@@ -148,3 +148,11 @@ function getFiliereCompletionSnapshot() {
     filieres
   };
 }
+
+// À exécuter manuellement depuis l'éditeur Apps Script pour éprouver la
+// chaîne lecture -> calcul sur les vraies données (voir CLAUDE.md :
+// "Éprouver la chaîne complète... avant d'élargir"). Le résultat s'affiche
+// dans le journal d'exécution (View > Logs).
+function testFiliereCompletionSnapshot() {
+  Logger.log(JSON.stringify(getFiliereCompletionSnapshot(), null, 2));
+}
