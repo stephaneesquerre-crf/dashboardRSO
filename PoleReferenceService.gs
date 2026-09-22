@@ -27,7 +27,7 @@ function getPoleReference_() {
     byPoleCode[normalizeText_(poleCode)] = {
       poleCode,
       label: cleanValue_(record[columns.label]),
-      filiere: columns.filiere ? cleanValue_(record[columns.filiere]) : '',
+      filiere: cleanValue_(record[columns.filiere]),
       territoire: columns.territoire ? cleanValue_(record[columns.territoire]) : '',
       regions: columns.regions ? cleanValue_(record[columns.regions]) : ''
     };
@@ -37,9 +37,9 @@ function getPoleReference_() {
 
 function findPoleReferenceColumns_(headers) {
   return {
-    poleCode: findHeader_(headers, 'code pole'),
-    label: findHeader_(headers, 'libelle'),
-    filiere: findOptionalHeader_(headers, 'filiere'),
+    poleCode: findHeader_(headers, 'code'),
+    label: findHeader_(headers, 'nom'),
+    filiere: findHeader_(headers, 'filiere'),
     territoire: findOptionalHeader_(headers, 'territoire'),
     regions: findOptionalHeader_(headers, 'region')
   };

@@ -3,6 +3,14 @@ const CONFIG = Object.freeze({
   // Classeur contenant les onglets IMPORT DONNEES (faits) et BDD NOMS (dimension pôle).
   SPREADSHEET_ID: '1JLtSywWoSeeI_lA1O0YA-C_SKFdSwIaCQm_xLWl43c0',
   IMPORT_SHEET_NAME: 'IMPORT DONNEES',
+  // Zone SYNTHESE : la ligne 1 est un titre fusionné, les en-têtes sont en
+  // ligne 2. Les colonnes AM:AZ sont imposées car les en-têtes (Site, Action
+  // envisagée...) se répètent à l'identique dans les autres zones de la
+  // feuille (plans d'actions sites pilotes, etc.) : une recherche par nom
+  // d'en-tête sans restriction de colonnes trouverait la mauvaise zone.
+  IMPORT_HEADER_ROW: 2,
+  IMPORT_SYNTHESE_FIRST_COLUMN: 'AM',
+  IMPORT_SYNTHESE_LAST_COLUMN: 'AZ',
   POLE_REFERENCE_SHEET_NAME: 'BDD NOMS',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,

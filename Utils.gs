@@ -59,3 +59,34 @@ function readSheetRecords_(spreadsheetId, sheetName, headerRow, maxRows) {
       return record;
     }, {}));
 }
+
+// Variante restreinte à une plage de colonnes (ex. AM:AZ), nécessaire quand
+// les mêmes intitulés de colonnes se répètent ailleurs sur la feuille : une
+// recherche d'en-tête sans cette restriction trouverait la mauvaise zone.
+function readSheetRecordsInColumnRange_(spreadsheetId, sheetName, headerRow, firstColumn, lastColumn, maxRows) {
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  if (!sheet) {
+    throw new Error(`Onglet introuvable : ${sheetName}`);
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < headerRow) {
+    return [];
+  }
+
+  const range = sheet.getRange(`${firstColumn}${headerRow}:${lastColumn}${lastRow}`);
+  const values = range.getDisplayValues();
+  const headers = values[0];
+  const dataRows = values.slice(1);
+  const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
+
+  return limitedRows
+    .filter((row) => row.some((value) => cleanValue_(value)))
+    .map((row) => headers.reduce((record, header, index) => {
+      if (header) {
+        record[header] = row[index];
+      }
+      return record;
+    }, {}));
+}
