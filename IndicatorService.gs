@@ -1,6 +1,12 @@
-// Valeurs d'avancement exclues du dénominateur (formule figée dans le
-// CLAUDE.md : Taux = Σ(avancement = 100 %) ÷ Σ(avancement ∉ {0 %, Abandonnée})).
-const INDICATOR_EXCLUDED_AVANCEMENT = ['0%', 'abandonnee'];
+// Formule vérifiée directement dans les formules du classeur national
+// (onglets par filière, ex. SAN!J10/K10 :
+//   # terminés   = COUNTIF(ligne action, "=100%")
+//   # concernés  = TOTAL structures de la filière - COUNTIF(ligne action, "=Abandonnée")
+// Le dénominateur exclut donc UNIQUEMENT les « Abandonnée » — les pôles à
+// 0 % ou sans réponse restent comptés comme concernés. C'est différent de ce
+// qu'indiquait une première lecture du CLAUDE.md (qui excluait aussi 0 %) :
+// à corriger dans le CLAUDE.md en conséquence.
+const INDICATOR_EXCLUDED_AVANCEMENT = 'abandonnee';
 const INDICATOR_DONE_AVANCEMENT = '100%';
 const INDICATOR_UNKNOWN_FILIERE_LABEL = 'Filière non renseignée';
 
@@ -55,12 +61,21 @@ function normalizeAvancementValue_(value) {
 }
 
 function isAvancementConcerne_(avancement) {
-  const normalized = normalizeAvancementValue_(avancement);
-  return normalized !== '' && INDICATOR_EXCLUDED_AVANCEMENT.indexOf(normalized) === -1;
+  return normalizeAvancementValue_(avancement) !== INDICATOR_EXCLUDED_AVANCEMENT;
 }
 
 function isAvancementTermine_(avancement) {
   return normalizeAvancementValue_(avancement) === normalizeAvancementValue_(INDICATOR_DONE_AVANCEMENT);
+}
+
+// Convertit l'avancement affiché ("20%", "100%"...) en fraction numérique ;
+// renvoie 0 pour tout ce qui n'est pas un pourcentage (Abandonnée, vide,
+// #N/A). Reproduit le comportement de SUMIFS/AVERAGEIFS sur la colonne
+// Avancement dans l'onglet "Traitement données" du classeur national, qui
+// ignore les cellules non numériques.
+function parseAvancementFraction_(avancement) {
+  const match = normalizeAvancementValue_(avancement).match(/^(\d+(?:\.\d+)?)%$/);
+  return match ? Number(match[1]) / 100 : 0;
 }
 
 // La filière « officielle » d'un couple pôle × action vient de BDD NOMS (via
@@ -79,15 +94,16 @@ function resolveFactFiliere_(fact, poleReference) {
 }
 
 // Premier livrable du CLAUDE.md : % terminées par filière + ligne de qualité
-// (pôles de la filière absents de toute réponse concernée).
+// (pôles de la filière qui n'ont pas répondu).
 //
-// La définition de « pôle qui n'a pas répondu » est provisoire : elle
-// compte comme non répondant tout pôle de BDD NOMS dont aucune ligne de
-// IMPORT DONNEES n'est « concernée » (cf. isAvancementConcerne_). Le
-// CLAUDE.md note explicitement que la définition de « a répondu cette
-// campagne » reste à valider avec le responsable de l'outil (section
-// « En attente ») : ce chiffre est donc à confirmer avec lui avant
-// diffusion, pas un résultat déjà validé.
+// « A répondu » est repris de la formule vérifiée dans l'onglet Traitement
+// données du classeur national (COUNTIFS(..., Somme de l'avancement <> 0)) :
+// un pôle est compté comme répondant dès que la somme de ses avancements,
+// tous couples pôle × action confondus, est strictement positive. C'est un
+// cumul depuis toujours, pas propre à une campagne : le CLAUDE.md note que
+// distinguer « s'est déjà servi de l'outil » de « a répondu cette campagne »
+// reste en attente d'arbitrage avec le responsable de l'outil — ce chiffre
+// mesure donc le premier, pas le second.
 //
 // Certaines filières de BDD NOMS (ex. PROT ENFANCE) n'ont aucune ligne dans
 // la zone SYNTHESE : leurs données sont alimentées autrement dans le
@@ -105,12 +121,13 @@ function getFiliereCompletionSnapshot() {
         filiere: name,
         total: 0,
         concernes: 0,
-        terminees: 0,
-        respondingPoleCodes: {}
+        terminees: 0
       };
     }
     return byFiliere[name];
   };
+
+  const responseSumByPoleCode = {};
 
   facts.forEach((fact) => {
     const filiereName = resolveFactFiliere_(fact, poleReference);
@@ -118,11 +135,14 @@ function getFiliereCompletionSnapshot() {
     bucket.total += 1;
     if (isAvancementConcerne_(fact.avancement)) {
       bucket.concernes += 1;
-      bucket.respondingPoleCodes[normalizeText_(fact.poleCode)] = true;
       if (isAvancementTermine_(fact.avancement)) {
         bucket.terminees += 1;
       }
     }
+
+    const normalizedPoleCode = normalizeText_(fact.poleCode);
+    responseSumByPoleCode[normalizedPoleCode] =
+      (responseSumByPoleCode[normalizedPoleCode] || 0) + parseAvancementFraction_(fact.avancement);
   });
 
   // Univers des pôles attendus par filière, tel que déclaré dans BDD NOMS.
@@ -147,7 +167,7 @@ function getFiliereCompletionSnapshot() {
       const bucket = byFiliere[name];
       const expectedPoleCodes = expectedPoleCodesByFiliere[name] || [];
       const nonRespondentPoles = expectedPoleCodes
-        .filter((normalizedPoleCode) => !bucket.respondingPoleCodes[normalizedPoleCode])
+        .filter((normalizedPoleCode) => (responseSumByPoleCode[normalizedPoleCode] || 0) === 0)
         .map((normalizedPoleCode) => poleReference[normalizedPoleCode]);
       const dataAvailable = bucket.total > 0;
 
