@@ -43,20 +43,46 @@ function findFactColumns_(headers) {
 }
 
 const INDICATOR_UNKNOWN_LABEL = 'Non renseigné(e)';
+const PADOM_FILIERE_LABEL = 'PADOM';
 
 // La filière et le territoire « officiels » d'un couple pôle × action
 // viennent de BDD NOMS (via le code pôle), pas de la colonne Filière
 // d'IMPORT DONNEES : les deux classent différemment certaines lignes (ex.
-// BDD NOMS regroupe "PA" et "DOM" sous "PADOM" ; "SANITAIRE" y est noté
-// "SAN"). Repli sur la colonne du fait uniquement quand le pôle est
-// introuvable dans BDD NOMS (ex. le pôle OUTRE-MER, dont le code est vide
-// côté BDD NOMS — cf. CLAUDE.md, "à corriger à la source").
-function resolveFactFiliere_(fact, poleReference) {
+// "SANITAIRE" y est noté "SAN"). Repli sur la colonne du fait uniquement
+// quand le pôle est introuvable dans BDD NOMS (ex. le pôle OUTRE-MER, dont
+// le code est vide côté BDD NOMS — cf. CLAUDE.md, "à corriger à la source").
+//
+// Cas particulier PADOM : BDD NOMS regroupe les pôles "PA" et "DOM" sous
+// un seul libellé "PADOM", mais IMPORT DONNEES distingue les deux pour
+// chaque pôle. Le classeur national affiche PA et DOM comme deux filières
+// séparées, donc on réaffecte chaque pôle PADOM à "PA" ou "DOM" d'après ses
+// propres lignes de faits (padomOverrides), jamais d'après une règle
+// recalculée ici.
+function resolveFactFiliere_(fact, poleReference, padomOverrides) {
   const pole = poleReference[normalizeText_(fact.poleCode)];
   if (pole && pole.filiere) {
+    if (pole.filiere === PADOM_FILIERE_LABEL) {
+      const override = padomOverrides[normalizeText_(fact.poleCode)];
+      if (override) {
+        return override;
+      }
+    }
     return pole.filiere;
   }
   return fact.filiere || INDICATOR_UNKNOWN_LABEL;
+}
+
+// Un pôle PADOM est reclassé "PA" ou "DOM" d'après la colonne Filière de ses
+// propres lignes dans IMPORT DONNEES (vérifié : chaque pôle PADOM n'y
+// apparaît jamais qu'avec l'une des deux valeurs, jamais les deux).
+function derivePadomOverrides_(facts) {
+  const overrides = {};
+  facts.forEach((fact) => {
+    if (fact.filiere === 'PA' || fact.filiere === 'DOM') {
+      overrides[normalizeText_(fact.poleCode)] = fact.filiere;
+    }
+  });
+  return overrides;
 }
 
 function resolveFactTerritoire_(fact, poleReference) {
@@ -79,18 +105,33 @@ function resolveFactTerritoire_(fact, poleReference) {
 function getDashboardBootstrap() {
   const config = getConfig_();
   const poleReference = getPoleReference_();
+  const factRecords = getFactRecords_();
+  const padomOverrides = derivePadomOverrides_(factRecords);
 
-  const facts = getFactRecords_().map((fact) => ({
+  const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
     action: fact.action,
     volet: fact.volet,
     thematique: fact.thematique,
     avancement: fact.avancement,
-    filiere: resolveFactFiliere_(fact, poleReference),
+    filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
     territoire: resolveFactTerritoire_(fact, poleReference)
   }));
 
-  const poles = Object.keys(poleReference).map((normalizedPoleCode) => poleReference[normalizedPoleCode]);
+  // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
+  // par filière/territoire) doit refléter le même reclassement PADOM -> PA/DOM
+  // que ses faits, sous peine d'incohérence entre "pôles attendus" et
+  // "pôles avec des faits".
+  const poles = Object.keys(poleReference).map((normalizedPoleCode) => {
+    const pole = poleReference[normalizedPoleCode];
+    if (pole.filiere === PADOM_FILIERE_LABEL) {
+      const override = padomOverrides[normalizedPoleCode];
+      if (override) {
+        return Object.assign({}, pole, { filiere: override });
+      }
+    }
+    return pole;
+  });
 
   return {
     appVersion: config.APP_VERSION,

@@ -335,6 +335,21 @@
 
       td { font-variant-numeric: tabular-nums; }
 
+      .sort-button {
+        min-height: auto;
+        padding: 0;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-weight: inherit;
+        text-transform: inherit;
+        letter-spacing: inherit;
+        cursor: pointer;
+      }
+
+      .sort-button:hover { color: var(--series-1); }
+
       .is-unavailable td {
         color: var(--text-muted);
         font-style: italic;
@@ -464,7 +479,6 @@
             <label for="synthese-niveau">Regrouper par</label>
             <select id="synthese-niveau">
               <option value="filiere">Filière</option>
-              <option value="territoire">Territoire (détail)</option>
               <option value="thematique">Thématique</option>
               <option value="volet">Volet (année de lancement)</option>
               <option value="action">Action</option>
@@ -479,7 +493,7 @@
             </select>
           </div>
         </div>
-        <p class="filter-hint">« Territoire (détail) » affiche une barre par territoire de la filière choisie — nécessite de choisir une filière précise.</p>
+        <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
       </section>
 
       <section class="panel">
@@ -507,18 +521,7 @@
         <div style="overflow-x:auto">
           <table id="data-table">
             <caption id="data-table-caption">Les taux sont exprimés en %.</caption>
-            <thead>
-              <tr>
-                <th scope="col" id="data-table-group-header">Filière</th>
-                <th scope="col">Concernées</th>
-                <th scope="col">Terminées</th>
-                <th scope="col">Terminées / concernées</th>
-                <th scope="col">Moyenne d'avancement</th>
-                <th scope="col">Pôles connus</th>
-                <th scope="col">N'ont pas répondu</th>
-                <th scope="col">Taux de réponse</th>
-              </tr>
-            </thead>
+            <thead id="data-table-head"></thead>
             <tbody id="data-table-body"></tbody>
           </table>
         </div>
@@ -586,10 +589,11 @@
           <p><strong>Moyenne d'avancement</strong> : moyenne des pourcentages d'avancement parmi les couples concernés. Contrairement au premier indicateur, aucune formule vivante équivalente n'a été retrouvée dans le classeur national pour la vérifier (l'onglet qui porte ce nom s'est révélé être une copie mal étiquetée du premier indicateur) — c'est une interprétation raisonnable, pas une valeur confirmée par une référence externe.</p>
           <p><strong>Taux de réponse</strong> : part des pôles connus (BDD NOMS) ayant au moins un avancement non nul, tous couples pôle × action confondus. Vérifié : correspond exactement aux « % de réponses » déjà affichés dans le classeur national, filière par filière.</p>
           <div class="doc-caveat">« A répondu » compte depuis toujours, pas seulement la campagne en cours — distinguer les deux reste une question ouverte avec le responsable de l'outil.</div>
+          <div class="doc-caveat">Dès qu'une filière précise est choisie, le tableau « Détail des données » affiche toujours une ligne par action (jamais agrégée sur plusieurs actions) : « concernés »/« terminés » y sont bien des comptes de pôles pour cette action, comparables au <code>Tableau de bord VA</code> du classeur national. Sans filière choisie, ce tableau compare les filières entre elles et « concernés »/« terminés » y sont alors des sommes sur tous les couples pôle × action de chaque filière — des nombres plus grands, normalement.</div>
         </div>
         <div class="doc-section">
-          <h3>Filières PA/DOM et PADOM</h3>
-          <p>BDD NOMS regroupe ces pôles sous une seule filière <code>PADOM</code> (Personnes Âgées + soin à DOMicile). IMPORT DONNEES, lui, étiquette chaque ligne <code>PA</code> ou <code>DOM</code> séparément. Le dashboard résout la filière de chaque ligne via le code pôle et BDD NOMS — donc via <code>PADOM</code> — plutôt que via la colonne Filière d'IMPORT DONNEES : les deux libellés se retrouvent donc réconciliés sous un seul indicateur, sans qu'aucune donnée source n'ait besoin d'être modifiée.</p>
+          <h3>Filières PA et DOM</h3>
+          <p>BDD NOMS regroupe ces pôles sous une seule filière <code>PADOM</code> (Personnes Âgées + soin à DOMicile), mais le classeur national les affiche comme deux filières distinctes, <code>PA</code> et <code>DOM</code>. IMPORT DONNEES, lui, étiquette bien chaque ligne <code>PA</code> ou <code>DOM</code> séparément : le dashboard reclasse donc chaque pôle PADOM vers PA ou DOM d'après ses propres lignes de faits, plutôt que de garder le libellé unique de BDD NOMS. Vérifié : chaque pôle PADOM (50 au total) n'apparaît jamais qu'avec l'une des deux valeurs dans IMPORT DONNEES, jamais les deux — le reclassement est donc sans ambiguïté, sans qu'aucune donnée source n'ait besoin d'être modifiée.</p>
         </div>
         <div class="doc-section">
           <h3>Territoires</h3>
@@ -626,10 +630,15 @@
       const UNKNOWN_LABEL = 'Non renseigné(e)';
       const EXCLUDED_AVANCEMENT = 'abandonnee';
       const DONE_AVANCEMENT = '100%';
+      // Valeur spéciale du filtre Territoire (jamais un vrai nom de
+      // territoire) : bascule le graphique en comparaison des territoires
+      // entre eux, plutôt que d'être un niveau de regroupement séparé.
+      const TERRITOIRE_DETAIL_VALUE = '__territoires_detail__';
 
       const state = {
         bootstrap: null,
         syntheseSnapshot: null,
+        actionDetail: null,
         matrix: null
       };
 
@@ -653,7 +662,7 @@
         chartNote: document.getElementById('chart-note'),
         tooltip: document.getElementById('tooltip'),
         dataTableCaption: document.getElementById('data-table-caption'),
-        dataTableGroupHeader: document.getElementById('data-table-group-header'),
+        dataTableHead: document.getElementById('data-table-head'),
         tableBody: document.getElementById('data-table-body'),
         exportPng: document.getElementById('export-png'),
         exportSvg: document.getElementById('export-svg'),
@@ -923,6 +932,53 @@
         return {filiere, territoire, volet, thematique, poles, rows};
       }
 
+      // Une ligne par action (jamais par couple pôle × action agrégé sur
+      // plusieurs actions) : "concernes"/"terminees" sont donc bien des
+      // comptes de pôles pour CETTE action, comparables au `Tableau de
+      // bord VA` du classeur national. thematique/volet sont normalement
+      // constants pour une même action ; s'ils varient d'un pôle à l'autre
+      // (incohérence de saisie), les valeurs distinctes sont toutes
+      // affichées plutôt que d'en choisir une arbitrairement.
+      function computeActionDetail(bootstrap, options) {
+        const filiere = options.filiere;
+        if (!filiere) {
+          return {filiere: '', territoire: '', rows: []};
+        }
+        const territoire = options.territoire || '';
+
+        const scopedFacts = bootstrap.facts.filter((fact) =>
+          fact.filiere === filiere && (!territoire || fact.territoire === territoire)
+        );
+
+        const byAction = new Map();
+        scopedFacts.forEach((fact) => {
+          const key = fact.action || UNKNOWN_LABEL;
+          if (!byAction.has(key)) {
+            byAction.set(key, {action: key, thematiques: new Set(), volets: new Set(), concernes: 0, terminees: 0});
+          }
+          const bucket = byAction.get(key);
+          if (fact.thematique) bucket.thematiques.add(fact.thematique);
+          if (fact.volet) bucket.volets.add(fact.volet);
+          if (isConcerne(fact.avancement)) {
+            bucket.concernes += 1;
+            if (isTermine(fact.avancement)) bucket.terminees += 1;
+          }
+        });
+
+        const joinDistinct = (set) => [...set].sort((left, right) => left.localeCompare(right, 'fr')).join(' / ') || UNKNOWN_LABEL;
+
+        const rows = [...byAction.values()].map((bucket) => ({
+          action: bucket.action,
+          thematique: joinDistinct(bucket.thematiques),
+          volet: joinDistinct(bucket.volets),
+          concernes: bucket.concernes,
+          terminees: bucket.terminees,
+          tauxTerminees: roundRate(bucket.terminees, bucket.concernes)
+        }));
+
+        return {filiere, territoire, rows};
+      }
+
       // ---------------------------------------------------------------
       // Filtres — peuplés depuis les données déjà chargées, jamais codés en
       // dur (cf. CLAUDE.md : "tout ce qui varie vit dans un Sheet").
@@ -948,10 +1004,13 @@
         if ([...select.options].some((option) => option.value === current)) select.value = current;
       }
 
-      function populateTerritoireSelect(select, filiereName, placeholder) {
+      function populateTerritoireSelect(select, filiereName, placeholder, includeAllTerritoiresOption) {
         const current = select.value;
         select.replaceChildren();
         select.append(new Option(placeholder, ''));
+        if (includeAllTerritoiresOption && filiereName) {
+          select.append(new Option('Tous les territoires (détail)', TERRITOIRE_DETAIL_VALUE));
+        }
         territoiresForFiliere(filiereName).forEach((name) => select.append(new Option(territoireDisplayLabel(filiereName, name), name)));
         select.disabled = !filiereName;
         if ([...select.options].some((option) => option.value === current)) select.value = current;
@@ -967,21 +1026,33 @@
       }
 
       elements.syntheseFiliere.addEventListener('change', () => {
-        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière');
+        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière', true);
         updateNiveauAvailability();
         renderSynthese();
       });
-      elements.syntheseTerritoire.addEventListener('change', renderSynthese);
+      elements.syntheseTerritoire.addEventListener('change', () => {
+        updateNiveauAvailability();
+        renderSynthese();
+      });
       elements.syntheseNiveau.addEventListener('change', renderSynthese);
       elements.syntheseIndicateur.addEventListener('change', renderSynthese);
 
+      // Le regroupement « Filière » n'a de sens que pour comparer les
+      // filières entre elles (portée globale) : une fois une filière
+      // précise choisie, il ne produirait qu'une seule barre — source de
+      // confusion signalée par un utilisateur. La comparaison des
+      // territoires d'une filière se fait maintenant via le filtre
+      // Territoire (« Tous les territoires (détail) »), pas ici : le
+      // regroupement ne s'applique pas non plus tant que cette option est
+      // active.
       function updateNiveauAvailability() {
-        const territoireOption = elements.syntheseNiveau.querySelector('option[value="territoire"]');
+        const filiereOption = elements.syntheseNiveau.querySelector('option[value="filiere"]');
         const hasFiliere = Boolean(elements.syntheseFiliere.value);
-        territoireOption.disabled = !hasFiliere;
-        if (!hasFiliere && elements.syntheseNiveau.value === 'territoire') {
-          elements.syntheseNiveau.value = 'filiere';
+        filiereOption.disabled = hasFiliere;
+        if (hasFiliere && elements.syntheseNiveau.value === 'filiere') {
+          elements.syntheseNiveau.value = 'thematique';
         }
+        elements.syntheseNiveau.disabled = elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE;
       }
 
       elements.detailFiliere.addEventListener('change', () => {
@@ -998,15 +1069,31 @@
       // ---------------------------------------------------------------
       // Vue synthèse
       // ---------------------------------------------------------------
-      function updateChartTitle() {
+      // Traduit les filtres visibles (filière / territoire / regroupement)
+      // en options pour computeSnapshot. La valeur spéciale du filtre
+      // Territoire devient un regroupement par territoire, comme le faisait
+      // auparavant l'option "Territoire (détail)" du menu "Regrouper par".
+      function resolveSyntheseOptions() {
+        const filiere = elements.syntheseFiliere.value;
+        const territoireValue = elements.syntheseTerritoire.value;
+        if (territoireValue === TERRITOIRE_DETAIL_VALUE) {
+          return {filiere, territoire: '', niveau: 'territoire'};
+        }
+        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value};
+      }
+
+      function updateChartTitle(options) {
         const indicateur = INDICATEUR_META[elements.syntheseIndicateur.value];
-        const niveauLabel = NIVEAU_LABELS[elements.syntheseNiveau.value] || 'Filière';
+        const niveauLabel = NIVEAU_LABELS[options.niveau] || 'Filière';
         const scopeBits = [];
-        if (elements.syntheseFiliere.value) scopeBits.push(elements.syntheseFiliere.value);
-        if (elements.syntheseTerritoire.value) scopeBits.push(elements.syntheseTerritoire.value);
+        if (options.filiere) scopeBits.push(options.filiere);
+        if (options.territoire) {
+          scopeBits.push(options.territoire);
+        } else if (elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE) {
+          scopeBits.push('tous territoires');
+        }
         const scopeSuffix = scopeBits.length ? ` — ${scopeBits.join(' · ')}` : ' — toutes filières';
         elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}${scopeSuffix}`;
-        elements.dataTableGroupHeader.textContent = niveauLabel;
         elements.dataTableCaption.textContent = `${scopeBits.length ? scopeBits.join(' · ') : 'Toutes filières confondues'} — les taux sont exprimés en %.`;
 
         elements.syntheseLegend.replaceChildren();
@@ -1019,17 +1106,27 @@
         elements.syntheseLegend.append(item);
       }
 
+      // Dès qu'une filière précise est choisie, le tableau de détail
+      // affiche toujours une ligne par action (granularité pôle par action,
+      // cf. Méthodologie), indépendamment du regroupement choisi pour le
+      // graphique : sinon, "concernées"/"terminées" sommait plusieurs
+      // actions et ne correspondait plus au nombre de pôles attendu.
       function renderSynthese() {
         if (!state.bootstrap) return;
-        const snapshot = computeSnapshot(state.bootstrap, {
-          filiere: elements.syntheseFiliere.value,
-          territoire: elements.syntheseTerritoire.value,
-          niveau: elements.syntheseNiveau.value
-        });
+        const options = resolveSyntheseOptions();
+        const snapshot = computeSnapshot(state.bootstrap, options);
         state.syntheseSnapshot = snapshot;
-        updateChartTitle();
+        updateChartTitle(options);
         renderChart(snapshot);
-        renderTable(snapshot);
+
+        if (options.filiere) {
+          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire});
+          state.actionDetail = detail;
+          renderActionTable(detail);
+        } else {
+          state.actionDetail = null;
+          renderTable(snapshot);
+        }
         setSyntheseExportEnabled(true);
       }
 
@@ -1159,6 +1256,18 @@
       }
 
       function renderTable(snapshot) {
+        const niveauLabel = NIVEAU_LABELS[snapshot.niveau] || 'Filière';
+        elements.dataTableHead.replaceChildren();
+        const headRow = document.createElement('tr');
+        [niveauLabel, 'Concernées', 'Terminées', 'Terminées / concernées', "Moyenne d'avancement", 'Pôles connus', "N'ont pas répondu", 'Taux de réponse']
+          .forEach((label) => {
+            const th = document.createElement('th');
+            th.scope = 'col';
+            th.textContent = label;
+            headRow.appendChild(th);
+          });
+        elements.dataTableHead.appendChild(headRow);
+
         elements.tableBody.replaceChildren();
         snapshot.groups.forEach((item) => {
           const row = document.createElement('tr');
@@ -1184,6 +1293,78 @@
           if (!item.dataAvailable) row.removeChild(row.children[4]);
           elements.tableBody.appendChild(row);
         });
+      }
+
+      // Tri cliquable sur les 3 colonnes texte (action, thématique, volet),
+      // demandé pour retrouver rapidement une action précise dans une
+      // filière qui peut en compter plusieurs dizaines.
+      const actionSortState = {column: 'action', direction: 'asc'};
+      const ACTION_TABLE_COLUMNS = [
+        {key: 'action', label: 'Action', sortable: true},
+        {key: 'thematique', label: 'Thématique', sortable: true},
+        {key: 'volet', label: 'Volet', sortable: true},
+        {key: 'tauxTerminees', label: '% Terminés', sortable: false},
+        {key: 'terminees', label: 'Pôles ayant terminé', sortable: false},
+        {key: 'concernes', label: 'Pôles concernés', sortable: false}
+      ];
+
+      function sortActionRows(rows) {
+        const {column, direction} = actionSortState;
+        const factor = direction === 'asc' ? 1 : -1;
+        return [...rows].sort((left, right) => String(left[column]).localeCompare(String(right[column]), 'fr') * factor);
+      }
+
+      function renderActionTable(detail) {
+        elements.dataTableHead.replaceChildren();
+        const headRow = document.createElement('tr');
+        ACTION_TABLE_COLUMNS.forEach((column) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          if (!column.sortable) {
+            th.textContent = column.label;
+            headRow.appendChild(th);
+            return;
+          }
+          const isActive = actionSortState.column === column.key;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'sort-button';
+          button.textContent = column.label + (isActive ? (actionSortState.direction === 'asc' ? ' ▲' : ' ▼') : '');
+          button.setAttribute('aria-sort', isActive ? (actionSortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+          button.addEventListener('click', () => {
+            if (actionSortState.column === column.key) {
+              actionSortState.direction = actionSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+              actionSortState.column = column.key;
+              actionSortState.direction = 'asc';
+            }
+            renderActionTable(detail);
+          });
+          th.appendChild(button);
+          headRow.appendChild(th);
+        });
+        elements.dataTableHead.appendChild(headRow);
+
+        elements.tableBody.replaceChildren();
+        sortActionRows(detail.rows).forEach((row) => {
+          const tr = document.createElement('tr');
+          [row.action, row.thematique, row.volet, formatRate(row.tauxTerminees), formatCount(row.terminees), formatCount(row.concernes)]
+            .forEach((value) => {
+              const td = document.createElement('td');
+              td.textContent = value;
+              tr.appendChild(td);
+            });
+          elements.tableBody.appendChild(tr);
+        });
+      }
+
+      function buildActionDetailCsv(detail) {
+        const headers = ['Action', 'Thématique', 'Volet', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés'];
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const rows = sortActionRows(detail.rows).map((row) =>
+          [row.action, row.thematique, row.volet, row.tauxTerminees, row.terminees, row.concernes].map(escapeCsv).join(',')
+        );
+        return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
       }
 
       function buildCsv(snapshot) {
@@ -1270,8 +1451,10 @@
       });
 
       elements.exportCsv.addEventListener('click', () => {
-        if (!state.syntheseSnapshot) return;
-        const csv = buildCsv(state.syntheseSnapshot);
+        const csv = state.actionDetail
+          ? buildActionDetailCsv(state.actionDetail)
+          : (state.syntheseSnapshot ? buildCsv(state.syntheseSnapshot) : null);
+        if (!csv) return;
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-donnees-${dateStamp()}.csv`);
       });
 
