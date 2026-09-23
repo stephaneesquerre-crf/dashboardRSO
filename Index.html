@@ -31,6 +31,7 @@
         --series-1:       #005197; /* bleu Croix-Rouge — terminées / concernées */
         --series-2:       #0d9296; /* vert Croix-Rouge — moyenne d'avancement */
         --series-3:       #803ac0; /* violet Croix-Rouge — taux de réponse */
+        --status-critical:#d03b3b; /* réservé : "Abandonnée" dans la matrice détail */
       }
       @media (prefers-color-scheme: dark) {
         .viz-root {
@@ -44,6 +45,7 @@
           --series-1:       #006997;
           --series-2:       #009da7;
           --series-3:       #7830b6;
+          --status-critical:#e66767;
         }
       }
 
@@ -68,6 +70,31 @@
         color: var(--text-secondary);
         font-size: 0.86rem;
       }
+
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .tab-button {
+        min-height: 40px;
+        padding: 0 14px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        background: transparent;
+        color: var(--text-secondary);
+        font-weight: 600;
+      }
+
+      .tab-button[aria-selected="true"] {
+        border-bottom-color: var(--series-1);
+        color: var(--text-primary);
+      }
+
+      .tab-panel[hidden] { display: none; }
 
       .panel {
         padding: 20px;
@@ -113,6 +140,42 @@
       button:hover { border-color: var(--series-1); }
       button:disabled { cursor: default; opacity: 0.5; }
 
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .filter-field {
+        display: grid;
+        gap: 4px;
+        min-width: 170px;
+      }
+
+      .filter-field label {
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .filter-field select {
+        min-height: 38px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-1);
+        color: var(--text-primary);
+        font: inherit;
+      }
+
+      .filter-field select:disabled {
+        color: var(--text-muted);
+        background: var(--surface-2);
+      }
+
       .legend {
         display: flex;
         flex-wrap: wrap;
@@ -138,7 +201,7 @@
         overflow-x: auto;
       }
 
-      #chart {
+      svg.chart {
         display: block;
       }
 
@@ -220,78 +283,229 @@
 
       .status { color: var(--text-secondary); font-size: 0.84rem; }
       .error { color: #b3261e; }
+
+      .matrix-scroll {
+        overflow: auto;
+        max-height: 70vh;
+      }
+
+      table.matrix {
+        font-size: 0.78rem;
+      }
+
+      table.matrix th,
+      table.matrix td {
+        text-align: center;
+        white-space: nowrap;
+        padding: 6px 10px;
+      }
+
+      table.matrix th.matrix-action-header,
+      table.matrix td.matrix-action {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        text-align: left;
+        white-space: normal;
+        min-width: 220px;
+        background: var(--surface-1);
+      }
+
+      table.matrix thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-2);
+        text-transform: none;
+        letter-spacing: normal;
+      }
+
+      table.matrix thead th.matrix-action-header {
+        z-index: 3;
+      }
+
+      .matrix-empty {
+        padding: 20px;
+        color: var(--text-muted);
+        text-align: center;
+      }
     </style>
   </head>
   <body class="viz-root">
-    <h1>Dashboard RSO — Avancement par filière</h1>
+    <h1>Dashboard RSO — Avancement des actions</h1>
     <p class="subtitle" id="status">Chargement des données…</p>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Comparaison des trois indicateurs</h2>
-        <div class="actions">
-          <button type="button" id="export-png">Exporter le graphique (PNG)</button>
-          <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
+    <div class="tabs" role="tablist" aria-label="Vues du dashboard">
+      <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
+      <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
+    </div>
+
+    <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
         </div>
-      </div>
-      <div class="legend">
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Terminées / concernées</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-2)"></span>Moyenne d'avancement</span>
-        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Taux de réponse</span>
-      </div>
-      <div class="chart-scroll">
-        <svg id="chart" role="img" aria-label="Comparaison des trois indicateurs par filière"></svg>
-      </div>
-      <p class="chart-note" id="chart-note"></p>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="synthese-filiere">Filière</label>
+            <select id="synthese-filiere"></select>
+          </div>
+          <div class="filter-field">
+            <label for="synthese-territoire">Territoire</label>
+            <select id="synthese-territoire"><option value="">Toute la filière</option></select>
+          </div>
+          <div class="filter-field">
+            <label for="synthese-niveau">Regrouper par</label>
+            <select id="synthese-niveau">
+              <option value="filiere">Filière</option>
+              <option value="thematique">Thématique</option>
+              <option value="volet">Volet (année de lancement)</option>
+              <option value="action">Action</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="synthese-indicateur">Indicateur</label>
+            <select id="synthese-indicateur">
+              <option value="tauxTerminees">Terminées / concernées</option>
+              <option value="tauxMoyenAvancement">Moyenne d'avancement</option>
+              <option value="tauxReponse">Taux de réponse</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="synthese-chart-title">Terminées / concernées, par filière</h2>
+          <div class="actions">
+            <button type="button" id="export-png">Exporter le graphique (PNG)</button>
+            <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
+          </div>
+        </div>
+        <div class="chart-scroll">
+          <svg class="chart" id="chart" role="img" aria-label="Comparaison de l'indicateur choisi"></svg>
+        </div>
+        <p class="chart-note" id="chart-note"></p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Détail des données</h2>
+          <div class="actions">
+            <button type="button" id="export-csv">Exporter le tableau (CSV)</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="data-table">
+            <caption id="data-table-caption">Les taux sont exprimés en %.</caption>
+            <thead>
+              <tr>
+                <th scope="col" id="data-table-group-header">Filière</th>
+                <th scope="col">Concernées</th>
+                <th scope="col">Terminées</th>
+                <th scope="col">Terminées / concernées</th>
+                <th scope="col">Moyenne d'avancement</th>
+                <th scope="col">Pôles connus</th>
+                <th scope="col">N'ont pas répondu</th>
+                <th scope="col">Taux de réponse</th>
+              </tr>
+            </thead>
+            <tbody id="data-table-body"></tbody>
+          </table>
+        </div>
+      </section>
     </section>
 
-    <section class="panel">
-      <div class="panel-header">
-        <h2>Détail des données</h2>
-        <div class="actions">
-          <button type="button" id="export-csv">Exporter le tableau (CSV)</button>
+    <section class="tab-panel" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
         </div>
-      </div>
-      <div style="overflow-x:auto">
-        <table id="data-table">
-          <caption>Une ligne par filière ; les taux sont exprimés en %.</caption>
-          <thead>
-            <tr>
-              <th scope="col">Filière</th>
-              <th scope="col">Concernées</th>
-              <th scope="col">Terminées</th>
-              <th scope="col">Terminées / concernées</th>
-              <th scope="col">Moyenne d'avancement</th>
-              <th scope="col">Pôles connus</th>
-              <th scope="col">N'ont pas répondu</th>
-              <th scope="col">Taux de réponse</th>
-            </tr>
-          </thead>
-          <tbody id="data-table-body"></tbody>
-        </table>
-      </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="detail-filiere">Filière</label>
+            <select id="detail-filiere"><option value="">Choisir une filière…</option></select>
+          </div>
+          <div class="filter-field">
+            <label for="detail-territoire">Territoire</label>
+            <select id="detail-territoire" disabled><option value="">Choisir d'abord une filière…</option></select>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="detail-title">Détail pôle × action</h2>
+          <div class="actions">
+            <button type="button" id="export-matrix-csv" disabled>Exporter le tableau (CSV)</button>
+          </div>
+        </div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--status-critical)"></span>Abandonnée</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:hsl(190,45%,60%)"></span>Avancement (plus foncé = plus avancé)</span>
+        </div>
+        <div class="matrix-scroll">
+          <table class="matrix" id="matrix-table" hidden>
+            <thead><tr id="matrix-header-row"></tr></thead>
+            <tbody id="matrix-body"></tbody>
+          </table>
+          <p class="matrix-empty" id="matrix-empty">Choisissez une filière puis un territoire pour afficher le détail.</p>
+        </div>
+      </section>
     </section>
 
     <div id="tooltip" role="status" aria-live="polite"></div>
 
     <script>
-      const SERIES = [
-        {key: 'tauxTerminees', label: 'Terminées / concernées', color: 'var(--series-1)'},
-        {key: 'tauxMoyenAvancement', label: "Moyenne d'avancement", color: 'var(--series-2)'},
-        {key: 'tauxReponse', label: 'Taux de réponse', color: 'var(--series-3)'}
-      ];
+      const NIVEAU_LABELS = {
+        filiere: 'Filière',
+        thematique: 'Thématique',
+        volet: 'Volet',
+        action: 'Action'
+      };
 
-      const state = {snapshot: null};
+      const INDICATEUR_META = {
+        tauxTerminees: {label: 'Terminées / concernées', color: 'var(--series-1)'},
+        tauxMoyenAvancement: {label: "Moyenne d'avancement", color: 'var(--series-2)'},
+        tauxReponse: {label: 'Taux de réponse', color: 'var(--series-3)'}
+      };
+
+      const state = {
+        filterOptions: {filieres: [], territoiresByFiliere: {}},
+        syntheseSnapshot: null,
+        matrix: null
+      };
 
       const elements = {
         status: document.getElementById('status'),
+        tabSynthese: document.getElementById('tab-synthese'),
+        tabDetail: document.getElementById('tab-detail'),
+        panelSynthese: document.getElementById('panel-synthese'),
+        panelDetail: document.getElementById('panel-detail'),
+
+        syntheseFiliere: document.getElementById('synthese-filiere'),
+        syntheseTerritoire: document.getElementById('synthese-territoire'),
+        syntheseNiveau: document.getElementById('synthese-niveau'),
+        syntheseIndicateur: document.getElementById('synthese-indicateur'),
+        chartTitle: document.getElementById('synthese-chart-title'),
         chart: document.getElementById('chart'),
         chartNote: document.getElementById('chart-note'),
         tooltip: document.getElementById('tooltip'),
+        dataTableCaption: document.getElementById('data-table-caption'),
+        dataTableGroupHeader: document.getElementById('data-table-group-header'),
         tableBody: document.getElementById('data-table-body'),
         exportPng: document.getElementById('export-png'),
         exportSvg: document.getElementById('export-svg'),
-        exportCsv: document.getElementById('export-csv')
+        exportCsv: document.getElementById('export-csv'),
+
+        detailFiliere: document.getElementById('detail-filiere'),
+        detailTerritoire: document.getElementById('detail-territoire'),
+        detailTitle: document.getElementById('detail-title'),
+        matrixTable: document.getElementById('matrix-table'),
+        matrixHeaderRow: document.getElementById('matrix-header-row'),
+        matrixBody: document.getElementById('matrix-body'),
+        matrixEmpty: document.getElementById('matrix-empty'),
+        exportMatrixCsv: document.getElementById('export-matrix-csv')
       };
 
       function formatRate(value) {
@@ -333,20 +547,127 @@
         return el;
       }
 
-      function renderChart(filieres) {
-        const plottable = filieres.filter((item) => item.dataAvailable);
-        const skipped = filieres.filter((item) => !item.dataAvailable);
+      // ---------------------------------------------------------------
+      // Onglets
+      // ---------------------------------------------------------------
+      function selectTab(name) {
+        const showSynthese = name === 'synthese';
+        elements.tabSynthese.setAttribute('aria-selected', String(showSynthese));
+        elements.tabDetail.setAttribute('aria-selected', String(!showSynthese));
+        elements.panelSynthese.hidden = !showSynthese;
+        elements.panelDetail.hidden = showSynthese;
+      }
+      elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
+      elements.tabDetail.addEventListener('click', () => selectTab('detail'));
 
-        const barWidth = 20;
-        const barGap = 2;
-        const groupWidth = SERIES.length * barWidth + (SERIES.length - 1) * barGap;
-        const groupGap = 28;
+      // ---------------------------------------------------------------
+      // Filtres (peuplés depuis getFilterOptions(), jamais codés en dur —
+      // cf. CLAUDE.md : "tout ce qui varie vit dans un Sheet").
+      // ---------------------------------------------------------------
+      function populateFiliereSelect(select, includeGlobalOption) {
+        const current = select.value;
+        select.replaceChildren();
+        if (includeGlobalOption) {
+          select.append(new Option('Toutes les filières', ''));
+        } else {
+          select.append(new Option('Choisir une filière…', ''));
+        }
+        state.filterOptions.filieres.forEach((name) => select.append(new Option(name, name)));
+        if ([...select.options].some((option) => option.value === current)) {
+          select.value = current;
+        }
+      }
+
+      function populateTerritoireSelect(select, filiereName, placeholder) {
+        const current = select.value;
+        select.replaceChildren();
+        select.append(new Option(placeholder, ''));
+        const territoires = state.filterOptions.territoiresByFiliere[filiereName] || [];
+        territoires.forEach((name) => select.append(new Option(name, name)));
+        select.disabled = !filiereName;
+        if ([...select.options].some((option) => option.value === current)) {
+          select.value = current;
+        }
+      }
+
+      elements.syntheseFiliere.addEventListener('change', () => {
+        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière');
+        loadSynthese();
+      });
+      elements.syntheseTerritoire.addEventListener('change', loadSynthese);
+      elements.syntheseNiveau.addEventListener('change', loadSynthese);
+      elements.syntheseIndicateur.addEventListener('change', () => {
+        renderChart(state.syntheseSnapshot);
+        updateChartTitle();
+      });
+
+      elements.detailFiliere.addEventListener('change', () => {
+        populateTerritoireSelect(elements.detailTerritoire, elements.detailFiliere.value, 'Choisir un territoire…');
+        loadMatrix();
+      });
+      elements.detailTerritoire.addEventListener('change', loadMatrix);
+
+      // ---------------------------------------------------------------
+      // Vue synthèse
+      // ---------------------------------------------------------------
+      function updateChartTitle() {
+        const indicateur = INDICATEUR_META[elements.syntheseIndicateur.value];
+        const niveauLabel = NIVEAU_LABELS[elements.syntheseNiveau.value] || 'Filière';
+        elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}`;
+        elements.dataTableGroupHeader.textContent = niveauLabel;
+        const scopeBits = [];
+        if (elements.syntheseFiliere.value) scopeBits.push(elements.syntheseFiliere.value);
+        if (elements.syntheseTerritoire.value) scopeBits.push(elements.syntheseTerritoire.value);
+        elements.dataTableCaption.textContent = scopeBits.length
+          ? `${scopeBits.join(' · ')} — les taux sont exprimés en %.`
+          : 'Toutes filières confondues — les taux sont exprimés en %.';
+      }
+
+      function loadSynthese() {
+        const options = {
+          filiere: elements.syntheseFiliere.value,
+          territoire: elements.syntheseTerritoire.value,
+          niveau: elements.syntheseNiveau.value
+        };
+        elements.status.textContent = 'Chargement des données…';
+        elements.status.classList.remove('error');
+        google.script.run
+          .withSuccessHandler((snapshot) => {
+            state.syntheseSnapshot = snapshot;
+            const generated = new Date(snapshot.generatedAt);
+            elements.status.textContent =
+              `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${snapshot.appVersion}`;
+            updateChartTitle();
+            renderChart(snapshot);
+            renderTable(snapshot);
+            setSyntheseExportEnabled(true);
+          })
+          .withFailureHandler((error) => {
+            elements.status.textContent = error && error.message
+              ? error.message
+              : 'Impossible de charger le tableau de bord.';
+            elements.status.classList.add('error');
+            setSyntheseExportEnabled(false);
+          })
+          .getCompletionSnapshot(options);
+      }
+
+      function renderChart(snapshot) {
+        if (!snapshot) return;
+        const indicateurKey = elements.syntheseIndicateur.value;
+        const indicateur = INDICATEUR_META[indicateurKey];
+        const groups = snapshot.groups;
+        const plottable = groups.filter((item) => item[indicateurKey] !== null);
+        const skipped = groups.filter((item) => item[indicateurKey] === null);
+
+        const barWidth = 24;
+        const groupGap = 14;
         const marginLeft = 44;
         const marginRight = 16;
         const marginTop = 12;
-        const marginBottom = 46;
+        const marginBottom = 70;
         const plotHeight = 260;
-        const width = marginLeft + marginRight + plottable.length * (groupWidth + groupGap);
+        const width = marginLeft + marginRight + Math.max(plottable.length, 1) * (barWidth + groupGap);
         const height = marginTop + plotHeight + marginBottom;
 
         elements.chart.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -356,7 +677,6 @@
 
         const baselineY = marginTop + plotHeight;
 
-        // Grille et axe des ordonnées (0 / 25 / 50 / 75 / 100 %).
         [0, 25, 50, 75, 100].forEach((tick) => {
           const y = baselineY - (tick / 100) * plotHeight;
           elements.chart.appendChild(svgEl('line', {
@@ -370,54 +690,46 @@
         });
 
         plottable.forEach((item, index) => {
-          const groupX = marginLeft + index * (groupWidth + groupGap);
+          const barX = marginLeft + index * (barWidth + groupGap);
+          const value = item[indicateurKey];
+          const barHeight = (value / 100) * plotHeight;
+          const barY = baselineY - barHeight;
 
-          SERIES.forEach((series, seriesIndex) => {
-            const value = item[series.key];
-            const barX = groupX + seriesIndex * (barWidth + barGap);
-            const barHeight = value === null ? 0 : (value / 100) * plotHeight;
-            const barY = baselineY - barHeight;
-
-            if (value !== null) {
-              const path = svgEl('path', {
-                d: buildRoundedTopBarPath(barX, barY, barWidth, barHeight, 4),
-                fill: resolveColor(series.color)
-              });
-              elements.chart.appendChild(path);
-            }
-
-            // Zone de survol pleine hauteur : une petite valeur reste
-            // facilement atteignable au clavier/souris (cf. dataviz skill,
-            // "the hit target is bigger than the mark").
-            const hit = svgEl('rect', {
-              class: 'bar-hit',
-              x: barX, y: marginTop, width: barWidth, height: plotHeight,
-              tabindex: '0',
-              role: 'img',
-              'aria-label': `${item.filiere} — ${series.label} : ${value === null ? 'non disponible' : formatRate(value)}`
-            });
-            const show = (event) => showTooltip(event, item, series, value);
-            hit.addEventListener('pointerenter', show);
-            hit.addEventListener('pointermove', show);
-            hit.addEventListener('focus', show);
-            hit.addEventListener('pointerleave', hideTooltip);
-            hit.addEventListener('blur', hideTooltip);
-            elements.chart.appendChild(hit);
+          const path = svgEl('path', {
+            d: buildRoundedTopBarPath(barX, barY, barWidth, barHeight, 4),
+            fill: resolveColor(indicateur.color)
           });
+          elements.chart.appendChild(path);
+
+          const hit = svgEl('rect', {
+            class: 'bar-hit',
+            x: barX, y: marginTop, width: barWidth, height: plotHeight,
+            tabindex: '0',
+            role: 'img',
+            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)}`
+          });
+          const show = (event) => showTooltip(event, item, indicateur, value);
+          hit.addEventListener('pointerenter', show);
+          hit.addEventListener('pointermove', show);
+          hit.addEventListener('focus', show);
+          hit.addEventListener('pointerleave', hideTooltip);
+          hit.addEventListener('blur', hideTooltip);
+          elements.chart.appendChild(hit);
 
           const categoryLabel = svgEl('text', {
-            class: 'category-text', x: groupX + groupWidth / 2, y: baselineY + 16, 'text-anchor': 'middle'
+            class: 'category-text', x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
+            transform: `rotate(-40 ${barX + barWidth / 2} ${baselineY + 16})`
           });
-          categoryLabel.textContent = item.filiere;
+          categoryLabel.textContent = item.label;
           elements.chart.appendChild(categoryLabel);
         });
 
         elements.chartNote.textContent = skipped.length
-          ? `${skipped.map((item) => item.filiere).join(', ')} : donnée non disponible depuis cette source (voir tableau).`
+          ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
           : '';
       }
 
-      function showTooltip(event, item, series, value) {
+      function showTooltip(event, item, indicateur, value) {
         const tooltip = elements.tooltip;
         tooltip.replaceChildren();
         const valueEl = document.createElement('div');
@@ -425,7 +737,7 @@
         valueEl.textContent = value === null ? 'Non disponible' : formatRate(value);
         const labelEl = document.createElement('div');
         labelEl.className = 'tooltip-label';
-        labelEl.textContent = `${item.filiere} — ${series.label}`;
+        labelEl.textContent = `${item.label} — ${indicateur.label}`;
         tooltip.append(valueEl, labelEl);
         tooltip.style.left = `${event.clientX}px`;
         tooltip.style.top = `${event.clientY}px`;
@@ -436,13 +748,13 @@
         elements.tooltip.classList.remove('is-visible');
       }
 
-      function renderTable(filieres) {
+      function renderTable(snapshot) {
         elements.tableBody.replaceChildren();
-        filieres.forEach((item) => {
+        snapshot.groups.forEach((item) => {
           const row = document.createElement('tr');
           if (!item.dataAvailable) row.className = 'is-unavailable';
           const cells = [
-            item.filiere,
+            item.label,
             formatCount(item.concernes),
             formatCount(item.terminees),
             item.dataAvailable ? formatRate(item.tauxTerminees) : item.note,
@@ -464,15 +776,16 @@
         });
       }
 
-      function buildCsv(filieres) {
+      function buildCsv(snapshot) {
+        const niveauLabel = NIVEAU_LABELS[snapshot.niveau] || 'Filière';
         const headers = [
-          'Filière', 'Concernées', 'Terminées', 'Taux terminées (%)',
+          niveauLabel, 'Concernées', 'Terminées', 'Taux terminées (%)',
           'Moyenne avancement (%)', 'Pôles connus', "N'ont pas répondu",
           'Taux de réponse (%)', 'Note'
         ];
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
-        const rows = filieres.map((item) => [
-          item.filiere, item.concernes, item.terminees, item.tauxTerminees,
+        const rows = snapshot.groups.map((item) => [
+          item.label, item.concernes, item.terminees, item.tauxTerminees,
           item.tauxMoyenAvancement, item.poleUniverseCount, item.nonRespondentPoleCount,
           item.tauxReponse, item.note
         ].map(escapeCsv).join(','));
@@ -556,36 +869,147 @@
       });
 
       elements.exportCsv.addEventListener('click', () => {
-        if (!state.snapshot) return;
-        const csv = buildCsv(state.snapshot.filieres);
+        if (!state.syntheseSnapshot) return;
+        const csv = buildCsv(state.syntheseSnapshot);
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-donnees-${dateStamp()}.csv`);
       });
 
-      function setExportButtonsEnabled(enabled) {
+      function setSyntheseExportEnabled(enabled) {
         [elements.exportPng, elements.exportSvg, elements.exportCsv].forEach((button) => {
           button.disabled = !enabled;
         });
       }
+      setSyntheseExportEnabled(false);
 
-      setExportButtonsEnabled(false);
+      // ---------------------------------------------------------------
+      // Vue détail pôle × action
+      // ---------------------------------------------------------------
+      // Avancement = grandeur continue -> une seule teinte, du clair (peu
+      // avancé) au foncé (très avancé), comme le recommande le skill
+      // dataviz pour une heatmap. "Abandonnée" est un état à part (pas un
+      // point de la même échelle 0-100 %) : couleur "critical" réservée du
+      // skill, jamais réutilisée comme une nuance parmi d'autres.
+      function matrixCellStyle(rawValue) {
+        const normalized = String(rawValue || '').trim();
+        if (!normalized) {
+          return {background: 'var(--surface-2)', color: 'var(--text-muted)', text: '—'};
+        }
+        if (/abandonn[ée]e/i.test(normalized)) {
+          return {background: 'var(--status-critical)', color: '#ffffff', text: 'Abandonnée'};
+        }
+        const match = normalized.match(/^(\d+(?:[.,]\d+)?)\s*%$/);
+        if (!match) {
+          return {background: 'var(--surface-2)', color: 'var(--text-primary)', text: normalized};
+        }
+        const percent = Number(match[1].replace(',', '.'));
+        const lightness = 92 - (percent / 100) * 55; // 92% (0) -> 37% (100)
+        const textColor = lightness < 55 ? '#ffffff' : 'var(--text-primary)';
+        return {background: `hsl(190, 45%, ${lightness}%)`, color: textColor, text: `${percent} %`};
+      }
 
+      function loadMatrix() {
+        const filiere = elements.detailFiliere.value;
+        const territoire = elements.detailTerritoire.value;
+        if (!filiere || !territoire) {
+          state.matrix = null;
+          elements.matrixTable.hidden = true;
+          elements.matrixEmpty.hidden = false;
+          elements.matrixEmpty.textContent = 'Choisissez une filière puis un territoire pour afficher le détail.';
+          elements.exportMatrixCsv.disabled = true;
+          elements.detailTitle.textContent = 'Détail pôle × action';
+          return;
+        }
+        elements.matrixEmpty.hidden = false;
+        elements.matrixEmpty.textContent = 'Chargement…';
+        elements.matrixTable.hidden = true;
+        google.script.run
+          .withSuccessHandler((matrix) => {
+            state.matrix = matrix;
+            renderMatrix(matrix);
+          })
+          .withFailureHandler((error) => {
+            elements.matrixEmpty.hidden = false;
+            elements.matrixEmpty.textContent = error && error.message ? error.message : 'Impossible de charger le détail.';
+            elements.matrixTable.hidden = true;
+            elements.exportMatrixCsv.disabled = true;
+          })
+          .getPoleActionMatrix(filiere, territoire);
+      }
+
+      function renderMatrix(matrix) {
+        elements.detailTitle.textContent = `Détail pôle × action — ${matrix.filiere} · ${matrix.territoire}`;
+        if (!matrix.rows.length || !matrix.poles.length) {
+          elements.matrixTable.hidden = true;
+          elements.matrixEmpty.hidden = false;
+          elements.matrixEmpty.textContent = 'Aucune donnée pour ce périmètre.';
+          elements.exportMatrixCsv.disabled = true;
+          return;
+        }
+
+        elements.matrixHeaderRow.replaceChildren();
+        const actionHeader = document.createElement('th');
+        actionHeader.className = 'matrix-action-header';
+        actionHeader.scope = 'col';
+        actionHeader.textContent = 'Action';
+        elements.matrixHeaderRow.appendChild(actionHeader);
+        matrix.poles.forEach((pole) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          th.textContent = pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode;
+          th.title = pole.poleCode;
+          elements.matrixHeaderRow.appendChild(th);
+        });
+
+        elements.matrixBody.replaceChildren();
+        matrix.rows.forEach((row) => {
+          const tr = document.createElement('tr');
+          const actionCell = document.createElement('td');
+          actionCell.className = 'matrix-action';
+          actionCell.textContent = row.action;
+          tr.appendChild(actionCell);
+          row.cells.forEach((rawValue) => {
+            const style = matrixCellStyle(rawValue);
+            const td = document.createElement('td');
+            td.textContent = style.text;
+            td.style.background = style.background;
+            td.style.color = style.color;
+            tr.appendChild(td);
+          });
+          elements.matrixBody.appendChild(tr);
+        });
+
+        elements.matrixTable.hidden = false;
+        elements.matrixEmpty.hidden = true;
+        elements.exportMatrixCsv.disabled = false;
+      }
+
+      elements.exportMatrixCsv.addEventListener('click', () => {
+        if (!state.matrix) return;
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const headers = ['Action', ...state.matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
+        const rows = state.matrix.rows.map((row) => [row.action, ...row.cells].map(escapeCsv).join(','));
+        const csv = [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+        downloadBlob(
+          new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}),
+          `dashboard-rso-detail-${state.matrix.filiere}-${state.matrix.territoire}-${dateStamp()}.csv`.replace(/\s+/g, '_')
+        );
+      });
+
+      // ---------------------------------------------------------------
+      // Démarrage
+      // ---------------------------------------------------------------
       google.script.run
-        .withSuccessHandler((snapshot) => {
-          state.snapshot = snapshot;
-          const generated = new Date(snapshot.generatedAt);
-          elements.status.textContent =
-            `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${snapshot.appVersion}`;
-          renderChart(snapshot.filieres);
-          renderTable(snapshot.filieres);
-          setExportButtonsEnabled(true);
+        .withSuccessHandler((options) => {
+          state.filterOptions = options;
+          populateFiliereSelect(elements.syntheseFiliere, true);
+          populateFiliereSelect(elements.detailFiliere, false);
+          loadSynthese();
         })
         .withFailureHandler((error) => {
-          elements.status.textContent = error && error.message
-            ? error.message
-            : 'Impossible de charger le tableau de bord.';
+          elements.status.textContent = error && error.message ? error.message : 'Impossible de charger les filtres.';
           elements.status.classList.add('error');
         })
-        .getFiliereCompletionSnapshot();
+        .getFilterOptions();
     </script>
   </body>
 </html>
