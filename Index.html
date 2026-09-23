@@ -19,6 +19,10 @@
         échouaient aux contrôles d'accessibilité du skill dataviz (chroma
         trop faible, séparation CVD insuffisante) — validé avec
         scripts/validate_palette.js (clair et sombre, all-pairs).
+
+        Mode sombre : bascule manuelle (attribut data-theme), pas seulement
+        prefers-color-scheme — le skill dataviz recommande un choix explicite
+        plutôt qu'un simple suivi du système, et c'était demandé.
       */
       .viz-root {
         color-scheme: light;
@@ -34,7 +38,7 @@
         --status-critical:#d03b3b; /* réservé : "Abandonnée" dans la matrice détail */
       }
       @media (prefers-color-scheme: dark) {
-        .viz-root {
+        :root:not([data-theme="light"]) .viz-root {
           color-scheme: dark;
           --surface-1:      #1a1a19;
           --surface-2:      #232322;
@@ -48,6 +52,19 @@
           --status-critical:#e66767;
         }
       }
+      :root[data-theme="dark"] .viz-root {
+        color-scheme: dark;
+        --surface-1:      #1a1a19;
+        --surface-2:      #232322;
+        --text-primary:   #ffffff;
+        --text-secondary: #c3c2b7;
+        --text-muted:     #8f8d84;
+        --line:           #333330;
+        --series-1:       #006997;
+        --series-2:       #009da7;
+        --series-3:       #7830b6;
+        --status-critical:#e66767;
+      }
 
       * { box-sizing: border-box; }
 
@@ -59,14 +76,45 @@
         font: 14px/1.4 "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
 
+      .app-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+
+      .app-header-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      #app-logo {
+        /* Le fichier fourni a un fond blanc (pas de transparence) : on le
+           pose sur une plaque blanche systématique plutôt que de le laisser
+           flotter, pour qu'il reste lisible même en mode sombre. */
+        height: 34px;
+        width: auto;
+        display: block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
       h1 {
-        margin: 0 0 4px;
+        margin: 0;
         font-size: 1.3rem;
         font-weight: 600; /* Poppins SemiBold, cf. charte graphique */
       }
 
+      .theme-toggle {
+        min-height: 34px;
+      }
+
       .subtitle {
-        margin: 0 0 20px;
+        margin: 4px 0 20px;
         color: var(--text-secondary);
         font-size: 0.86rem;
       }
@@ -76,6 +124,7 @@
         gap: 4px;
         margin-bottom: 16px;
         border-bottom: 1px solid var(--line);
+        flex-wrap: wrap;
       }
 
       .tab-button {
@@ -176,6 +225,12 @@
         background: var(--surface-2);
       }
 
+      .filter-hint {
+        margin: -10px 0 18px;
+        color: var(--text-muted);
+        font-size: 0.76rem;
+      }
+
       .legend {
         display: flex;
         flex-wrap: wrap;
@@ -195,14 +250,17 @@
         width: 10px;
         height: 10px;
         border-radius: 2px;
+        flex: 0 0 auto;
       }
 
       .chart-scroll {
-        overflow-x: auto;
+        overflow: visible;
       }
 
       svg.chart {
         display: block;
+        overflow: visible; /* les étiquettes pivotées dépassent parfois du viewBox */
+        max-width: 100%;
       }
 
       .chart-note {
@@ -228,7 +286,7 @@
       #tooltip {
         position: fixed;
         z-index: 10;
-        max-width: 240px;
+        max-width: 260px;
         padding: 8px 10px;
         border-radius: 8px;
         background: var(--text-primary);
@@ -243,6 +301,7 @@
 
       #tooltip.is-visible { opacity: 1; }
       #tooltip .tooltip-value { font-weight: 700; }
+      #tooltip .tooltip-effectifs { opacity: 0.85; }
       #tooltip .tooltip-label { opacity: 0.85; }
 
       table {
@@ -324,20 +383,67 @@
         z-index: 3;
       }
 
+      table.matrix thead .matrix-territoire-header {
+        top: 0;
+      }
+
+      table.matrix thead .matrix-pole-header {
+        top: 33px;
+      }
+
       .matrix-empty {
         padding: 20px;
         color: var(--text-muted);
         text-align: center;
       }
+
+      .doc-section {
+        margin-bottom: 22px;
+      }
+
+      .doc-section h3 {
+        margin: 0 0 8px;
+        font-size: 0.92rem;
+      }
+
+      .doc-section p, .doc-section li {
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+
+      .doc-section code {
+        padding: 1px 5px;
+        border-radius: 4px;
+        background: var(--surface-2);
+        font-size: 0.82em;
+      }
+
+      .doc-caveat {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--status-critical);
+        border-radius: 6px;
+        background: var(--surface-2);
+        margin: 8px 0;
+        font-size: 0.84rem;
+      }
     </style>
   </head>
   <body class="viz-root">
-    <h1>Dashboard RSO — Avancement des actions</h1>
+    <div class="app-header">
+      <div class="app-header-title">
+        <img id="app-logo" src="data:image/jpeg;base64,/9j/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/sABFEdWNreQABAAQAAABkAAD/4QQUaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wLwA8P3hwYWNrZXQgYmVnaW49Iu+7vyIgaWQ9Ilc1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCI/PiA8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIiB4OnhtcHRrPSJBZG9iZSBYTVAgQ29yZSA5LjAtYzAwMCA3OS5kYTRhN2U1ZWYsIDIwMjIvMTEvMjItMTM6NTA6MDcgICAgICAgICI+IDxyZGY6UkRGIHhtbG5zOnJkZj0iaHR0cDovL3d3dy53My5vcmcvMTk5OS8wMi8yMi1yZGYtc3ludGF4LW5zIyI+IDxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSIiIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdFJlZj0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlUmVmIyIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0idXVpZDo1RDIwODkyNDkzQkZEQjExOTE0QTg1OTBEMzE1MDhDOCIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpDQkFGRTM3QkQyMDQxMUVEQTMzQkU1RjZFOUE3MUExMyIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpDQkFGRTM3QUQyMDQxMUVEQTMzQkU1RjZFOUE3MUExMyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBJbGx1c3RyYXRvciAyNy4yIChNYWNpbnRvc2gpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InV1aWQ6OTM1ZGY2ZTItOWM4MC03MDRiLThlMWEtM2IwNGQxOGE3ZDUwIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOmZiMDA3ZDdkLTRlZjktNDFkYS05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" alt="Croix-Rouge française">
+        <h1>Dashboard RSO — Avancement des actions</h1>
+      </div>
+      <button type="button" class="theme-toggle" id="theme-toggle">🌙 Mode sombre</button>
+    </div>
     <p class="subtitle" id="status">Chargement des données…</p>
 
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
       <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
+      <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
     </div>
 
     <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
@@ -358,6 +464,7 @@
             <label for="synthese-niveau">Regrouper par</label>
             <select id="synthese-niveau">
               <option value="filiere">Filière</option>
+              <option value="territoire">Territoire (détail)</option>
               <option value="thematique">Thématique</option>
               <option value="volet">Volet (année de lancement)</option>
               <option value="action">Action</option>
@@ -372,6 +479,7 @@
             </select>
           </div>
         </div>
+        <p class="filter-hint">« Territoire (détail) » affiche une barre par territoire de la filière choisie — nécessite de choisir une filière précise.</p>
       </section>
 
       <section class="panel">
@@ -382,6 +490,7 @@
             <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
           </div>
         </div>
+        <div class="legend" id="synthese-legend"></div>
         <div class="chart-scroll">
           <svg class="chart" id="chart" role="img" aria-label="Comparaison de l'indicateur choisi"></svg>
         </div>
@@ -430,6 +539,14 @@
             <label for="detail-territoire">Territoire</label>
             <select id="detail-territoire" disabled><option value="">Choisir d'abord une filière…</option></select>
           </div>
+          <div class="filter-field">
+            <label for="detail-volet">Volet</label>
+            <select id="detail-volet" disabled><option value="">Tous les volets</option></select>
+          </div>
+          <div class="filter-field">
+            <label for="detail-thematique">Thématique</label>
+            <select id="detail-thematique" disabled><option value="">Toutes les thématiques</option></select>
+          </div>
         </div>
       </section>
 
@@ -446,10 +563,45 @@
         </div>
         <div class="matrix-scroll">
           <table class="matrix" id="matrix-table" hidden>
-            <thead><tr id="matrix-header-row"></tr></thead>
+            <thead>
+              <tr id="matrix-territoire-row" class="matrix-territoire-header"></tr>
+              <tr id="matrix-header-row" class="matrix-pole-header"></tr>
+            </thead>
             <tbody id="matrix-body"></tbody>
           </table>
-          <p class="matrix-empty" id="matrix-empty">Choisissez une filière puis un territoire pour afficher le détail.</p>
+          <p class="matrix-empty" id="matrix-empty">Choisissez une filière (et éventuellement un territoire) pour afficher le détail.</p>
+        </div>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="panel-doc" role="tabpanel" aria-labelledby="tab-doc" hidden>
+      <section class="panel">
+        <div class="doc-section">
+          <h3>Sources</h3>
+          <p>Deux onglets du classeur REPORTING NATIONAL : <code>IMPORT DONNEES</code> (zone SYNTHESE, colonnes AM:AZ) pour la table de faits — un couple pôle × action par ligne — et <code>BDD NOMS</code> pour la dimension pôle (filière, territoire, régions). La jointure se fait sur le code pôle.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Les trois indicateurs</h3>
+          <p><strong>Terminées / concernées</strong> : nombre de couples pôle × action à 100 % divisé par le nombre de couples « concernés » (tout sauf « Abandonnée » — un pôle à 0 % reste concerné, il n'a simplement pas encore progressé). Formule vérifiée directement dans les onglets par filière du classeur national (ex. <code>SAN!J10/K10</code>).</p>
+          <p><strong>Moyenne d'avancement</strong> : moyenne des pourcentages d'avancement parmi les couples concernés. Contrairement au premier indicateur, aucune formule vivante équivalente n'a été retrouvée dans le classeur national pour la vérifier (l'onglet qui porte ce nom s'est révélé être une copie mal étiquetée du premier indicateur) — c'est une interprétation raisonnable, pas une valeur confirmée par une référence externe.</p>
+          <p><strong>Taux de réponse</strong> : part des pôles connus (BDD NOMS) ayant au moins un avancement non nul, tous couples pôle × action confondus. Vérifié : correspond exactement aux « % de réponses » déjà affichés dans le classeur national, filière par filière.</p>
+          <div class="doc-caveat">« A répondu » compte depuis toujours, pas seulement la campagne en cours — distinguer les deux reste une question ouverte avec le responsable de l'outil.</div>
+        </div>
+        <div class="doc-section">
+          <h3>Filières PA/DOM et PADOM</h3>
+          <p>BDD NOMS regroupe ces pôles sous une seule filière <code>PADOM</code> (Personnes Âgées + soin à DOMicile). IMPORT DONNEES, lui, étiquette chaque ligne <code>PA</code> ou <code>DOM</code> séparément. Le dashboard résout la filière de chaque ligne via le code pôle et BDD NOMS — donc via <code>PADOM</code> — plutôt que via la colonne Filière d'IMPORT DONNEES : les deux libellés se retrouvent donc réconciliés sous un seul indicateur, sans qu'aucune donnée source n'ait besoin d'être modifiée.</p>
+        </div>
+        <div class="doc-section">
+          <h3>Territoires</h3>
+          <p>Un territoire est une lettre ou un numéro (ex. <code>Territoire A</code>, <code>Territoire 3</code>) propre à chaque filière, associé à une liste de régions (ex. <code>HDF - IDF - GE</code>). Les deux nomenclatures (lettrée / numérotée) coexistent selon les filières — c'est normal, chacune est propre à sa filière (cf. CLAUDE.md).</p>
+        </div>
+        <div class="doc-section">
+          <h3>Limites connues</h3>
+          <ul>
+            <li><strong>PROT ENFANCE</strong> n'a aucune ligne dans IMPORT DONNEES (zone SYNTHESE) : ses données sont alimentées autrement dans le classeur national. Affiché comme « donnée non disponible », jamais comme un faux 0 %.</li>
+            <li><strong>OUTRE-MER</strong> : le pôle correspondant dans BDD NOMS a un code vide, donc pas d'univers de pôles fiable pour cette filière (taux de réponse non calculable) — à corriger à la source.</li>
+            <li>Les données lues ici reflètent le classeur au moment du dernier chargement de cette page : en cas de doute sur un chiffre, vérifier dans le Sheet vivant avant tout usage en réunion.</li>
+          </ul>
         </div>
       </section>
     </section>
@@ -459,6 +611,7 @@
     <script>
       const NIVEAU_LABELS = {
         filiere: 'Filière',
+        territoire: 'Territoire',
         thematique: 'Thématique',
         volet: 'Volet',
         action: 'Action'
@@ -470,23 +623,31 @@
         tauxReponse: {label: 'Taux de réponse', color: 'var(--series-3)'}
       };
 
+      const UNKNOWN_LABEL = 'Non renseigné(e)';
+      const EXCLUDED_AVANCEMENT = 'abandonnee';
+      const DONE_AVANCEMENT = '100%';
+
       const state = {
-        filterOptions: {filieres: [], territoiresByFiliere: {}},
+        bootstrap: null,
         syntheseSnapshot: null,
         matrix: null
       };
 
       const elements = {
         status: document.getElementById('status'),
+        themeToggle: document.getElementById('theme-toggle'),
         tabSynthese: document.getElementById('tab-synthese'),
         tabDetail: document.getElementById('tab-detail'),
+        tabDoc: document.getElementById('tab-doc'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
+        panelDoc: document.getElementById('panel-doc'),
 
         syntheseFiliere: document.getElementById('synthese-filiere'),
         syntheseTerritoire: document.getElementById('synthese-territoire'),
         syntheseNiveau: document.getElementById('synthese-niveau'),
         syntheseIndicateur: document.getElementById('synthese-indicateur'),
+        syntheseLegend: document.getElementById('synthese-legend'),
         chartTitle: document.getElementById('synthese-chart-title'),
         chart: document.getElementById('chart'),
         chartNote: document.getElementById('chart-note'),
@@ -500,13 +661,36 @@
 
         detailFiliere: document.getElementById('detail-filiere'),
         detailTerritoire: document.getElementById('detail-territoire'),
+        detailVolet: document.getElementById('detail-volet'),
+        detailThematique: document.getElementById('detail-thematique'),
         detailTitle: document.getElementById('detail-title'),
         matrixTable: document.getElementById('matrix-table'),
+        matrixTerritoireRow: document.getElementById('matrix-territoire-row'),
         matrixHeaderRow: document.getElementById('matrix-header-row'),
         matrixBody: document.getElementById('matrix-body'),
         matrixEmpty: document.getElementById('matrix-empty'),
         exportMatrixCsv: document.getElementById('export-matrix-csv')
       };
+
+      // ---------------------------------------------------------------
+      // Mode sombre : bascule manuelle, mémorisée pour cette session.
+      // ---------------------------------------------------------------
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        elements.themeToggle.textContent = theme === 'dark' ? '☀️ Mode clair' : '🌙 Mode sombre';
+        try { window.localStorage.setItem('pnrso.theme', theme); } catch (error) { /* stockage indisponible : pas bloquant */ }
+        if (state.syntheseSnapshot) renderChart(state.syntheseSnapshot);
+      }
+      elements.themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+      });
+      (function initTheme() {
+        let saved = null;
+        try { saved = window.localStorage.getItem('pnrso.theme'); } catch (error) { /* ignore */ }
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+      })();
 
       function formatRate(value) {
         return value === null || value === undefined ? '—' : `${value.toLocaleString('fr-FR')} %`;
@@ -547,65 +731,269 @@
         return el;
       }
 
+      function truncateLabel(text, maxChars) {
+        return text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text;
+      }
+
       // ---------------------------------------------------------------
       // Onglets
       // ---------------------------------------------------------------
       function selectTab(name) {
-        const showSynthese = name === 'synthese';
-        elements.tabSynthese.setAttribute('aria-selected', String(showSynthese));
-        elements.tabDetail.setAttribute('aria-selected', String(!showSynthese));
-        elements.panelSynthese.hidden = !showSynthese;
-        elements.panelDetail.hidden = showSynthese;
+        elements.tabSynthese.setAttribute('aria-selected', String(name === 'synthese'));
+        elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
+        elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
+        elements.panelSynthese.hidden = name !== 'synthese';
+        elements.panelDetail.hidden = name !== 'detail';
+        elements.panelDoc.hidden = name !== 'doc';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
+      elements.tabDoc.addEventListener('click', () => selectTab('doc'));
 
       // ---------------------------------------------------------------
-      // Filtres (peuplés depuis getFilterOptions(), jamais codés en dur —
-      // cf. CLAUDE.md : "tout ce qui varie vit dans un Sheet").
+      // Calcul — reproduit fidèlement (et seulement ici, cf. commentaire
+      // côté serveur) la logique des trois indicateurs.
       // ---------------------------------------------------------------
+      function normalizeAvancementValue(value) {
+        return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+      }
+      function isConcerne(avancement) {
+        return normalizeAvancementValue(avancement) !== EXCLUDED_AVANCEMENT;
+      }
+      function isTermine(avancement) {
+        return normalizeAvancementValue(avancement) === DONE_AVANCEMENT;
+      }
+      function parseAvancementFraction(avancement) {
+        const match = normalizeAvancementValue(avancement).match(/^(\d+(?:\.\d+)?)%$/);
+        return match ? Number(match[1]) / 100 : 0;
+      }
+      function normalizePoleCode(code) {
+        return String(code || '').trim().toLowerCase();
+      }
+      function roundRate(numerator, denominator) {
+        return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
+      }
+
+      function poleUniverseCodes(poles, filiereName, territoireName) {
+        return poles
+          .filter((pole) => pole.filiere === filiereName && (!territoireName || pole.territoire === territoireName))
+          .map((pole) => normalizePoleCode(pole.poleCode));
+      }
+
+      function computeSnapshot(bootstrap, options) {
+        const scopeFiliere = options.filiere || '';
+        const scopeTerritoire = scopeFiliere ? (options.territoire || '') : '';
+        const niveau = NIVEAU_LABELS[options.niveau] ? options.niveau : 'filiere';
+
+        const scopedFacts = bootstrap.facts.filter((fact) => {
+          if (scopeFiliere && fact.filiere !== scopeFiliere) return false;
+          if (scopeFiliere && scopeTerritoire && fact.territoire !== scopeTerritoire) return false;
+          return true;
+        });
+
+        const keyOf = (fact) => {
+          if (niveau === 'territoire') return fact.territoire || UNKNOWN_LABEL;
+          if (niveau === 'thematique') return fact.thematique || UNKNOWN_LABEL;
+          if (niveau === 'volet') return fact.volet || UNKNOWN_LABEL;
+          if (niveau === 'action') return fact.action || UNKNOWN_LABEL;
+          return fact.filiere;
+        };
+
+        const byGroup = new Map();
+        const ensureGroup = (name) => {
+          if (!byGroup.has(name)) {
+            byGroup.set(name, {total: 0, concernes: 0, terminees: 0, somme: 0, respondingPoles: new Map()});
+          }
+          return byGroup.get(name);
+        };
+
+        scopedFacts.forEach((fact) => {
+          const bucket = ensureGroup(keyOf(fact));
+          bucket.total += 1;
+          const fraction = parseAvancementFraction(fact.avancement);
+          if (isConcerne(fact.avancement)) {
+            bucket.concernes += 1;
+            bucket.somme += fraction;
+            if (isTermine(fact.avancement)) bucket.terminees += 1;
+          }
+          const code = normalizePoleCode(fact.poleCode);
+          bucket.respondingPoles.set(code, (bucket.respondingPoles.get(code) || 0) + fraction);
+        });
+
+        if (niveau === 'filiere' && !scopeFiliere) {
+          bootstrap.poles.forEach((pole) => { if (pole.filiere) ensureGroup(pole.filiere); });
+        }
+        if (niveau === 'territoire' && scopeFiliere) {
+          bootstrap.poles
+            .filter((pole) => pole.filiere === scopeFiliere && pole.territoire)
+            .forEach((pole) => ensureGroup(pole.territoire));
+        }
+
+        const groups = [...byGroup.keys()]
+          .sort((left, right) => left.localeCompare(right, 'fr'))
+          .map((name) => {
+            const bucket = byGroup.get(name);
+            const universeFiliere = niveau === 'filiere' ? name : scopeFiliere;
+            const universeTerritoire = niveau === 'territoire' ? name : (niveau === 'filiere' ? '' : scopeTerritoire);
+            const universe = universeFiliere ? poleUniverseCodes(bootstrap.poles, universeFiliere, universeTerritoire) : [];
+            const nonRespondentCodes = universe.filter((code) => (bucket.respondingPoles.get(code) || 0) === 0);
+            const dataAvailable = bucket.total > 0;
+
+            return {
+              label: name,
+              dataAvailable: dataAvailable,
+              note: dataAvailable ? '' : 'Donnée non disponible pour ce groupe dans ce périmètre (voir onglet Méthodologie).',
+              total: bucket.total,
+              concernes: bucket.concernes,
+              terminees: bucket.terminees,
+              tauxTerminees: dataAvailable ? roundRate(bucket.terminees, bucket.concernes) : null,
+              tauxMoyenAvancement: dataAvailable ? roundRate(bucket.somme, bucket.concernes) : null,
+              poleUniverseCount: universe.length,
+              nonRespondentPoleCount: nonRespondentCodes.length,
+              tauxReponse: dataAvailable && universe.length > 0
+                ? roundRate(universe.length - nonRespondentCodes.length, universe.length)
+                : null
+            };
+          });
+
+        return {
+          appVersion: bootstrap.appVersion,
+          generatedAt: bootstrap.generatedAt,
+          filiere: scopeFiliere,
+          territoire: scopeTerritoire,
+          niveau: niveau,
+          groups: groups
+        };
+      }
+
+      function computeMatrix(bootstrap, options) {
+        const filiere = options.filiere;
+        if (!filiere) {
+          return {filiere: '', territoire: '', volet: '', thematique: '', territoires: [], poles: [], rows: []};
+        }
+        const territoire = options.territoire || '';
+        const volet = options.volet || '';
+        const thematique = options.thematique || '';
+
+        const scopedFacts = bootstrap.facts.filter((fact) =>
+          fact.filiere === filiere &&
+          (!territoire || fact.territoire === territoire) &&
+          (!volet || fact.volet === volet) &&
+          (!thematique || fact.thematique === thematique)
+        );
+
+        const poleOrder = [];
+        const poleSeen = new Set();
+        const actionOrder = [];
+        const actionSeen = new Set();
+        const cellByKey = new Map();
+
+        scopedFacts.forEach((fact) => {
+          const code = normalizePoleCode(fact.poleCode);
+          if (!poleSeen.has(code)) { poleSeen.add(code); poleOrder.push(code); }
+          if (!actionSeen.has(fact.action)) { actionSeen.add(fact.action); actionOrder.push(fact.action); }
+          cellByKey.set(`${fact.action}\u0001${code}`, fact.avancement);
+        });
+
+        const poleByCode = new Map(bootstrap.poles.map((pole) => [normalizePoleCode(pole.poleCode), pole]));
+        // Trie les pôles par territoire (pour le regroupement visuel) puis
+        // par code, plutôt que par ordre d'apparition dans le classeur.
+        poleOrder.sort((left, right) => {
+          const poleLeft = poleByCode.get(left);
+          const poleRight = poleByCode.get(right);
+          const territoireLeft = poleLeft ? poleLeft.territoire : '';
+          const territoireRight = poleRight ? poleRight.territoire : '';
+          return territoireLeft.localeCompare(territoireRight, 'fr') || left.localeCompare(right, 'fr');
+        });
+
+        const poles = poleOrder.map((code) => {
+          const pole = poleByCode.get(code);
+          return {
+            poleCode: pole ? pole.poleCode : code,
+            label: pole ? pole.label : '',
+            territoire: pole ? pole.territoire : ''
+          };
+        });
+
+        const rows = actionOrder.map((action) => ({
+          action: action,
+          cells: poleOrder.map((code) => cellByKey.get(`${action}\u0001${code}`) || '')
+        }));
+
+        return {filiere, territoire, volet, thematique, poles, rows};
+      }
+
+      // ---------------------------------------------------------------
+      // Filtres — peuplés depuis les données déjà chargées, jamais codés en
+      // dur (cf. CLAUDE.md : "tout ce qui varie vit dans un Sheet").
+      // ---------------------------------------------------------------
+      function distinctSorted(values) {
+        return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right, 'fr'));
+      }
+
+      function territoiresForFiliere(filiereName) {
+        return distinctSorted(state.bootstrap.poles.filter((pole) => pole.filiere === filiereName).map((pole) => pole.territoire));
+      }
+
+      function territoireDisplayLabel(filiereName, territoireName) {
+        const pole = state.bootstrap.poles.find((item) => item.filiere === filiereName && item.territoire === territoireName && item.regions);
+        return pole ? `${territoireName} · ${pole.regions}` : territoireName;
+      }
+
       function populateFiliereSelect(select, includeGlobalOption) {
         const current = select.value;
         select.replaceChildren();
-        if (includeGlobalOption) {
-          select.append(new Option('Toutes les filières', ''));
-        } else {
-          select.append(new Option('Choisir une filière…', ''));
-        }
-        state.filterOptions.filieres.forEach((name) => select.append(new Option(name, name)));
-        if ([...select.options].some((option) => option.value === current)) {
-          select.value = current;
-        }
+        select.append(new Option(includeGlobalOption ? 'Toutes les filières' : 'Choisir une filière…', ''));
+        distinctSorted(state.bootstrap.poles.map((pole) => pole.filiere)).forEach((name) => select.append(new Option(name, name)));
+        if ([...select.options].some((option) => option.value === current)) select.value = current;
       }
 
       function populateTerritoireSelect(select, filiereName, placeholder) {
         const current = select.value;
         select.replaceChildren();
         select.append(new Option(placeholder, ''));
-        const territoires = state.filterOptions.territoiresByFiliere[filiereName] || [];
-        territoires.forEach((name) => select.append(new Option(name, name)));
+        territoiresForFiliere(filiereName).forEach((name) => select.append(new Option(territoireDisplayLabel(filiereName, name), name)));
         select.disabled = !filiereName;
-        if ([...select.options].some((option) => option.value === current)) {
-          select.value = current;
-        }
+        if ([...select.options].some((option) => option.value === current)) select.value = current;
+      }
+
+      function populateValueSelect(select, values, placeholder) {
+        const current = select.value;
+        select.replaceChildren();
+        select.append(new Option(placeholder, ''));
+        values.forEach((name) => select.append(new Option(name, name)));
+        select.disabled = values.length === 0;
+        if ([...select.options].some((option) => option.value === current)) select.value = current;
       }
 
       elements.syntheseFiliere.addEventListener('change', () => {
         populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière');
-        loadSynthese();
+        updateNiveauAvailability();
+        renderSynthese();
       });
-      elements.syntheseTerritoire.addEventListener('change', loadSynthese);
-      elements.syntheseNiveau.addEventListener('change', loadSynthese);
-      elements.syntheseIndicateur.addEventListener('change', () => {
-        renderChart(state.syntheseSnapshot);
-        updateChartTitle();
-      });
+      elements.syntheseTerritoire.addEventListener('change', renderSynthese);
+      elements.syntheseNiveau.addEventListener('change', renderSynthese);
+      elements.syntheseIndicateur.addEventListener('change', renderSynthese);
+
+      function updateNiveauAvailability() {
+        const territoireOption = elements.syntheseNiveau.querySelector('option[value="territoire"]');
+        const hasFiliere = Boolean(elements.syntheseFiliere.value);
+        territoireOption.disabled = !hasFiliere;
+        if (!hasFiliere && elements.syntheseNiveau.value === 'territoire') {
+          elements.syntheseNiveau.value = 'filiere';
+        }
+      }
 
       elements.detailFiliere.addEventListener('change', () => {
-        populateTerritoireSelect(elements.detailTerritoire, elements.detailFiliere.value, 'Choisir un territoire…');
-        loadMatrix();
+        populateTerritoireSelect(elements.detailTerritoire, elements.detailFiliere.value, 'Tous les territoires');
+        const facts = state.bootstrap.facts.filter((fact) => fact.filiere === elements.detailFiliere.value);
+        populateValueSelect(elements.detailVolet, distinctSorted(facts.map((fact) => fact.volet)), 'Tous les volets');
+        populateValueSelect(elements.detailThematique, distinctSorted(facts.map((fact) => fact.thematique)), 'Toutes les thématiques');
+        renderMatrix();
       });
-      elements.detailTerritoire.addEventListener('change', loadMatrix);
+      elements.detailTerritoire.addEventListener('change', renderMatrix);
+      elements.detailVolet.addEventListener('change', renderMatrix);
+      elements.detailThematique.addEventListener('change', renderMatrix);
 
       // ---------------------------------------------------------------
       // Vue synthèse
@@ -613,43 +1001,42 @@
       function updateChartTitle() {
         const indicateur = INDICATEUR_META[elements.syntheseIndicateur.value];
         const niveauLabel = NIVEAU_LABELS[elements.syntheseNiveau.value] || 'Filière';
-        elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}`;
-        elements.dataTableGroupHeader.textContent = niveauLabel;
         const scopeBits = [];
         if (elements.syntheseFiliere.value) scopeBits.push(elements.syntheseFiliere.value);
         if (elements.syntheseTerritoire.value) scopeBits.push(elements.syntheseTerritoire.value);
-        elements.dataTableCaption.textContent = scopeBits.length
-          ? `${scopeBits.join(' · ')} — les taux sont exprimés en %.`
-          : 'Toutes filières confondues — les taux sont exprimés en %.';
+        const scopeSuffix = scopeBits.length ? ` — ${scopeBits.join(' · ')}` : ' — toutes filières';
+        elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}${scopeSuffix}`;
+        elements.dataTableGroupHeader.textContent = niveauLabel;
+        elements.dataTableCaption.textContent = `${scopeBits.length ? scopeBits.join(' · ') : 'Toutes filières confondues'} — les taux sont exprimés en %.`;
+
+        elements.syntheseLegend.replaceChildren();
+        const item = document.createElement('span');
+        item.className = 'legend-item';
+        const swatch = document.createElement('span');
+        swatch.className = 'legend-swatch';
+        swatch.style.background = indicateur.color;
+        item.append(swatch, document.createTextNode(indicateur.label));
+        elements.syntheseLegend.append(item);
       }
 
-      function loadSynthese() {
-        const options = {
+      function renderSynthese() {
+        if (!state.bootstrap) return;
+        const snapshot = computeSnapshot(state.bootstrap, {
           filiere: elements.syntheseFiliere.value,
           territoire: elements.syntheseTerritoire.value,
           niveau: elements.syntheseNiveau.value
-        };
-        elements.status.textContent = 'Chargement des données…';
-        elements.status.classList.remove('error');
-        google.script.run
-          .withSuccessHandler((snapshot) => {
-            state.syntheseSnapshot = snapshot;
-            const generated = new Date(snapshot.generatedAt);
-            elements.status.textContent =
-              `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${snapshot.appVersion}`;
-            updateChartTitle();
-            renderChart(snapshot);
-            renderTable(snapshot);
-            setSyntheseExportEnabled(true);
-          })
-          .withFailureHandler((error) => {
-            elements.status.textContent = error && error.message
-              ? error.message
-              : 'Impossible de charger le tableau de bord.';
-            elements.status.classList.add('error');
-            setSyntheseExportEnabled(false);
-          })
-          .getCompletionSnapshot(options);
+        });
+        state.syntheseSnapshot = snapshot;
+        updateChartTitle();
+        renderChart(snapshot);
+        renderTable(snapshot);
+        setSyntheseExportEnabled(true);
+      }
+
+      function effectifsFor(indicateurKey, item) {
+        if (indicateurKey === 'tauxTerminees') return `${formatCount(item.terminees)} / ${formatCount(item.concernes)} concernées`;
+        if (indicateurKey === 'tauxReponse') return `${formatCount(item.poleUniverseCount - item.nonRespondentPoleCount)} / ${formatCount(item.poleUniverseCount)} pôles`;
+        return `moyenne sur ${formatCount(item.concernes)} concernées`;
       }
 
       function renderChart(snapshot) {
@@ -662,11 +1049,18 @@
 
         const barWidth = 24;
         const groupGap = 14;
-        const marginLeft = 44;
         const marginRight = 16;
         const marginTop = 12;
-        const marginBottom = 70;
         const plotHeight = 260;
+
+        // La marge basse et la marge gauche s'adaptent à la longueur des
+        // étiquettes pivotées : sans ça, les libellés les plus longs
+        // dépassaient du cadre et devenaient invisibles (SVG masque tout ce
+        // qui sort du viewBox par défaut).
+        const maxLabelChars = Math.max(...plottable.map((item) => truncateLabel(item.label, 28).length), 4);
+        const marginBottom = Math.min(60 + maxLabelChars * 5.2, 220);
+        const marginLeft = Math.max(44, 30 + maxLabelChars * 3.2);
+
         const width = marginLeft + marginRight + Math.max(plottable.length, 1) * (barWidth + groupGap);
         const height = marginTop + plotHeight + marginBottom;
 
@@ -689,6 +1083,14 @@
           elements.chart.appendChild(label);
         });
 
+        if (!plottable.length) {
+          const empty = svgEl('text', {
+            class: 'category-text', x: width / 2, y: baselineY / 2, 'text-anchor': 'middle'
+          });
+          empty.textContent = 'Aucune donnée disponible pour cet indicateur dans ce périmètre.';
+          elements.chart.appendChild(empty);
+        }
+
         plottable.forEach((item, index) => {
           const barX = marginLeft + index * (barWidth + groupGap);
           const value = item[indicateurKey];
@@ -706,9 +1108,9 @@
             x: barX, y: marginTop, width: barWidth, height: plotHeight,
             tabindex: '0',
             role: 'img',
-            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)}`
+            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)} (${effectifsFor(indicateurKey, item)})`
           });
-          const show = (event) => showTooltip(event, item, indicateur, value);
+          const show = (event) => showTooltip(event, item, indicateur, indicateurKey, value);
           hit.addEventListener('pointerenter', show);
           hit.addEventListener('pointermove', show);
           hit.addEventListener('focus', show);
@@ -720,7 +1122,12 @@
             class: 'category-text', x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
             transform: `rotate(-40 ${barX + barWidth / 2} ${baselineY + 16})`
           });
-          categoryLabel.textContent = item.label;
+          categoryLabel.textContent = truncateLabel(item.label, 28);
+          if (categoryLabel.textContent !== item.label) {
+            const titleEl = svgEl('title', {});
+            titleEl.textContent = item.label;
+            categoryLabel.appendChild(titleEl);
+          }
           elements.chart.appendChild(categoryLabel);
         });
 
@@ -729,16 +1136,19 @@
           : '';
       }
 
-      function showTooltip(event, item, indicateur, value) {
+      function showTooltip(event, item, indicateur, indicateurKey, value) {
         const tooltip = elements.tooltip;
         tooltip.replaceChildren();
         const valueEl = document.createElement('div');
         valueEl.className = 'tooltip-value';
         valueEl.textContent = value === null ? 'Non disponible' : formatRate(value);
+        const effectifsEl = document.createElement('div');
+        effectifsEl.className = 'tooltip-effectifs';
+        effectifsEl.textContent = effectifsFor(indicateurKey, item);
         const labelEl = document.createElement('div');
         labelEl.className = 'tooltip-label';
         labelEl.textContent = `${item.label} — ${indicateur.label}`;
-        tooltip.append(valueEl, labelEl);
+        tooltip.append(valueEl, effectifsEl, labelEl);
         tooltip.style.left = `${event.clientX}px`;
         tooltip.style.top = `${event.clientY}px`;
         tooltip.classList.add('is-visible');
@@ -822,18 +1232,9 @@
         const secondaryColor = bodyStyle.getPropertyValue('--text-secondary').trim();
         const surfaceColor = bodyStyle.getPropertyValue('--surface-1').trim();
 
-        clone.querySelectorAll('.axis-line').forEach((el) => {
-          el.setAttribute('stroke', lineColor);
-          el.removeAttribute('class');
-        });
-        clone.querySelectorAll('.axis-text').forEach((el) => {
-          el.setAttribute('fill', mutedColor);
-          el.removeAttribute('class');
-        });
-        clone.querySelectorAll('.category-text').forEach((el) => {
-          el.setAttribute('fill', secondaryColor);
-          el.removeAttribute('class');
-        });
+        clone.querySelectorAll('.axis-line').forEach((el) => { el.setAttribute('stroke', lineColor); el.removeAttribute('class'); });
+        clone.querySelectorAll('.axis-text').forEach((el) => { el.setAttribute('fill', mutedColor); el.removeAttribute('class'); });
+        clone.querySelectorAll('.category-text').forEach((el) => { el.setAttribute('fill', secondaryColor); el.removeAttribute('class'); });
         clone.querySelectorAll('.bar-hit').forEach((el) => el.remove());
 
         const background = svgEl('rect', {x: 0, y: 0, width: '100%', height: '100%', fill: surfaceColor});
@@ -875,9 +1276,7 @@
       });
 
       function setSyntheseExportEnabled(enabled) {
-        [elements.exportPng, elements.exportSvg, elements.exportCsv].forEach((button) => {
-          button.disabled = !enabled;
-        });
+        [elements.exportPng, elements.exportSvg, elements.exportCsv].forEach((button) => { button.disabled = !enabled; });
       }
       setSyntheseExportEnabled(false);
 
@@ -907,43 +1306,55 @@
         return {background: `hsl(190, 45%, ${lightness}%)`, color: textColor, text: `${percent} %`};
       }
 
-      function loadMatrix() {
+      function renderMatrix() {
         const filiere = elements.detailFiliere.value;
-        const territoire = elements.detailTerritoire.value;
-        if (!filiere || !territoire) {
+        if (!filiere) {
           state.matrix = null;
           elements.matrixTable.hidden = true;
           elements.matrixEmpty.hidden = false;
-          elements.matrixEmpty.textContent = 'Choisissez une filière puis un territoire pour afficher le détail.';
+          elements.matrixEmpty.textContent = 'Choisissez une filière (et éventuellement un territoire) pour afficher le détail.';
           elements.exportMatrixCsv.disabled = true;
           elements.detailTitle.textContent = 'Détail pôle × action';
           return;
         }
-        elements.matrixEmpty.hidden = false;
-        elements.matrixEmpty.textContent = 'Chargement…';
-        elements.matrixTable.hidden = true;
-        google.script.run
-          .withSuccessHandler((matrix) => {
-            state.matrix = matrix;
-            renderMatrix(matrix);
-          })
-          .withFailureHandler((error) => {
-            elements.matrixEmpty.hidden = false;
-            elements.matrixEmpty.textContent = error && error.message ? error.message : 'Impossible de charger le détail.';
-            elements.matrixTable.hidden = true;
-            elements.exportMatrixCsv.disabled = true;
-          })
-          .getPoleActionMatrix(filiere, territoire);
-      }
 
-      function renderMatrix(matrix) {
-        elements.detailTitle.textContent = `Détail pôle × action — ${matrix.filiere} · ${matrix.territoire}`;
+        const matrix = computeMatrix(state.bootstrap, {
+          filiere: filiere,
+          territoire: elements.detailTerritoire.value,
+          volet: elements.detailVolet.value,
+          thematique: elements.detailThematique.value
+        });
+        state.matrix = matrix;
+
+        const scopeBits = [matrix.filiere, matrix.territoire || 'tous territoires', matrix.volet, matrix.thematique].filter(Boolean);
+        elements.detailTitle.textContent = `Détail pôle × action — ${scopeBits.join(' · ')}`;
+
         if (!matrix.rows.length || !matrix.poles.length) {
           elements.matrixTable.hidden = true;
           elements.matrixEmpty.hidden = false;
           elements.matrixEmpty.textContent = 'Aucune donnée pour ce périmètre.';
           elements.exportMatrixCsv.disabled = true;
           return;
+        }
+
+        const showTerritoireRow = !matrix.territoire; // "tous les territoires" : sous-en-tête groupé
+        elements.matrixTerritoireRow.replaceChildren();
+        elements.matrixTerritoireRow.hidden = !showTerritoireRow;
+        if (showTerritoireRow) {
+          const corner = document.createElement('th');
+          corner.className = 'matrix-action-header';
+          elements.matrixTerritoireRow.appendChild(corner);
+          let index = 0;
+          while (index < matrix.poles.length) {
+            const territoire = matrix.poles[index].territoire || 'Territoire non renseigné';
+            let span = 0;
+            while (index + span < matrix.poles.length && (matrix.poles[index + span].territoire || 'Territoire non renseigné') === territoire) span += 1;
+            const th = document.createElement('th');
+            th.colSpan = span;
+            th.textContent = territoireDisplayLabel(matrix.filiere, territoire) || territoire;
+            elements.matrixTerritoireRow.appendChild(th);
+            index += span;
+          }
         }
 
         elements.matrixHeaderRow.replaceChildren();
@@ -989,27 +1400,31 @@
         const headers = ['Action', ...state.matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
         const rows = state.matrix.rows.map((row) => [row.action, ...row.cells].map(escapeCsv).join(','));
         const csv = [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
-        downloadBlob(
-          new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}),
-          `dashboard-rso-detail-${state.matrix.filiere}-${state.matrix.territoire}-${dateStamp()}.csv`.replace(/\s+/g, '_')
-        );
+        const scopeSuffix = [state.matrix.filiere, state.matrix.territoire].filter(Boolean).join('-').replace(/\s+/g, '_');
+        downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-detail-${scopeSuffix}-${dateStamp()}.csv`);
       });
 
       // ---------------------------------------------------------------
-      // Démarrage
+      // Démarrage — un seul aller-retour serveur ; tout le reste (filtres,
+      // agrégations, matrice) se recalcule ensuite dans le navigateur.
       // ---------------------------------------------------------------
       google.script.run
-        .withSuccessHandler((options) => {
-          state.filterOptions = options;
+        .withSuccessHandler((bootstrap) => {
+          state.bootstrap = bootstrap;
+          const generated = new Date(bootstrap.generatedAt);
+          elements.status.textContent =
+            `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;
           populateFiliereSelect(elements.syntheseFiliere, true);
           populateFiliereSelect(elements.detailFiliere, false);
-          loadSynthese();
+          updateNiveauAvailability();
+          renderSynthese();
+          renderMatrix();
         })
         .withFailureHandler((error) => {
-          elements.status.textContent = error && error.message ? error.message : 'Impossible de charger les filtres.';
+          elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';
           elements.status.classList.add('error');
         })
-        .getFilterOptions();
+        .getDashboardBootstrap();
     </script>
   </body>
 </html>
