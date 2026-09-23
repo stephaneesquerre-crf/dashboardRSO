@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <style>
+      .viz-root {
+        color-scheme: light;
+        --surface-1:      #fcfcfb;
+        --surface-2:      #f3f2ef;
+        --text-primary:   #0b0b0b;
+        --text-secondary: #52514e;
+        --text-muted:     #85837c;
+        --line:           #e4e2dd;
+        --series-1:       #2a78d6; /* terminées / concernées */
+        --series-2:       #eb6834; /* moyenne d'avancement */
+        --series-3:       #1baf7a; /* taux de réponse */
+      }
+      @media (prefers-color-scheme: dark) {
+        .viz-root {
+          color-scheme: dark;
+          --surface-1:      #1a1a19;
+          --surface-2:      #232322;
+          --text-primary:   #ffffff;
+          --text-secondary: #c3c2b7;
+          --text-muted:     #8f8d84;
+          --line:           #333330;
+          --series-1:       #3987e5;
+          --series-2:       #d95926;
+          --series-3:       #199e70;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--surface-1);
+        color: var(--text-primary);
+        font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.3rem;
+      }
+
+      .subtitle {
+        margin: 0 0 20px;
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+      }
+
+      .panel {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-1);
+        margin-bottom: 20px;
+      }
+
+      .panel-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .panel-header h2 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface-2);
+        color: var(--text-primary);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button:hover { border-color: var(--series-1); }
+      button:disabled { cursor: default; opacity: 0.5; }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 14px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend-swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+      }
+
+      .chart-scroll {
+        overflow-x: auto;
+      }
+
+      #chart {
+        display: block;
+      }
+
+      .chart-note {
+        margin: 10px 0 0;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+      }
+
+      .bar-hit {
+        fill: transparent;
+        cursor: pointer;
+      }
+
+      .bar-hit:focus {
+        outline: 2px solid var(--text-secondary);
+        outline-offset: 2px;
+      }
+
+      .axis-line { stroke: var(--line); stroke-width: 1; }
+      .axis-text { fill: var(--text-muted); font-size: 10px; }
+      .category-text { fill: var(--text-secondary); font-size: 11px; }
+
+      #tooltip {
+        position: fixed;
+        z-index: 10;
+        max-width: 240px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--text-primary);
+        color: var(--surface-1);
+        font-size: 0.78rem;
+        line-height: 1.35;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -110%);
+        transition: opacity 100ms ease;
+      }
+
+      #tooltip.is-visible { opacity: 1; }
+      #tooltip .tooltip-value { font-weight: 700; }
+      #tooltip .tooltip-label { opacity: 0.85; }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+      }
+
+      caption {
+        text-align: left;
+        margin-bottom: 8px;
+        color: var(--text-secondary);
+      }
+
+      th, td {
+        padding: 7px 10px;
+        border-bottom: 1px solid var(--line);
+        text-align: right;
+      }
+
+      th:first-child, td:first-child {
+        text-align: left;
+      }
+
+      th {
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      td { font-variant-numeric: tabular-nums; }
+
+      .is-unavailable td {
+        color: var(--text-muted);
+        font-style: italic;
+      }
+
+      .status { color: var(--text-secondary); font-size: 0.84rem; }
+      .error { color: #b3261e; }
+    </style>
+  </head>
+  <body class="viz-root">
+    <h1>Dashboard RSO — Avancement par filière</h1>
+    <p class="subtitle" id="status">Chargement des données…</p>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Comparaison des trois indicateurs</h2>
+        <div class="actions">
+          <button type="button" id="export-png">Exporter le graphique (PNG)</button>
+          <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-1)"></span>Terminées / concernées</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-2)"></span>Moyenne d'avancement</span>
+        <span class="legend-item"><span class="legend-swatch" style="background:var(--series-3)"></span>Taux de réponse</span>
+      </div>
+      <div class="chart-scroll">
+        <svg id="chart" role="img" aria-label="Comparaison des trois indicateurs par filière"></svg>
+      </div>
+      <p class="chart-note" id="chart-note"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Détail des données</h2>
+        <div class="actions">
+          <button type="button" id="export-csv">Exporter le tableau (CSV)</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="data-table">
+          <caption>Une ligne par filière ; les taux sont exprimés en %.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Filière</th>
+              <th scope="col">Concernées</th>
+              <th scope="col">Terminées</th>
+              <th scope="col">Terminées / concernées</th>
+              <th scope="col">Moyenne d'avancement</th>
+              <th scope="col">Pôles connus</th>
+              <th scope="col">N'ont pas répondu</th>
+              <th scope="col">Taux de réponse</th>
+            </tr>
+          </thead>
+          <tbody id="data-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div id="tooltip" role="status" aria-live="polite"></div>
+
+    <script>
+      const SERIES = [
+        {key: 'tauxTerminees', label: 'Terminées / concernées', color: 'var(--series-1)'},
+        {key: 'tauxMoyenAvancement', label: "Moyenne d'avancement", color: 'var(--series-2)'},
+        {key: 'tauxReponse', label: 'Taux de réponse', color: 'var(--series-3)'}
+      ];
+
+      const state = {snapshot: null};
+
+      const elements = {
+        status: document.getElementById('status'),
+        chart: document.getElementById('chart'),
+        chartNote: document.getElementById('chart-note'),
+        tooltip: document.getElementById('tooltip'),
+        tableBody: document.getElementById('data-table-body'),
+        exportPng: document.getElementById('export-png'),
+        exportSvg: document.getElementById('export-svg'),
+        exportCsv: document.getElementById('export-csv')
+      };
+
+      function formatRate(value) {
+        return value === null || value === undefined ? '—' : `${value.toLocaleString('fr-FR')} %`;
+      }
+
+      function formatCount(value) {
+        return value === null || value === undefined ? '—' : value.toLocaleString('fr-FR');
+      }
+
+      function resolveColor(cssVarExpression) {
+        // Les couleurs de la légende/du graphique sont posées comme
+        // variables CSS (mode clair/sombre) : l'export SVG/PNG doit figer
+        // la valeur réellement affichée, pas laisser "var(...)" tel quel.
+        const match = /var\((--[a-z0-9-]+)\)/.exec(cssVarExpression);
+        if (!match) return cssVarExpression;
+        return getComputedStyle(document.body).getPropertyValue(match[1]).trim();
+      }
+
+      function buildRoundedTopBarPath(x, y, width, height, radius) {
+        const r = Math.max(0, Math.min(radius, width / 2, height));
+        if (height <= 0) return '';
+        const top = y;
+        const bottom = y + height;
+        return [
+          `M ${x} ${bottom}`,
+          `L ${x} ${top + r}`,
+          `Q ${x} ${top} ${x + r} ${top}`,
+          `L ${x + width - r} ${top}`,
+          `Q ${x + width} ${top} ${x + width} ${top + r}`,
+          `L ${x + width} ${bottom}`,
+          'Z'
+        ].join(' ');
+      }
+
+      function svgEl(tag, attributes) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        Object.keys(attributes || {}).forEach((name) => el.setAttribute(name, attributes[name]));
+        return el;
+      }
+
+      function renderChart(filieres) {
+        const plottable = filieres.filter((item) => item.dataAvailable);
+        const skipped = filieres.filter((item) => !item.dataAvailable);
+
+        const barWidth = 20;
+        const barGap = 2;
+        const groupWidth = SERIES.length * barWidth + (SERIES.length - 1) * barGap;
+        const groupGap = 28;
+        const marginLeft = 44;
+        const marginRight = 16;
+        const marginTop = 12;
+        const marginBottom = 46;
+        const plotHeight = 260;
+        const width = marginLeft + marginRight + plottable.length * (groupWidth + groupGap);
+        const height = marginTop + plotHeight + marginBottom;
+
+        elements.chart.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        elements.chart.setAttribute('width', width);
+        elements.chart.setAttribute('height', height);
+        elements.chart.textContent = '';
+
+        const baselineY = marginTop + plotHeight;
+
+        // Grille et axe des ordonnées (0 / 25 / 50 / 75 / 100 %).
+        [0, 25, 50, 75, 100].forEach((tick) => {
+          const y = baselineY - (tick / 100) * plotHeight;
+          elements.chart.appendChild(svgEl('line', {
+            class: 'axis-line', x1: marginLeft, x2: width - marginRight, y1: y, y2: y
+          }));
+          const label = svgEl('text', {
+            class: 'axis-text', x: marginLeft - 8, y: y + 3, 'text-anchor': 'end'
+          });
+          label.textContent = `${tick} %`;
+          elements.chart.appendChild(label);
+        });
+
+        plottable.forEach((item, index) => {
+          const groupX = marginLeft + index * (groupWidth + groupGap);
+
+          SERIES.forEach((series, seriesIndex) => {
+            const value = item[series.key];
+            const barX = groupX + seriesIndex * (barWidth + barGap);
+            const barHeight = value === null ? 0 : (value / 100) * plotHeight;
+            const barY = baselineY - barHeight;
+
+            if (value !== null) {
+              const path = svgEl('path', {
+                d: buildRoundedTopBarPath(barX, barY, barWidth, barHeight, 4),
+                fill: resolveColor(series.color)
+              });
+              elements.chart.appendChild(path);
+            }
+
+            // Zone de survol pleine hauteur : une petite valeur reste
+            // facilement atteignable au clavier/souris (cf. dataviz skill,
+            // "the hit target is bigger than the mark").
+            const hit = svgEl('rect', {
+              class: 'bar-hit',
+              x: barX, y: marginTop, width: barWidth, height: plotHeight,
+              tabindex: '0',
+              role: 'img',
+              'aria-label': `${item.filiere} — ${series.label} : ${value === null ? 'non disponible' : formatRate(value)}`
+            });
+            const show = (event) => showTooltip(event, item, series, value);
+            hit.addEventListener('pointerenter', show);
+            hit.addEventListener('pointermove', show);
+            hit.addEventListener('focus', show);
+            hit.addEventListener('pointerleave', hideTooltip);
+            hit.addEventListener('blur', hideTooltip);
+            elements.chart.appendChild(hit);
+          });
+
+          const categoryLabel = svgEl('text', {
+            class: 'category-text', x: groupX + groupWidth / 2, y: baselineY + 16, 'text-anchor': 'middle'
+          });
+          categoryLabel.textContent = item.filiere;
+          elements.chart.appendChild(categoryLabel);
+        });
+
+        elements.chartNote.textContent = skipped.length
+          ? `${skipped.map((item) => item.filiere).join(', ')} : donnée non disponible depuis cette source (voir tableau).`
+          : '';
+      }
+
+      function showTooltip(event, item, series, value) {
+        const tooltip = elements.tooltip;
+        tooltip.replaceChildren();
+        const valueEl = document.createElement('div');
+        valueEl.className = 'tooltip-value';
+        valueEl.textContent = value === null ? 'Non disponible' : formatRate(value);
+        const labelEl = document.createElement('div');
+        labelEl.className = 'tooltip-label';
+        labelEl.textContent = `${item.filiere} — ${series.label}`;
+        tooltip.append(valueEl, labelEl);
+        tooltip.style.left = `${event.clientX}px`;
+        tooltip.style.top = `${event.clientY}px`;
+        tooltip.classList.add('is-visible');
+      }
+
+      function hideTooltip() {
+        elements.tooltip.classList.remove('is-visible');
+      }
+
+      function renderTable(filieres) {
+        elements.tableBody.replaceChildren();
+        filieres.forEach((item) => {
+          const row = document.createElement('tr');
+          if (!item.dataAvailable) row.className = 'is-unavailable';
+          const cells = [
+            item.filiere,
+            formatCount(item.concernes),
+            formatCount(item.terminees),
+            item.dataAvailable ? formatRate(item.tauxTerminees) : item.note,
+            item.dataAvailable ? formatRate(item.tauxMoyenAvancement) : '—',
+            formatCount(item.poleUniverseCount),
+            formatCount(item.nonRespondentPoleCount),
+            formatRate(item.tauxReponse)
+          ];
+          cells.forEach((value, index) => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            if (!item.dataAvailable && index === 3) cell.colSpan = 2;
+            row.appendChild(cell);
+          });
+          // Le colspan sur "note" masque la cellule "Moyenne d'avancement" :
+          // on l'enlève pour ne pas dupliquer le texte de la note.
+          if (!item.dataAvailable) row.removeChild(row.children[4]);
+          elements.tableBody.appendChild(row);
+        });
+      }
+
+      function buildCsv(filieres) {
+        const headers = [
+          'Filière', 'Concernées', 'Terminées', 'Taux terminées (%)',
+          'Moyenne avancement (%)', 'Pôles connus', "N'ont pas répondu",
+          'Taux de réponse (%)', 'Note'
+        ];
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const rows = filieres.map((item) => [
+          item.filiere, item.concernes, item.terminees, item.tauxTerminees,
+          item.tauxMoyenAvancement, item.poleUniverseCount, item.nonRespondentPoleCount,
+          item.tauxReponse, item.note
+        ].map(escapeCsv).join(','));
+        return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+      }
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function dateStamp() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      // Un fichier .svg téléchargé est ouvert hors de cette page : il ne
+      // doit dépendre d'aucune feuille de style ni variable CSS externe.
+      // On fige donc les couleurs calculées en attributs directs, on
+      // ajoute un fond opaque et on retire les zones de survol (utiles
+      // seulement dans la page vivante).
+      function serializeChartSvg() {
+        const clone = elements.chart.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+        const bodyStyle = getComputedStyle(document.body);
+        const lineColor = bodyStyle.getPropertyValue('--line').trim();
+        const mutedColor = bodyStyle.getPropertyValue('--text-muted').trim();
+        const secondaryColor = bodyStyle.getPropertyValue('--text-secondary').trim();
+        const surfaceColor = bodyStyle.getPropertyValue('--surface-1').trim();
+
+        clone.querySelectorAll('.axis-line').forEach((el) => {
+          el.setAttribute('stroke', lineColor);
+          el.removeAttribute('class');
+        });
+        clone.querySelectorAll('.axis-text').forEach((el) => {
+          el.setAttribute('fill', mutedColor);
+          el.removeAttribute('class');
+        });
+        clone.querySelectorAll('.category-text').forEach((el) => {
+          el.setAttribute('fill', secondaryColor);
+          el.removeAttribute('class');
+        });
+        clone.querySelectorAll('.bar-hit').forEach((el) => el.remove());
+
+        const background = svgEl('rect', {x: 0, y: 0, width: '100%', height: '100%', fill: surfaceColor});
+        clone.insertBefore(background, clone.firstChild);
+
+        return new XMLSerializer().serializeToString(clone);
+      }
+
+      elements.exportSvg.addEventListener('click', () => {
+        const svgText = serializeChartSvg();
+        downloadBlob(new Blob([svgText], {type: 'image/svg+xml'}), `dashboard-rso-graphique-${dateStamp()}.svg`);
+      });
+
+      elements.exportPng.addEventListener('click', () => {
+        const svgText = serializeChartSvg();
+        const svgBlob = new Blob([svgText], {type: 'image/svg+xml'});
+        const url = URL.createObjectURL(svgBlob);
+        const image = new Image();
+        image.onload = () => {
+          const scale = 2; // export net sur écrans haute densité
+          const canvas = document.createElement('canvas');
+          canvas.width = elements.chart.viewBox.baseVal.width * scale;
+          canvas.height = elements.chart.viewBox.baseVal.height * scale;
+          const context = canvas.getContext('2d');
+          context.fillStyle = getComputedStyle(document.body).getPropertyValue('--surface-1').trim();
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.scale(scale, scale);
+          context.drawImage(image, 0, 0);
+          URL.revokeObjectURL(url);
+          canvas.toBlob((blob) => downloadBlob(blob, `dashboard-rso-graphique-${dateStamp()}.png`), 'image/png');
+        };
+        image.src = url;
+      });
+
+      elements.exportCsv.addEventListener('click', () => {
+        if (!state.snapshot) return;
+        const csv = buildCsv(state.snapshot.filieres);
+        downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-donnees-${dateStamp()}.csv`);
+      });
+
+      function setExportButtonsEnabled(enabled) {
+        [elements.exportPng, elements.exportSvg, elements.exportCsv].forEach((button) => {
+          button.disabled = !enabled;
+        });
+      }
+
+      setExportButtonsEnabled(false);
+
+      google.script.run
+        .withSuccessHandler((snapshot) => {
+          state.snapshot = snapshot;
+          const generated = new Date(snapshot.generatedAt);
+          elements.status.textContent =
+            `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${snapshot.appVersion}`;
+          renderChart(snapshot.filieres);
+          renderTable(snapshot.filieres);
+          setExportButtonsEnabled(true);
+        })
+        .withFailureHandler((error) => {
+          elements.status.textContent = error && error.message
+            ? error.message
+            : 'Impossible de charger le tableau de bord.';
+          elements.status.classList.add('error');
+        })
+        .getFiliereCompletionSnapshot();
+    </script>
+  </body>
+</html>
