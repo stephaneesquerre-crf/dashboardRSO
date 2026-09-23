@@ -1,11 +1,37 @@
-// Formule vérifiée directement dans les formules du classeur national
-// (onglets par filière, ex. SAN!J10/K10 :
-//   # terminés   = COUNTIF(ligne action, "=100%")
-//   # concernés  = TOTAL structures de la filière - COUNTIF(ligne action, "=Abandonnée")
-// Le dénominateur exclut donc UNIQUEMENT les « Abandonnée » — les pôles à
-// 0 % ou sans réponse restent comptés comme concernés. C'est différent de ce
-// qu'indiquait une première lecture du CLAUDE.md (qui excluait aussi 0 %) :
-// à corriger dans le CLAUDE.md en conséquence.
+// Trois indicateurs coexistent, chacun avec un usage différent (arbitrage
+// remonté par l'utilisateur entre le directeur et Simon — les deux points de
+// vue restent affichables plutôt que de trancher un seul indicateur) :
+//
+// 1. tauxTerminees        : # terminés (=100 %) / # concernés.
+// 2. tauxMoyenAvancement  : moyenne des avancements parmi les concernés.
+// 3. tauxReponse          : part des pôles de la filière ayant au moins un
+//                            avancement non nul, parmi tous les pôles connus
+//                            de la filière (pas seulement les concernés).
+//
+// Les points 1 et 3 sont vérifiés directement dans les formules du classeur
+// national :
+//   - onglets par filière (ex. SAN!J10/K10) :
+//       # terminés  = COUNTIF(ligne action, "=100%")
+//       # concernés = TOTAL structures de la filière - COUNTIF(ligne action, "=Abandonnée")
+//     Le dénominateur exclut donc UNIQUEMENT les « Abandonnée » — les pôles à
+//     0 % ou sans réponse restent comptés comme concernés.
+//   - onglet "Traitement données" : un pôle est compté comme répondant dès
+//     que la somme de ses avancements, tous couples pôle × action confondus,
+//     est strictement positive (COUNTIFS(..., Somme de l'avancement <> 0)).
+//     C'est un cumul depuis toujours, pas propre à une campagne : le
+//     CLAUDE.md note que distinguer « s'est déjà servi de l'outil » de
+//     « a répondu cette campagne » reste en attente d'arbitrage avec le
+//     responsable de l'outil — ce chiffre mesure donc le premier, pas le
+//     second.
+//
+// Le point 2 (« % moyen d'avancement ») n'a en revanche aucune formule
+// vivante équivalente dans le classeur : l'onglet qui porte ce nom
+// ("Evolution 2", "moyenne des avancements") pointe en fait vers des
+// archives mensuelles du taux terminés/concernés (ex. ='Archives 0626'!L9)
+// et n'est donc qu'une copie mal nommée du premier indicateur. La formule
+// ci-dessous (moyenne des fractions d'avancement parmi les concernés) est
+// donc une interprétation raisonnable, pas une valeur vérifiée contre une
+// référence existante — à confirmer avec Simon si la précision compte.
 const INDICATOR_EXCLUDED_AVANCEMENT = 'abandonnee';
 const INDICATOR_DONE_AVANCEMENT = '100%';
 const INDICATOR_UNKNOWN_FILIERE_LABEL = 'Filière non renseignée';
@@ -93,22 +119,18 @@ function resolveFactFiliere_(fact, poleReference) {
   return fact.filiere || INDICATOR_UNKNOWN_FILIERE_LABEL;
 }
 
-// Premier livrable du CLAUDE.md : % terminées par filière + ligne de qualité
-// (pôles de la filière qui n'ont pas répondu).
-//
-// « A répondu » est repris de la formule vérifiée dans l'onglet Traitement
-// données du classeur national (COUNTIFS(..., Somme de l'avancement <> 0)) :
-// un pôle est compté comme répondant dès que la somme de ses avancements,
-// tous couples pôle × action confondus, est strictement positive. C'est un
-// cumul depuis toujours, pas propre à une campagne : le CLAUDE.md note que
-// distinguer « s'est déjà servi de l'outil » de « a répondu cette campagne »
-// reste en attente d'arbitrage avec le responsable de l'outil — ce chiffre
-// mesure donc le premier, pas le second.
+function roundRate_(numerator, denominator) {
+  return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
+}
+
+// Premier livrable du CLAUDE.md, étendu aux trois indicateurs par filière
+// (voir le commentaire en tête de fichier pour chaque formule et sa source).
 //
 // Certaines filières de BDD NOMS (ex. PROT ENFANCE) n'ont aucune ligne dans
 // la zone SYNTHESE : leurs données sont alimentées autrement dans le
 // classeur national (cf. CLAUDE.md, "pièges connus"). Ces filières
-// apparaissent avec dataAvailable=false plutôt qu'un faux taux de 0 %.
+// apparaissent avec dataAvailable=false et les trois taux à null plutôt
+// qu'un faux 0 %.
 function getFiliereCompletionSnapshot() {
   const config = getConfig_();
   const facts = getFactRecords_();
@@ -121,7 +143,8 @@ function getFiliereCompletionSnapshot() {
         filiere: name,
         total: 0,
         concernes: 0,
-        terminees: 0
+        terminees: 0,
+        sommeAvancementConcernes: 0
       };
     }
     return byFiliere[name];
@@ -135,6 +158,7 @@ function getFiliereCompletionSnapshot() {
     bucket.total += 1;
     if (isAvancementConcerne_(fact.avancement)) {
       bucket.concernes += 1;
+      bucket.sommeAvancementConcernes += parseAvancementFraction_(fact.avancement);
       if (isAvancementTermine_(fact.avancement)) {
         bucket.terminees += 1;
       }
@@ -180,12 +204,13 @@ function getFiliereCompletionSnapshot() {
         total: bucket.total,
         concernes: bucket.concernes,
         terminees: bucket.terminees,
-        rate: !dataAvailable
-          ? null
-          : bucket.concernes === 0
-            ? 0
-            : Math.round((bucket.terminees / bucket.concernes) * 1000) / 10,
+        tauxTerminees: dataAvailable ? roundRate_(bucket.terminees, bucket.concernes) : null,
+        tauxMoyenAvancement: dataAvailable ? roundRate_(bucket.sommeAvancementConcernes, bucket.concernes) : null,
+        poleUniverseCount: expectedPoleCodes.length,
         nonRespondentPoleCount: nonRespondentPoles.length,
+        tauxReponse: dataAvailable && expectedPoleCodes.length > 0
+          ? roundRate_(expectedPoleCodes.length - nonRespondentPoles.length, expectedPoleCodes.length)
+          : null,
         nonRespondentPoles: nonRespondentPoles.map((pole) => ({
           poleCode: pole.poleCode,
           label: pole.label
