@@ -210,7 +210,8 @@
         letter-spacing: 0.03em;
       }
 
-      .filter-field select {
+      .filter-field select,
+      .filter-field input {
         min-height: 38px;
         padding: 0 10px;
         border: 1px solid var(--line);
@@ -220,7 +221,8 @@
         font: inherit;
       }
 
-      .filter-field select:disabled {
+      .filter-field select:disabled,
+      .filter-field input:disabled {
         color: var(--text-muted);
         background: var(--surface-2);
       }
@@ -383,6 +385,23 @@
         white-space: normal;
         min-width: 220px;
         background: var(--surface-1);
+      }
+
+      table.matrix th.matrix-meta-header,
+      table.matrix td.matrix-meta {
+        text-align: left;
+        white-space: normal;
+        min-width: 140px;
+      }
+
+      .matrix-pole-label {
+        font-weight: 600;
+      }
+
+      .matrix-pole-code {
+        color: var(--text-muted);
+        font-size: 0.72rem;
+        font-weight: 400;
       }
 
       table.matrix thead th {
@@ -550,6 +569,10 @@
             <label for="detail-thematique">Thématique</label>
             <select id="detail-thematique" disabled><option value="">Toutes les thématiques</option></select>
           </div>
+          <div class="filter-field">
+            <label for="detail-pole-search">Rechercher un pôle</label>
+            <input type="search" id="detail-pole-search" placeholder="Nom ou code du pôle…">
+          </div>
         </div>
       </section>
 
@@ -672,6 +695,7 @@
         detailTerritoire: document.getElementById('detail-territoire'),
         detailVolet: document.getElementById('detail-volet'),
         detailThematique: document.getElementById('detail-thematique'),
+        detailPoleSearch: document.getElementById('detail-pole-search'),
         detailTitle: document.getElementById('detail-title'),
         matrixTable: document.getElementById('matrix-table'),
         matrixTerritoireRow: document.getElementById('matrix-territoire-row'),
@@ -791,6 +815,17 @@
       function normalizePoleCode(code) {
         return String(code || '').trim().toLowerCase();
       }
+      // Recherche insensible aux accents/casse (ex. filtre "nom du pôle").
+      function normalizeSearchText(value) {
+        return String(value || '')
+          .trim()
+          .normalize('NFD')
+          .replace(/[̀-ͯ]/g, '')
+          .toLowerCase();
+      }
+      function joinDistinct(set) {
+        return [...set].sort((left, right) => left.localeCompare(right, 'fr')).join(' / ') || UNKNOWN_LABEL;
+      }
       function roundRate(numerator, denominator) {
         return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
       }
@@ -908,11 +943,20 @@
         const actionOrder = [];
         const actionSeen = new Set();
         const cellByKey = new Map();
+        const voletsByAction = new Map();
+        const thematiquesByAction = new Map();
 
         scopedFacts.forEach((fact) => {
           const code = normalizePoleCode(fact.poleCode);
           if (!poleSeen.has(code)) { poleSeen.add(code); poleOrder.push(code); }
-          if (!actionSeen.has(fact.action)) { actionSeen.add(fact.action); actionOrder.push(fact.action); }
+          if (!actionSeen.has(fact.action)) {
+            actionSeen.add(fact.action);
+            actionOrder.push(fact.action);
+            voletsByAction.set(fact.action, new Set());
+            thematiquesByAction.set(fact.action, new Set());
+          }
+          if (fact.volet) voletsByAction.get(fact.action).add(fact.volet);
+          if (fact.thematique) thematiquesByAction.get(fact.action).add(fact.thematique);
           cellByKey.set(`${fact.action}\u0001${code}`, fact.avancement);
         });
 
@@ -927,7 +971,19 @@
           return territoireLeft.localeCompare(territoireRight, 'fr') || left.localeCompare(right, 'fr');
         });
 
-        const poles = poleOrder.map((code) => {
+        // Filtre "rechercher un pôle" : ne restreint que les colonnes
+        // affichées, jamais la liste des actions (une action reste visible
+        // même si le pôle qui la renseigne est masqué par la recherche).
+        const searchTerm = normalizeSearchText(options.poleSearch);
+        const visiblePoleOrder = searchTerm
+          ? poleOrder.filter((code) => {
+              const pole = poleByCode.get(code);
+              const haystack = normalizeSearchText(`${pole ? pole.label : ''} ${pole ? pole.poleCode : code}`);
+              return haystack.indexOf(searchTerm) !== -1;
+            })
+          : poleOrder;
+
+        const poles = visiblePoleOrder.map((code) => {
           const pole = poleByCode.get(code);
           return {
             poleCode: pole ? pole.poleCode : code,
@@ -938,7 +994,9 @@
 
         const rows = actionOrder.map((action) => ({
           action: action,
-          cells: poleOrder.map((code) => cellByKey.get(`${action}\u0001${code}`) || '')
+          volet: joinDistinct(voletsByAction.get(action)),
+          thematique: joinDistinct(thematiquesByAction.get(action)),
+          cells: visiblePoleOrder.map((code) => cellByKey.get(`${action}\u0001${code}`) || '')
         }));
 
         return {filiere, territoire, volet, thematique, poles, rows};
@@ -976,8 +1034,6 @@
             if (isTermine(fact.avancement)) bucket.terminees += 1;
           }
         });
-
-        const joinDistinct = (set) => [...set].sort((left, right) => left.localeCompare(right, 'fr')).join(' / ') || UNKNOWN_LABEL;
 
         const rows = [...byAction.values()].map((bucket) => ({
           action: bucket.action,
@@ -1077,6 +1133,7 @@
       elements.detailTerritoire.addEventListener('change', renderMatrix);
       elements.detailVolet.addEventListener('change', renderMatrix);
       elements.detailThematique.addEventListener('change', renderMatrix);
+      elements.detailPoleSearch.addEventListener('input', renderMatrix);
 
       // ---------------------------------------------------------------
       // Vue synthèse
@@ -1501,6 +1558,22 @@
         return {background: `hsl(190, 45%, ${lightness}%)`, color: textColor, text: `${percent} %`};
       }
 
+      // Tri cliquable sur Action/Volet/Thématique, même mécanisme que le
+      // tableau "Détail des données" de la vue synthèse, pour retrouver
+      // rapidement une action dans une filière qui peut en compter beaucoup.
+      const matrixSortState = {column: 'action', direction: 'asc'};
+      const MATRIX_INFO_COLUMNS = [
+        {key: 'action', label: 'Action'},
+        {key: 'volet', label: 'Volet'},
+        {key: 'thematique', label: 'Thématique'}
+      ];
+
+      function sortMatrixRows(rows) {
+        const {column, direction} = matrixSortState;
+        const factor = direction === 'asc' ? 1 : -1;
+        return [...rows].sort((left, right) => String(left[column]).localeCompare(String(right[column]), 'fr') * factor);
+      }
+
       function renderMatrix() {
         const filiere = elements.detailFiliere.value;
         if (!filiere) {
@@ -1517,7 +1590,8 @@
           filiere: filiere,
           territoire: elements.detailTerritoire.value,
           volet: elements.detailVolet.value,
-          thematique: elements.detailThematique.value
+          thematique: elements.detailThematique.value,
+          poleSearch: elements.detailPoleSearch.value
         });
         state.matrix = matrix;
 
@@ -1538,6 +1612,7 @@
         if (showTerritoireRow) {
           const corner = document.createElement('th');
           corner.className = 'matrix-action-header';
+          corner.colSpan = MATRIX_INFO_COLUMNS.length;
           elements.matrixTerritoireRow.appendChild(corner);
           let index = 0;
           while (index < matrix.poles.length) {
@@ -1553,26 +1628,60 @@
         }
 
         elements.matrixHeaderRow.replaceChildren();
-        const actionHeader = document.createElement('th');
-        actionHeader.className = 'matrix-action-header';
-        actionHeader.scope = 'col';
-        actionHeader.textContent = 'Action';
-        elements.matrixHeaderRow.appendChild(actionHeader);
+        MATRIX_INFO_COLUMNS.forEach((column) => {
+          const th = document.createElement('th');
+          th.className = column.key === 'action' ? 'matrix-action-header' : 'matrix-meta-header';
+          th.scope = 'col';
+          const isActive = matrixSortState.column === column.key;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'sort-button';
+          button.textContent = column.label + (isActive ? (matrixSortState.direction === 'asc' ? ' ▲' : ' ▼') : '');
+          button.setAttribute('aria-sort', isActive ? (matrixSortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+          button.addEventListener('click', () => {
+            if (matrixSortState.column === column.key) {
+              matrixSortState.direction = matrixSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+              matrixSortState.column = column.key;
+              matrixSortState.direction = 'asc';
+            }
+            renderMatrix();
+          });
+          th.appendChild(button);
+          elements.matrixHeaderRow.appendChild(th);
+        });
         matrix.poles.forEach((pole) => {
           const th = document.createElement('th');
           th.scope = 'col';
-          th.textContent = pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode;
           th.title = pole.poleCode;
+          const labelLine = document.createElement('div');
+          labelLine.className = 'matrix-pole-label';
+          labelLine.textContent = pole.label || pole.poleCode;
+          th.appendChild(labelLine);
+          if (pole.label) {
+            const codeLine = document.createElement('div');
+            codeLine.className = 'matrix-pole-code';
+            codeLine.textContent = pole.poleCode;
+            th.appendChild(codeLine);
+          }
           elements.matrixHeaderRow.appendChild(th);
         });
 
         elements.matrixBody.replaceChildren();
-        matrix.rows.forEach((row) => {
+        sortMatrixRows(matrix.rows).forEach((row) => {
           const tr = document.createElement('tr');
           const actionCell = document.createElement('td');
           actionCell.className = 'matrix-action';
           actionCell.textContent = row.action;
           tr.appendChild(actionCell);
+          const voletCell = document.createElement('td');
+          voletCell.className = 'matrix-meta';
+          voletCell.textContent = row.volet;
+          tr.appendChild(voletCell);
+          const thematiqueCell = document.createElement('td');
+          thematiqueCell.className = 'matrix-meta';
+          thematiqueCell.textContent = row.thematique;
+          tr.appendChild(thematiqueCell);
           row.cells.forEach((rawValue) => {
             const style = matrixCellStyle(rawValue);
             const td = document.createElement('td');
@@ -1592,8 +1701,8 @@
       elements.exportMatrixCsv.addEventListener('click', () => {
         if (!state.matrix) return;
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
-        const headers = ['Action', ...state.matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
-        const rows = state.matrix.rows.map((row) => [row.action, ...row.cells].map(escapeCsv).join(','));
+        const headers = ['Action', 'Volet', 'Thématique', ...state.matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
+        const rows = sortMatrixRows(state.matrix.rows).map((row) => [row.action, row.volet, row.thematique, ...row.cells].map(escapeCsv).join(','));
         const csv = [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
         const scopeSuffix = [state.matrix.filiere, state.matrix.territoire].filter(Boolean).join('-').replace(/\s+/g, '_');
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-detail-${scopeSuffix}-${dateStamp()}.csv`);
