@@ -290,6 +290,13 @@
       .chart-sidebar {
         display: grid;
         gap: 20px;
+        position: sticky;
+        top: 12px;
+        align-self: start;
+      }
+
+      @media (max-width: 900px) {
+        .chart-sidebar { position: static; }
       }
 
       .panel.compact { padding: 16px; }
@@ -1377,6 +1384,13 @@
       elements.syntheseFiliere.addEventListener('change', () => {
         populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière', true);
         updateNiveauAvailability();
+        // En vue "toutes filières" (comparaison des filières entre elles),
+        // le taux de réponse est l'indicateur le plus utile par défaut —
+        // demandé après un aller-retour où "Terminées / concernées" restait
+        // sélectionné par défaut même en revenant à cette vue.
+        if (!elements.syntheseFiliere.value) {
+          elements.syntheseIndicateur.value = 'tauxReponse';
+        }
         renderSynthese();
       });
       elements.syntheseTerritoire.addEventListener('change', () => {
@@ -2324,6 +2338,9 @@
           populateFiliereSelect(elements.detailFiliere, false);
           populateFiliereSelect(elements.controlFiliere, true);
           updateNiveauAvailability();
+          // Page chargée sur la vue "toutes filières" par défaut : même
+          // règle que dans l'écouteur de synthese-filiere ci-dessus.
+          elements.syntheseIndicateur.value = 'tauxReponse';
           renderSynthese();
           renderMatrix();
           renderControl();
