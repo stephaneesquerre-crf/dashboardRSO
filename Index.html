@@ -271,6 +271,160 @@
         font-size: 0.78rem;
       }
 
+      /* ---------------------------------------------------------------
+         Vue synthèse : graphique principal + colonne latérale (comparaison,
+         fiche d'identité, top/bottom 3), et plein écran natif sur les
+         graphiques.
+         --------------------------------------------------------------- */
+      .synthese-chart-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+
+      @media (max-width: 900px) {
+        .synthese-chart-grid { grid-template-columns: 1fr; }
+      }
+
+      .chart-sidebar {
+        display: grid;
+        gap: 20px;
+      }
+
+      .panel.compact { padding: 16px; }
+      .panel.compact .panel-header h2 { font-size: 0.9rem; }
+
+      .fullscreen-toggle { min-height: 34px; }
+
+      .chart-panel:fullscreen {
+        background: var(--surface-1);
+        padding: 24px;
+        overflow: auto;
+      }
+
+      .chart-panel:fullscreen .chart-scroll {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 150px);
+      }
+
+      .chart-panel:fullscreen svg.chart {
+        width: 100%;
+        height: auto;
+        max-height: calc(100vh - 150px);
+      }
+
+      .identity-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 12px;
+        margin: 0;
+      }
+
+      .identity-stats dt {
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin-bottom: 2px;
+      }
+
+      .identity-stats dd {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 600;
+      }
+
+      .identity-stats dd small {
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 400;
+        color: var(--text-muted);
+      }
+
+      .ranking-block + .ranking-block { margin-top: 16px; }
+
+      .ranking-block h3 {
+        margin: 0 0 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-secondary);
+      }
+
+      .ranking-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .ranking-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 4px 10px;
+        font-size: 0.82rem;
+      }
+
+      .ranking-item-label {
+        grid-column: 1 / -1;
+        white-space: normal;
+      }
+
+      .ranking-item-value {
+        font-weight: 600;
+      }
+
+      .ranking-bar-track {
+        grid-column: 1 / -1;
+        height: 6px;
+        border-radius: 3px;
+        background: var(--surface-2);
+        overflow: hidden;
+      }
+
+      .ranking-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: var(--series-1);
+      }
+
+      .ranking-empty {
+        color: var(--text-muted);
+        font-size: 0.8rem;
+      }
+
+      /* ---------------------------------------------------------------
+         Vue contrôle
+         --------------------------------------------------------------- */
+      .control-toggle-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+      }
+
+      .control-toggle-field input { width: 16px; height: 16px; }
+
+      table.control-table th,
+      table.control-table td {
+        text-align: left;
+        padding: 8px 10px;
+      }
+
+      table.control-table td.numeric,
+      table.control-table th.numeric { text-align: right; }
+
+      tr.control-row-problem td:first-child {
+        border-left: 3px solid var(--status-critical);
+      }
+
       .bar-hit {
         fill: transparent;
         cursor: pointer;
@@ -477,6 +631,7 @@
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
       <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
+      <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle</button>
       <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
     </div>
 
@@ -515,20 +670,57 @@
         <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2 id="synthese-chart-title">Terminées / concernées, par filière</h2>
-          <div class="actions">
-            <button type="button" id="export-png">Exporter le graphique (PNG)</button>
-            <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
+      <div class="synthese-chart-grid">
+        <section class="panel chart-panel" id="chart-panel-main">
+          <div class="panel-header">
+            <h2 id="synthese-chart-title">Terminées / concernées, par filière</h2>
+            <div class="actions">
+              <button type="button" id="export-png">Exporter le graphique (PNG)</button>
+              <button type="button" id="export-svg">Exporter le graphique (SVG)</button>
+              <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-main">⤢ Plein écran</button>
+            </div>
           </div>
+          <div class="legend" id="synthese-legend"></div>
+          <div class="chart-scroll">
+            <svg class="chart" id="chart" role="img" aria-label="Comparaison de l'indicateur choisi"></svg>
+          </div>
+          <p class="chart-note" id="chart-note"></p>
+        </section>
+
+        <div class="chart-sidebar">
+          <section class="panel chart-panel compact" id="chart-panel-comparison">
+            <div class="panel-header">
+              <h2 id="comparison-chart-title">Comparaison</h2>
+              <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-comparison">⤢ Plein écran</button>
+            </div>
+            <div class="chart-scroll">
+              <svg class="chart" id="comparison-chart" role="img" aria-label="Graphique de comparaison"></svg>
+            </div>
+            <p class="chart-note" id="comparison-chart-note"></p>
+          </section>
+
+          <section class="panel compact" id="identity-card">
+            <div class="panel-header">
+              <h2 id="identity-card-title">Fiche d'identité</h2>
+            </div>
+            <dl class="identity-stats" id="identity-stats"></dl>
+          </section>
+
+          <section class="panel compact">
+            <div class="panel-header">
+              <h2 id="ranking-title">Top 3 / Bottom 3 des actions</h2>
+            </div>
+            <div class="ranking-block">
+              <h3>Top 3 — Terminées / concernées</h3>
+              <ol class="ranking-list" id="ranking-top"></ol>
+            </div>
+            <div class="ranking-block">
+              <h3>Bottom 3 — Terminées / concernées</h3>
+              <ol class="ranking-list" id="ranking-bottom"></ol>
+            </div>
+          </section>
         </div>
-        <div class="legend" id="synthese-legend"></div>
-        <div class="chart-scroll">
-          <svg class="chart" id="chart" role="img" aria-label="Comparaison de l'indicateur choisi"></svg>
-        </div>
-        <p class="chart-note" id="chart-note"></p>
-      </section>
+      </div>
 
       <section class="panel">
         <div class="panel-header">
@@ -600,6 +792,45 @@
       </section>
     </section>
 
+    <section class="tab-panel" id="panel-controle" role="tabpanel" aria-labelledby="tab-controle" hidden>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="control-filiere">Filière</label>
+            <select id="control-filiere"><option value="">Toutes les filières</option></select>
+          </div>
+          <div class="filter-field">
+            <label for="control-action-search">Rechercher une action</label>
+            <input type="search" id="control-action-search" placeholder="Nom de l'action…">
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="control-problems-only">
+            <label for="control-problems-only">Couverture incomplète uniquement</label>
+          </div>
+        </div>
+        <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="control-title">Couverture des actions par pôle</h2>
+          <div class="actions">
+            <button type="button" id="export-control-csv" disabled>Exporter le tableau (CSV)</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="control-table" id="control-table">
+            <thead id="control-table-head"></thead>
+            <tbody id="control-table-body"></tbody>
+          </table>
+        </div>
+        <p class="matrix-empty" id="control-empty" hidden>Aucune ligne ne correspond à ces filtres.</p>
+      </section>
+    </section>
+
     <section class="tab-panel" id="panel-doc" role="tabpanel" aria-labelledby="tab-doc" hidden>
       <section class="panel">
         <div class="doc-section">
@@ -662,7 +893,9 @@
         bootstrap: null,
         syntheseSnapshot: null,
         actionDetail: null,
-        matrix: null
+        matrix: null,
+        controlRows: null,
+        controlVisibleRows: null
       };
 
       const elements = {
@@ -670,9 +903,11 @@
         themeToggle: document.getElementById('theme-toggle'),
         tabSynthese: document.getElementById('tab-synthese'),
         tabDetail: document.getElementById('tab-detail'),
+        tabControle: document.getElementById('tab-controle'),
         tabDoc: document.getElementById('tab-doc'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
+        panelControle: document.getElementById('panel-controle'),
         panelDoc: document.getElementById('panel-doc'),
 
         syntheseFiliere: document.getElementById('synthese-filiere'),
@@ -691,6 +926,16 @@
         exportSvg: document.getElementById('export-svg'),
         exportCsv: document.getElementById('export-csv'),
 
+        chartPanelComparison: document.getElementById('chart-panel-comparison'),
+        comparisonChartTitle: document.getElementById('comparison-chart-title'),
+        comparisonChart: document.getElementById('comparison-chart'),
+        comparisonChartNote: document.getElementById('comparison-chart-note'),
+        identityCardTitle: document.getElementById('identity-card-title'),
+        identityStats: document.getElementById('identity-stats'),
+        rankingTitle: document.getElementById('ranking-title'),
+        rankingTop: document.getElementById('ranking-top'),
+        rankingBottom: document.getElementById('ranking-bottom'),
+
         detailFiliere: document.getElementById('detail-filiere'),
         detailTerritoire: document.getElementById('detail-territoire'),
         detailVolet: document.getElementById('detail-volet'),
@@ -702,7 +947,16 @@
         matrixHeaderRow: document.getElementById('matrix-header-row'),
         matrixBody: document.getElementById('matrix-body'),
         matrixEmpty: document.getElementById('matrix-empty'),
-        exportMatrixCsv: document.getElementById('export-matrix-csv')
+        exportMatrixCsv: document.getElementById('export-matrix-csv'),
+
+        controlFiliere: document.getElementById('control-filiere'),
+        controlActionSearch: document.getElementById('control-action-search'),
+        controlProblemsOnly: document.getElementById('control-problems-only'),
+        controlTitle: document.getElementById('control-title'),
+        controlTableHead: document.getElementById('control-table-head'),
+        controlTableBody: document.getElementById('control-table-body'),
+        controlEmpty: document.getElementById('control-empty'),
+        exportControlCsv: document.getElementById('export-control-csv')
       };
 
       // ---------------------------------------------------------------
@@ -774,14 +1028,40 @@
       function selectTab(name) {
         elements.tabSynthese.setAttribute('aria-selected', String(name === 'synthese'));
         elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
+        elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
         elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
+        elements.panelControle.hidden = name !== 'controle';
         elements.panelDoc.hidden = name !== 'doc';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
+      elements.tabControle.addEventListener('click', () => selectTab('controle'));
       elements.tabDoc.addEventListener('click', () => selectTab('doc'));
+
+      // ---------------------------------------------------------------
+      // Plein écran natif (API Fullscreen) sur n'importe quel graphique :
+      // un seul câblage générique plutôt qu'un bouton par graphique, pour
+      // que l'ajout d'un futur graphique n'oublie pas cette fonctionnalité.
+      // ---------------------------------------------------------------
+      document.querySelectorAll('.fullscreen-toggle').forEach((button) => {
+        const target = document.getElementById(button.dataset.fullscreenTarget);
+        if (!target) return;
+        button.addEventListener('click', () => {
+          if (document.fullscreenElement === target) {
+            document.exitFullscreen();
+          } else if (target.requestFullscreen) {
+            target.requestFullscreen();
+          }
+        });
+      });
+      document.addEventListener('fullscreenchange', () => {
+        document.querySelectorAll('.fullscreen-toggle').forEach((button) => {
+          const target = document.getElementById(button.dataset.fullscreenTarget);
+          button.textContent = target && document.fullscreenElement === target ? '⤡ Quitter le plein écran' : '⤢ Plein écran';
+        });
+      });
 
       // ---------------------------------------------------------------
       // Calcul — reproduit fidèlement (et seulement ici, cf. commentaire
@@ -1009,15 +1289,16 @@
       // constants pour une même action ; s'ils varient d'un pôle à l'autre
       // (incohérence de saisie), les valeurs distinctes sont toutes
       // affichées plutôt que d'en choisir une arbitrairement.
+      // filiere optionnel : vide = toutes filières confondues (utilisé pour
+      // le top/bottom 3 en vue globale, cf. renderRanking). Le tableau
+      // "Détail des données" de la vue synthèse continue lui de n'appeler
+      // cette fonction que lorsqu'une filière précise est choisie.
       function computeActionDetail(bootstrap, options) {
-        const filiere = options.filiere;
-        if (!filiere) {
-          return {filiere: '', territoire: '', rows: []};
-        }
+        const filiere = options.filiere || '';
         const territoire = options.territoire || '';
 
         const scopedFacts = bootstrap.facts.filter((fact) =>
-          fact.filiere === filiere && (!territoire || fact.territoire === territoire)
+          (!filiere || fact.filiere === filiere) && (!territoire || fact.territoire === territoire)
         );
 
         const byAction = new Map();
@@ -1175,6 +1456,156 @@
         elements.syntheseLegend.append(item);
       }
 
+      // Le graphique de comparaison montre toujours "un cran au-dessus" de
+      // la vue actuelle : la filière quand on regarde un territoire précis,
+      // l'ensemble de la CRF (toutes filières) quand on regarde déjà "toute
+      // la filière" ou la comparaison de ses territoires. Rien à comparer
+      // quand la vue actuelle EST déjà l'ensemble de la CRF.
+      function resolveComparisonOptions(options) {
+        if (!options.filiere) return null;
+        if (!options.territoire) {
+          return {filiere: '', territoire: '', niveau: 'filiere'};
+        }
+        return {filiere: options.filiere, territoire: '', niveau: options.niveau === 'territoire' ? 'filiere' : options.niveau};
+      }
+
+      function renderComparisonChart(options) {
+        const comparisonOptions = resolveComparisonOptions(options);
+        const panel = elements.chartPanelComparison;
+        if (!comparisonOptions) {
+          panel.hidden = true;
+          return;
+        }
+        panel.hidden = false;
+        const snapshot = computeSnapshot(state.bootstrap, comparisonOptions);
+        const scopeBits = [comparisonOptions.filiere, comparisonOptions.territoire].filter(Boolean);
+        elements.comparisonChartTitle.textContent = `Comparaison — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}`;
+        renderChart(snapshot, {
+          svg: elements.comparisonChart,
+          note: elements.comparisonChartNote,
+          indicateurKey: elements.syntheseIndicateur.value
+        });
+      }
+
+      // Fiche d'identité : quelques statistiques descriptives à l'échelle
+      // du périmètre affiché (filière + territoire), calculées directement
+      // sur bootstrap.facts/poles plutôt qu'à partir des groupes du
+      // graphique — un regroupement par thématique/volet/action découperait
+      // sinon l'univers de pôles en plusieurs morceaux et fausserait le
+      // taux de réponse global.
+      function computeIdentityCard(bootstrap, options) {
+        const filiere = options.filiere || '';
+        const territoire = options.territoire || '';
+        const poleCodes = new Set(
+          bootstrap.poles
+            .filter((pole) => (!filiere || pole.filiere === filiere) && (!territoire || pole.territoire === territoire) && pole.poleCode)
+            .map((pole) => normalizePoleCode(pole.poleCode))
+        );
+        const scopedFacts = bootstrap.facts.filter((fact) =>
+          (!filiere || fact.filiere === filiere) && (!territoire || fact.territoire === territoire)
+        );
+
+        const actions = new Set();
+        const respondingPoles = new Map();
+        let concernes = 0;
+        let terminees = 0;
+        let sommeAvancement = 0;
+        scopedFacts.forEach((fact) => {
+          if (fact.action) actions.add(fact.action);
+          const fraction = parseAvancementFraction(fact.avancement);
+          if (isConcerne(fact.avancement)) {
+            concernes += 1;
+            sommeAvancement += fraction;
+            if (isTermine(fact.avancement)) terminees += 1;
+          }
+          const code = normalizePoleCode(fact.poleCode);
+          respondingPoles.set(code, (respondingPoles.get(code) || 0) + fraction);
+        });
+        const nonRespondentCount = [...poleCodes].filter((code) => (respondingPoles.get(code) || 0) === 0).length;
+
+        return {
+          poleCount: poleCodes.size,
+          actionCount: actions.size,
+          nonRespondentCount,
+          tauxReponse: poleCodes.size > 0 ? roundRate(poleCodes.size - nonRespondentCount, poleCodes.size) : null,
+          concernes,
+          terminees,
+          tauxTerminees: concernes > 0 ? roundRate(terminees, concernes) : null,
+          tauxMoyenAvancement: concernes > 0 ? roundRate(sommeAvancement, concernes) : null
+        };
+      }
+
+      function identityStatTile(label, value, sub) {
+        const dt = document.createElement('dt');
+        dt.textContent = label;
+        const dd = document.createElement('dd');
+        dd.textContent = value;
+        if (sub) {
+          const small = document.createElement('small');
+          small.textContent = sub;
+          dd.appendChild(small);
+        }
+        return [dt, dd];
+      }
+
+      function renderIdentityCard(options) {
+        const card = computeIdentityCard(state.bootstrap, options);
+        const scopeBits = [options.filiere, options.territoire].filter(Boolean);
+        elements.identityCardTitle.textContent = `Fiche d'identité — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}`;
+        elements.identityStats.replaceChildren();
+        elements.identityStats.append(
+          ...identityStatTile('Pôles', formatCount(card.poleCount)),
+          ...identityStatTile('Actions suivies', formatCount(card.actionCount)),
+          ...identityStatTile('Taux de réponse', formatRate(card.tauxReponse), `${formatCount(card.nonRespondentCount)} pôle(s) sans réponse`),
+          ...identityStatTile('Terminées / concernées', formatRate(card.tauxTerminees), `${formatCount(card.terminees)} / ${formatCount(card.concernes)}`),
+          ...identityStatTile("Moyenne d'avancement", formatRate(card.tauxMoyenAvancement))
+        );
+      }
+
+      // Top/bottom 3 des actions du périmètre affiché, sur l'indicateur
+      // "Terminées / concernées" (celui vérifié directement dans le
+      // classeur national, cf. Méthodologie) — ignore les actions sans
+      // aucun pôle concerné, dont le taux ne voudrait rien dire.
+      function renderRankingList(listEl, rows, emptyMessage) {
+        listEl.replaceChildren();
+        if (!rows.length) {
+          const li = document.createElement('li');
+          li.className = 'ranking-empty';
+          li.textContent = emptyMessage;
+          listEl.appendChild(li);
+          return;
+        }
+        rows.forEach((row) => {
+          const li = document.createElement('li');
+          li.className = 'ranking-item';
+          const label = document.createElement('span');
+          label.className = 'ranking-item-label';
+          label.textContent = row.action;
+          const value = document.createElement('span');
+          value.className = 'ranking-item-value';
+          value.textContent = formatRate(row.tauxTerminees);
+          const track = document.createElement('div');
+          track.className = 'ranking-bar-track';
+          const fill = document.createElement('div');
+          fill.className = 'ranking-bar-fill';
+          fill.style.width = `${row.tauxTerminees}%`;
+          track.appendChild(fill);
+          li.append(label, value, track);
+          listEl.appendChild(li);
+        });
+      }
+
+      function renderRanking(options) {
+        const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire});
+        const scopeBits = [options.filiere, options.territoire].filter(Boolean);
+        elements.rankingTitle.textContent = `Top 3 / Bottom 3 — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}`;
+        const ranked = detail.rows.filter((row) => row.concernes > 0);
+        const byRateDesc = [...ranked].sort((left, right) => right.tauxTerminees - left.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
+        const byRateAsc = [...ranked].sort((left, right) => left.tauxTerminees - right.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
+        renderRankingList(elements.rankingTop, byRateDesc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
+        renderRankingList(elements.rankingBottom, byRateAsc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
+      }
+
       // Dès qu'une filière précise est choisie, le tableau de détail
       // affiche toujours une ligne par action (granularité pôle par action,
       // cf. Méthodologie), indépendamment du regroupement choisi pour le
@@ -1187,6 +1618,9 @@
         state.syntheseSnapshot = snapshot;
         updateChartTitle(options);
         renderChart(snapshot);
+        renderComparisonChart(options);
+        renderIdentityCard(options);
+        renderRanking(options);
 
         if (options.filiere) {
           const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire});
@@ -1205,9 +1639,15 @@
         return `moyenne sur ${formatCount(item.concernes)} concernées`;
       }
 
-      function renderChart(snapshot) {
+      // svg/note/indicateurKey paramétrables pour pouvoir dessiner le même
+      // graphique en plusieurs exemplaires (graphique principal + mini
+      // graphique de comparaison de la colonne latérale) sans dupliquer la
+      // logique de dessin.
+      function renderChart(snapshot, target) {
         if (!snapshot) return;
-        const indicateurKey = elements.syntheseIndicateur.value;
+        const svg = (target && target.svg) || elements.chart;
+        const note = (target && target.note) || elements.chartNote;
+        const indicateurKey = (target && target.indicateurKey) || elements.syntheseIndicateur.value;
         const indicateur = INDICATEUR_META[indicateurKey];
         const groups = snapshot.groups;
         const plottable = groups.filter((item) => item[indicateurKey] !== null);
@@ -1230,23 +1670,23 @@
         const width = marginLeft + marginRight + Math.max(plottable.length, 1) * (barWidth + groupGap);
         const height = marginTop + plotHeight + marginBottom;
 
-        elements.chart.setAttribute('viewBox', `0 0 ${width} ${height}`);
-        elements.chart.setAttribute('width', width);
-        elements.chart.setAttribute('height', height);
-        elements.chart.textContent = '';
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        svg.textContent = '';
 
         const baselineY = marginTop + plotHeight;
 
         [0, 25, 50, 75, 100].forEach((tick) => {
           const y = baselineY - (tick / 100) * plotHeight;
-          elements.chart.appendChild(svgEl('line', {
+          svg.appendChild(svgEl('line', {
             class: 'axis-line', x1: marginLeft, x2: width - marginRight, y1: y, y2: y
           }));
           const label = svgEl('text', {
             class: 'axis-text', x: marginLeft - 8, y: y + 3, 'text-anchor': 'end'
           });
           label.textContent = `${tick} %`;
-          elements.chart.appendChild(label);
+          svg.appendChild(label);
         });
 
         if (!plottable.length) {
@@ -1254,7 +1694,7 @@
             class: 'category-text', x: width / 2, y: baselineY / 2, 'text-anchor': 'middle'
           });
           empty.textContent = 'Aucune donnée disponible pour cet indicateur dans ce périmètre.';
-          elements.chart.appendChild(empty);
+          svg.appendChild(empty);
         }
 
         plottable.forEach((item, index) => {
@@ -1267,7 +1707,7 @@
             d: buildRoundedTopBarPath(barX, barY, barWidth, barHeight, 4),
             fill: resolveColor(indicateur.color)
           });
-          elements.chart.appendChild(path);
+          svg.appendChild(path);
 
           const hit = svgEl('rect', {
             class: 'bar-hit',
@@ -1282,7 +1722,7 @@
           hit.addEventListener('focus', show);
           hit.addEventListener('pointerleave', hideTooltip);
           hit.addEventListener('blur', hideTooltip);
-          elements.chart.appendChild(hit);
+          svg.appendChild(hit);
 
           const categoryLabel = svgEl('text', {
             class: 'category-text', x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
@@ -1294,10 +1734,10 @@
             titleEl.textContent = item.label;
             categoryLabel.appendChild(titleEl);
           }
-          elements.chart.appendChild(categoryLabel);
+          svg.appendChild(categoryLabel);
         });
 
-        elements.chartNote.textContent = skipped.length
+        note.textContent = skipped.length
           ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
           : '';
       }
@@ -1533,6 +1973,168 @@
       setSyntheseExportEnabled(false);
 
       // ---------------------------------------------------------------
+      // Vue contrôle — pour chaque couple filière × action, compare
+      // l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une
+      // ligne pour cette action dans IMPORT DONNEES, quel que soit
+      // l'avancement renseigné (même "Abandonnée" compte comme renseigné :
+      // ce contrôle détecte les pôles qui n'ont RIEN rempli pour une
+      // action, pas ceux en retard). Origine : des pôles CRC ("Optimisation
+      // de la flotte") absents d'IMPORT DONNEES alors qu'attendus d'après
+      // BDD NOMS, repérés manuellement — ce tableau généralise ce contrôle
+      // à toutes les actions plutôt que de le refaire au cas par cas.
+      // ---------------------------------------------------------------
+      function computeControlRows(bootstrap) {
+        const universeByFiliere = new Map();
+        bootstrap.poles.forEach((pole) => {
+          if (!pole.filiere || !pole.poleCode) return;
+          if (!universeByFiliere.has(pole.filiere)) universeByFiliere.set(pole.filiere, new Map());
+          universeByFiliere.get(pole.filiere).set(normalizePoleCode(pole.poleCode), pole);
+        });
+
+        const byKey = new Map();
+        bootstrap.facts.forEach((fact) => {
+          if (!fact.filiere || !fact.action) return;
+          const key = `${fact.filiere}\u0001${fact.action}`;
+          if (!byKey.has(key)) byKey.set(key, {filiere: fact.filiere, action: fact.action, respondedCodes: new Set()});
+          byKey.get(key).respondedCodes.add(normalizePoleCode(fact.poleCode));
+        });
+
+        return [...byKey.values()].map((entry) => {
+          const universe = universeByFiliere.get(entry.filiere) || new Map();
+          const universeCodes = [...universe.keys()];
+          const missingPoles = universeCodes
+            .filter((code) => !entry.respondedCodes.has(code))
+            .map((code) => universe.get(code))
+            .sort((left, right) => (left.label || left.poleCode).localeCompare(right.label || right.poleCode, 'fr'));
+
+          return {
+            filiere: entry.filiere,
+            action: entry.action,
+            universeCount: universeCodes.length,
+            respondedCount: universeCodes.length - missingPoles.length,
+            missingCount: missingPoles.length,
+            missingLabel: missingPoles.map((pole) => pole.label || pole.poleCode).join(', '),
+            coverage: universeCodes.length > 0 ? roundRate(universeCodes.length - missingPoles.length, universeCodes.length) : null
+          };
+        });
+      }
+
+      const controlSortState = {column: 'coverage', direction: 'asc'};
+      const CONTROL_TABLE_COLUMNS = [
+        {key: 'filiere', label: 'Filière', numeric: false},
+        {key: 'action', label: 'Action', numeric: false},
+        {key: 'universeCount', label: 'Pôles attendus', numeric: true},
+        {key: 'respondedCount', label: 'Pôles renseignés', numeric: true},
+        {key: 'missingCount', label: 'Pôles manquants', numeric: true},
+        {key: 'coverage', label: 'Couverture', numeric: true}
+      ];
+
+      function sortControlRows(rows) {
+        const {column, direction} = controlSortState;
+        const factor = direction === 'asc' ? 1 : -1;
+        return [...rows].sort((left, right) => {
+          if (column === 'coverage') {
+            if (left.coverage === null && right.coverage === null) return 0;
+            if (left.coverage === null) return 1;
+            if (right.coverage === null) return -1;
+            return (left.coverage - right.coverage) * factor;
+          }
+          if (typeof left[column] === 'number') return (left[column] - right[column]) * factor;
+          return String(left[column]).localeCompare(String(right[column]), 'fr') * factor;
+        });
+      }
+
+      function filterControlRows(rows) {
+        const filiere = elements.controlFiliere.value;
+        const searchTerm = normalizeSearchText(elements.controlActionSearch.value);
+        const problemsOnly = elements.controlProblemsOnly.checked;
+        return rows.filter((row) => {
+          if (filiere && row.filiere !== filiere) return false;
+          if (searchTerm && normalizeSearchText(row.action).indexOf(searchTerm) === -1) return false;
+          if (problemsOnly && row.coverage !== null && row.coverage >= 100) return false;
+          return true;
+        });
+      }
+
+      function renderControl() {
+        if (!state.bootstrap) return;
+        if (!state.controlRows) state.controlRows = computeControlRows(state.bootstrap);
+        const rows = sortControlRows(filterControlRows(state.controlRows));
+        state.controlVisibleRows = rows;
+
+        elements.controlTableHead.replaceChildren();
+        const headRow = document.createElement('tr');
+        CONTROL_TABLE_COLUMNS.forEach((column) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          if (column.numeric) th.className = 'numeric';
+          const isActive = controlSortState.column === column.key;
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'sort-button';
+          button.textContent = column.label + (isActive ? (controlSortState.direction === 'asc' ? ' ▲' : ' ▼') : '');
+          button.setAttribute('aria-sort', isActive ? (controlSortState.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+          button.addEventListener('click', () => {
+            if (controlSortState.column === column.key) {
+              controlSortState.direction = controlSortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+              controlSortState.column = column.key;
+              controlSortState.direction = 'asc';
+            }
+            renderControl();
+          });
+          th.appendChild(button);
+          headRow.appendChild(th);
+        });
+        elements.controlTableHead.appendChild(headRow);
+
+        elements.controlTableBody.replaceChildren();
+        rows.forEach((row) => {
+          const tr = document.createElement('tr');
+          if (row.coverage !== null && row.coverage < 100) tr.className = 'control-row-problem';
+          const cells = [
+            [row.filiere, false, ''],
+            [row.action, false, ''],
+            [formatCount(row.universeCount), true, ''],
+            [formatCount(row.respondedCount), true, ''],
+            [formatCount(row.missingCount), true, row.missingLabel],
+            [row.coverage === null ? 'Non disponible' : formatRate(row.coverage), true, '']
+          ];
+          cells.forEach(([value, numeric, title]) => {
+            const td = document.createElement('td');
+            td.textContent = value;
+            if (numeric) td.className = 'numeric';
+            if (title) td.title = title;
+            tr.appendChild(td);
+          });
+          elements.controlTableBody.appendChild(tr);
+        });
+
+        elements.controlTitle.textContent = `Couverture des actions par pôle (${rows.length.toLocaleString('fr-FR')} ligne${rows.length > 1 ? 's' : ''})`;
+        elements.controlEmpty.hidden = rows.length > 0;
+        elements.exportControlCsv.disabled = rows.length === 0;
+      }
+
+      function buildControlCsv(rows) {
+        const headers = ['Filière', 'Action', 'Pôles attendus', 'Pôles renseignés', 'Pôles manquants', 'Couverture (%)', 'Pôles manquants (détail)'];
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const csvRows = rows.map((row) => [
+          row.filiere, row.action, row.universeCount, row.respondedCount, row.missingCount,
+          row.coverage === null ? '' : row.coverage, row.missingLabel
+        ].map(escapeCsv).join(','));
+        return [headers.map(escapeCsv).join(','), ...csvRows].join('\r\n');
+      }
+
+      elements.controlFiliere.addEventListener('change', renderControl);
+      elements.controlActionSearch.addEventListener('input', renderControl);
+      elements.controlProblemsOnly.addEventListener('change', renderControl);
+      elements.exportControlCsv.addEventListener('click', () => {
+        if (!state.controlVisibleRows || !state.controlVisibleRows.length) return;
+        const csv = buildControlCsv(state.controlVisibleRows);
+        downloadBlob(new Blob([`﻿${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-controle-${dateStamp()}.csv`);
+      });
+
+      // ---------------------------------------------------------------
       // Vue détail pôle × action
       // ---------------------------------------------------------------
       // Avancement = grandeur continue -> une seule teinte, du clair (peu
@@ -1720,9 +2322,11 @@
             `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;
           populateFiliereSelect(elements.syntheseFiliere, true);
           populateFiliereSelect(elements.detailFiliere, false);
+          populateFiliereSelect(elements.controlFiliere, true);
           updateNiveauAvailability();
           renderSynthese();
           renderMatrix();
+          renderControl();
         })
         .withFailureHandler((error) => {
           elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';
