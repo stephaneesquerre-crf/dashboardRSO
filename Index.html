@@ -763,8 +763,20 @@
       // Calcul — reproduit fidèlement (et seulement ici, cf. commentaire
       // côté serveur) la logique des trois indicateurs.
       // ---------------------------------------------------------------
+      // Bug corrigé : sans le retrait des accents, "Abandonnée" (valeur
+      // réelle de la cellule) ne correspondait jamais à la constante
+      // EXCLUDED_AVANCEMENT "abandonnee" — isConcerne() renvoyait donc
+      // toujours vrai, y compris pour les pôles abandonnés, et gonflait le
+      // nombre de "concernés" partout dans l'appli (confirmé en comparant
+      // un export CSV réel au classeur national : 19 concernés affichés
+      // au lieu de 14 pour SAN "Repas végétariens", 19 - 5 abandonnés).
       function normalizeAvancementValue(value) {
-        return String(value || '').trim().toLowerCase().replace(/\s+/g, '');
+        return String(value || '')
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/\s+/g, '');
       }
       function isConcerne(avancement) {
         return normalizeAvancementValue(avancement) !== EXCLUDED_AVANCEMENT;
