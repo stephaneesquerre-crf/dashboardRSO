@@ -700,8 +700,13 @@
               <option value="tauxReponse">Taux de réponse</option>
             </select>
           </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="synthese-tracked-only">
+            <label for="synthese-tracked-only">Actions actuellement suivies uniquement</label>
+          </div>
         </div>
         <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
+        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
       </section>
 
       <div class="synthese-chart-grid">
@@ -799,6 +804,10 @@
             <label for="detail-pole-search">Rechercher un pôle</label>
             <input type="search" id="detail-pole-search" placeholder="Nom ou code du pôle…">
           </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="detail-tracked-only">
+            <label for="detail-tracked-only">Actions actuellement suivies uniquement</label>
+          </div>
         </div>
       </section>
 
@@ -844,8 +853,13 @@
             <input type="checkbox" id="control-problems-only">
             <label for="control-problems-only">Couverture incomplète uniquement</label>
           </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="control-tracked-only">
+            <label for="control-tracked-only">Actions actuellement suivies uniquement</label>
+          </div>
         </div>
         <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
+        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
       </section>
 
       <section class="panel">
@@ -930,7 +944,12 @@
         actionDetail: null,
         matrix: null,
         controlRows: null,
-        controlVisibleRows: null
+        controlVisibleRows: null,
+        // Coche "actions actuellement suivies" (cf. isCurrentlyTrackedAction) :
+        // un seul état partagé par les 3 vues (Synthèse, Détail, Contrôle),
+        // décoché par défaut pour ne rien masquer tant qu'on ne l'a pas
+        // demandé explicitement.
+        trackedOnly: false
       };
 
       const elements = {
@@ -950,6 +969,7 @@
         syntheseTerritoire: document.getElementById('synthese-territoire'),
         syntheseNiveau: document.getElementById('synthese-niveau'),
         syntheseIndicateur: document.getElementById('synthese-indicateur'),
+        syntheseTrackedOnly: document.getElementById('synthese-tracked-only'),
         syntheseLegend: document.getElementById('synthese-legend'),
         chartTitle: document.getElementById('synthese-chart-title'),
         chart: document.getElementById('chart'),
@@ -977,6 +997,7 @@
         detailVolet: document.getElementById('detail-volet'),
         detailThematique: document.getElementById('detail-thematique'),
         detailPoleSearch: document.getElementById('detail-pole-search'),
+        detailTrackedOnly: document.getElementById('detail-tracked-only'),
         detailTitle: document.getElementById('detail-title'),
         matrixTable: document.getElementById('matrix-table'),
         matrixTerritoireRow: document.getElementById('matrix-territoire-row'),
@@ -988,6 +1009,7 @@
         controlFiliere: document.getElementById('control-filiere'),
         controlActionSearch: document.getElementById('control-action-search'),
         controlProblemsOnly: document.getElementById('control-problems-only'),
+        controlTrackedOnly: document.getElementById('control-tracked-only'),
         controlTitle: document.getElementById('control-title'),
         controlBadge: document.getElementById('control-badge'),
         controlTableHead: document.getElementById('control-table-head'),
@@ -1143,6 +1165,27 @@
       function joinDistinct(set) {
         return [...set].sort((left, right) => left.localeCompare(right, 'fr')).join(' / ') || UNKNOWN_LABEL;
       }
+
+      // Colonne "Action socles" d'IMPORT DONNEES (cf. diagnostic du
+      // 2026-xx) : 9 valeurs réelles observées — "(vide)"/"#N/A" (lignes
+      // anciennes non classées), "Action socle 2024/2025/2026", "Action
+      // structurante", "Action supplémentaire", "Action filière" et
+      // "Action spécifique filière". La coche "actions actuellement
+      // suivies" ne garde QUE les actions socle, toutes années confondues
+      // — décision explicite : les catégories filière restent à trancher
+      // avec Simon, donc exclues pour l'instant comme les autres non-socle.
+      function isCurrentlyTrackedAction(fact) {
+        return normalizeSearchText(fact.actionSocle).indexOf('action socle') === 0;
+      }
+
+      // Année de campagne d'une ligne "Action socle <année>" (ex. 2026),
+      // null si la valeur ne correspond pas à ce format. Sert uniquement au
+      // Top 3 / Bottom 3 de la vue synthèse, restreint à l'année la plus
+      // récente trouvée dans les données plutôt qu'à une année figée en dur.
+      function extractActionSocleYear(value) {
+        const match = normalizeSearchText(value).match(/^action socle\D*(\d{4})/);
+        return match ? Number(match[1]) : null;
+      }
       function roundRate(numerator, denominator) {
         return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
       }
@@ -1161,6 +1204,7 @@
         const scopedFacts = bootstrap.facts.filter((fact) => {
           if (scopeFiliere && fact.filiere !== scopeFiliere) return false;
           if (scopeFiliere && scopeTerritoire && fact.territoire !== scopeTerritoire) return false;
+          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
           return true;
         });
 
@@ -1252,7 +1296,8 @@
           fact.filiere === filiere &&
           (!territoire || fact.territoire === territoire) &&
           (!volet || fact.volet === volet) &&
-          (!thematique || fact.thematique === thematique)
+          (!thematique || fact.thematique === thematique) &&
+          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
         );
 
         const poleOrder = [];
@@ -1334,9 +1379,17 @@
         const filiere = options.filiere || '';
         const territoire = options.territoire || '';
 
-        const scopedFacts = bootstrap.facts.filter((fact) =>
-          (!filiere || fact.filiere === filiere) && (!territoire || fact.territoire === territoire)
-        );
+        // factFilter (ex. Top/Bottom 3 : année socle la plus récente
+        // uniquement) est un prédicat additionnel indépendant de trackedOnly
+        // (coche générique "actions actuellement suivies") : les deux
+        // servent des besoins différents et ne s'appellent jamais ensemble.
+        const scopedFacts = bootstrap.facts.filter((fact) => {
+          if (filiere && fact.filiere !== filiere) return false;
+          if (territoire && fact.territoire !== territoire) return false;
+          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
+          if (options.factFilter && !options.factFilter(fact)) return false;
+          return true;
+        });
 
         const byAction = new Map();
         scopedFacts.forEach((fact) => {
@@ -1494,6 +1547,23 @@
       elements.detailThematique.addEventListener('change', renderMatrix);
       elements.detailPoleSearch.addEventListener('input', renderMatrix);
 
+      // Coche "actions actuellement suivies", partagée par les 3 vues (un
+      // seul état dans state.trackedOnly) : cocher/décocher dans une vue
+      // met à jour les deux autres et recalcule tout, plutôt que 3 réglages
+      // indépendants qu'on pourrait oublier de resynchroniser.
+      const trackedOnlyCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly];
+      function setTrackedOnly(checked) {
+        state.trackedOnly = checked;
+        trackedOnlyCheckboxes.forEach((checkbox) => { checkbox.checked = checked; });
+        if (!state.bootstrap) return;
+        renderSynthese();
+        renderMatrix();
+        renderControl();
+      }
+      trackedOnlyCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => setTrackedOnly(event.target.checked));
+      });
+
       // ---------------------------------------------------------------
       // Vue synthèse
       // ---------------------------------------------------------------
@@ -1504,10 +1574,11 @@
       function resolveSyntheseOptions() {
         const filiere = elements.syntheseFiliere.value;
         const territoireValue = elements.syntheseTerritoire.value;
+        const trackedOnly = state.trackedOnly;
         if (territoireValue === TERRITOIRE_DETAIL_VALUE) {
-          return {filiere, territoire: '', niveau: 'territoire'};
+          return {filiere, territoire: '', niveau: 'territoire', trackedOnly};
         }
-        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value};
+        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value, trackedOnly};
       }
 
       function updateChartTitle(options) {
@@ -1542,9 +1613,14 @@
       function resolveComparisonOptions(options) {
         if (!options.filiere) return null;
         if (!options.territoire) {
-          return {filiere: '', territoire: '', niveau: 'filiere'};
+          return {filiere: '', territoire: '', niveau: 'filiere', trackedOnly: options.trackedOnly};
         }
-        return {filiere: options.filiere, territoire: '', niveau: options.niveau === 'territoire' ? 'filiere' : options.niveau};
+        return {
+          filiere: options.filiere,
+          territoire: '',
+          niveau: options.niveau === 'territoire' ? 'filiere' : options.niveau,
+          trackedOnly: options.trackedOnly
+        };
       }
 
       function renderComparisonChart(options) {
@@ -1580,7 +1656,9 @@
             .map((pole) => normalizePoleCode(pole.poleCode))
         );
         const scopedFacts = bootstrap.facts.filter((fact) =>
-          (!filiere || fact.filiere === filiere) && (!territoire || fact.territoire === territoire)
+          (!filiere || fact.filiere === filiere) &&
+          (!territoire || fact.territoire === territoire) &&
+          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
         );
 
         const actions = new Set();
@@ -1673,10 +1751,34 @@
         });
       }
 
+      // Calculée une fois (les faits ne changent pas en cours de session) :
+      // année de campagne "Action socle" la plus récente trouvée dans les
+      // données, plutôt qu'une année figée en dur à retoucher chaque année.
+      // null si la colonne est absente ou ne contient aucune valeur
+      // reconnaissable — dans ce cas le Top/Bottom 3 n'est pas restreint,
+      // pour ne pas se vider silencieusement d'un classeur plus ancien.
+      function computeLatestActionSocleYear(bootstrap) {
+        let latest = null;
+        bootstrap.facts.forEach((fact) => {
+          const year = extractActionSocleYear(fact.actionSocle);
+          if (year !== null && (latest === null || year > latest)) latest = year;
+        });
+        return latest;
+      }
+
       function renderRanking(options) {
-        const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire});
+        if (state.latestActionSocleYear === undefined) {
+          state.latestActionSocleYear = computeLatestActionSocleYear(state.bootstrap);
+        }
+        const latestYear = state.latestActionSocleYear;
+        const detail = computeActionDetail(state.bootstrap, {
+          filiere: options.filiere,
+          territoire: options.territoire,
+          factFilter: latestYear === null ? null : (fact) => extractActionSocleYear(fact.actionSocle) === latestYear
+        });
         const scopeBits = [options.filiere, options.territoire].filter(Boolean);
-        elements.rankingTitle.textContent = `Top 3 / Bottom 3 — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}`;
+        const yearSuffix = latestYear === null ? '' : ` — action socle ${latestYear}`;
+        elements.rankingTitle.textContent = `Top 3 / Bottom 3 — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}${yearSuffix}`;
         const ranked = detail.rows.filter((row) => row.concernes > 0);
         const byRateDesc = [...ranked].sort((left, right) => right.tauxTerminees - left.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
         const byRateAsc = [...ranked].sort((left, right) => left.tauxTerminees - right.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
@@ -1701,7 +1803,7 @@
         renderRanking(options);
 
         if (options.filiere) {
-          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire});
+          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, trackedOnly: options.trackedOnly});
           state.actionDetail = detail;
           renderActionTable(detail);
         } else {
@@ -2096,7 +2198,7 @@
       // BDD NOMS, repérés manuellement — ce tableau généralise ce contrôle
       // à toutes les actions plutôt que de le refaire au cas par cas.
       // ---------------------------------------------------------------
-      function computeControlRows(bootstrap) {
+      function computeControlRows(bootstrap, trackedOnly) {
         const universeByFiliere = new Map();
         bootstrap.poles.forEach((pole) => {
           if (!pole.filiere || !pole.poleCode) return;
@@ -2107,6 +2209,7 @@
         const byKey = new Map();
         bootstrap.facts.forEach((fact) => {
           if (!fact.filiere || !fact.action) return;
+          if (trackedOnly && !isCurrentlyTrackedAction(fact)) return;
           const key = `${fact.filiere}\u0001${fact.action}`;
           if (!byKey.has(key)) byKey.set(key, {filiere: fact.filiere, action: fact.action, respondedCodes: new Set()});
           byKey.get(key).respondedCodes.add(normalizePoleCode(fact.poleCode));
@@ -2171,7 +2274,14 @@
 
       function renderControl() {
         if (!state.bootstrap) return;
-        if (!state.controlRows) state.controlRows = computeControlRows(state.bootstrap);
+        // Recalculé seulement quand la coche "actions actuellement suivies"
+        // change réellement d'état (elle change quelles lignes comptent
+        // comme "renseignées") — pas à chaque frappe dans la recherche ou
+        // changement de tri/filière, qui ne filtrent que l'affichage.
+        if (!state.controlRows || state.controlRowsTrackedOnly !== state.trackedOnly) {
+          state.controlRows = computeControlRows(state.bootstrap, state.trackedOnly);
+          state.controlRowsTrackedOnly = state.trackedOnly;
+        }
         const rows = sortControlRows(filterControlRows(state.controlRows));
         state.controlVisibleRows = rows;
 
@@ -2317,7 +2427,8 @@
           territoire: elements.detailTerritoire.value,
           volet: elements.detailVolet.value,
           thematique: elements.detailThematique.value,
-          poleSearch: elements.detailPoleSearch.value
+          poleSearch: elements.detailPoleSearch.value,
+          trackedOnly: state.trackedOnly
         });
         state.matrix = matrix;
 
