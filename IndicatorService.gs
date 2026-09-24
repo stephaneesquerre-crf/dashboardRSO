@@ -9,8 +9,7 @@ function getFactRecords_() {
     config.IMPORT_SHEET_NAME,
     config.IMPORT_HEADER_ROW,
     config.IMPORT_SYNTHESE_FIRST_COLUMN,
-    config.IMPORT_SYNTHESE_LAST_COLUMN,
-    config.MAX_DASHBOARD_ROWS
+    config.IMPORT_SYNTHESE_LAST_COLUMN
   );
 
   if (records.length === 0) {

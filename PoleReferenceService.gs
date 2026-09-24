@@ -8,8 +8,7 @@ function getPoleReference_() {
   const records = readSheetRecords_(
     config.SPREADSHEET_ID,
     config.POLE_REFERENCE_SHEET_NAME,
-    config.HEADER_ROW,
-    config.MAX_REFERENCE_ROWS
+    config.HEADER_ROW
   );
 
   if (records.length === 0) {
