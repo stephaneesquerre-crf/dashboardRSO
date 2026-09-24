@@ -25,7 +25,8 @@ function getFactRecords_() {
       volet: cleanValue_(record[columns.volet]),
       thematique: cleanValue_(record[columns.thematique]),
       avancement: cleanValue_(record[columns.avancement]),
-      filiere: cleanValue_(record[columns.filiere])
+      filiere: cleanValue_(record[columns.filiere]),
+      actionSocle: cleanValue_(record[columns.actionSocle])
     }))
     .filter((fact) => fact.poleCode && fact.action);
 }
@@ -37,7 +38,13 @@ function findFactColumns_(headers) {
     volet: findHeader_(headers, 'type daction'),
     thematique: findHeader_(headers, 'poste demissions'),
     avancement: findHeader_(headers, 'avancement'),
-    filiere: findHeader_(headers, 'filiere')
+    filiere: findHeader_(headers, 'filiere'),
+    // Colonne "Action socles" (dernière colonne AZ) : distingue actions
+    // socle (par année de campagne), actions filière et actions
+    // supplémentaires — cf. diagnosticActionSocles et Index.html, utilisé
+    // pour la coche "actions actuellement suivies". Optionnelle : un
+    // classeur plus ancien peut ne pas avoir cette colonne.
+    actionSocle: findOptionalHeader_(headers, 'action socle')
   };
 }
 
@@ -114,7 +121,8 @@ function getDashboardBootstrap() {
     thematique: fact.thematique,
     avancement: fact.avancement,
     filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
-    territoire: resolveFactTerritoire_(fact, poleReference)
+    territoire: resolveFactTerritoire_(fact, poleReference),
+    actionSocle: fact.actionSocle
   }));
 
   // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
