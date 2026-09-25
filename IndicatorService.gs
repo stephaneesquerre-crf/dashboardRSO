@@ -1,7 +1,7 @@
 // Table de faits : une ligne = un couple pôle × action, lue dans la zone
 // SYNTHESE de IMPORT DONNEES (colonnes AM:AZ, en-têtes en ligne 2 — voir
 // Config.gs). Le mapping colonne dashboard -> en-tête source est celui du
-// CLAUDE.md.
+// README.md.
 function getFactRecords_() {
   const config = getConfig_();
   const records = readSheetRecordsInColumnRange_(
@@ -56,7 +56,7 @@ const PADOM_FILIERE_LABEL = 'PADOM';
 // d'IMPORT DONNEES : les deux classent différemment certaines lignes (ex.
 // "SANITAIRE" y est noté "SAN"). Repli sur la colonne du fait uniquement
 // quand le pôle est introuvable dans BDD NOMS (ex. le pôle OUTRE-MER, dont
-// le code est vide côté BDD NOMS — cf. CLAUDE.md, "à corriger à la source").
+// le code est vide côté BDD NOMS — cf. README.md, "à corriger à la source").
 //
 // Cas particulier PADOM : BDD NOMS regroupe les pôles "PA" et "DOM" sous
 // un seul libellé "PADOM", mais IMPORT DONNEES distingue les deux pour
@@ -104,7 +104,7 @@ function resolveFactTerritoire_(fact, poleReference) {
 //
 // Pas d'abstraction supplémentaire côté serveur au-delà de la jointure
 // (filière/territoire résolus) : la logique des trois indicateurs (voir
-// CLAUDE.md et l'historique de leur vérification) ne vit qu'à un seul
+// README.md et l'historique de leur vérification) ne vit qu'à un seul
 // endroit, dans Index.html, plutôt que dupliquée en Apps Script ET en JS
 // navigateur — un projet sans mainteneur dédié ne doit pas avoir deux
 // versions de la même formule à garder synchronisées.
@@ -149,7 +149,7 @@ function getDashboardBootstrap() {
 }
 
 // À exécuter manuellement depuis l'éditeur Apps Script pour éprouver la
-// chaîne lecture -> jointure sur les vraies données (voir CLAUDE.md :
+// chaîne lecture -> jointure sur les vraies données (voir README.md :
 // "Éprouver la chaîne complète... avant d'élargir"). Le résultat s'affiche
 // dans le journal d'exécution (View > Logs) : compte des lignes et des
 // pôles plutôt que le détail complet, pour rester lisible.

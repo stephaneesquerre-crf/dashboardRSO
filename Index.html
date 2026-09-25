@@ -151,6 +151,13 @@
 
       .tab-panel[hidden] { display: none; }
 
+      .view-intro {
+        margin: 0 0 18px;
+        color: var(--text-secondary);
+        font-size: 0.86rem;
+        max-width: 70ch;
+      }
+
       .panel {
         padding: 20px;
         border: 1px solid var(--line);
@@ -670,6 +677,7 @@
     </div>
 
     <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
+      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. La colonne de droite replace le graphique dans son contexte plus large (comparaison, fiche d'identité, top/bottom 3 des actions).</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -779,6 +787,7 @@
     </section>
 
     <section class="tab-panel" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" hidden>
+      <p class="view-intro">Pour une filière (et éventuellement un territoire) choisie, affiche l'avancement de chaque pôle sur chaque action, sous forme de tableau croisé pôle × action — le niveau de détail le plus fin de l'outil, utile pour vérifier un pôle ou une action précise.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -836,6 +845,7 @@
     </section>
 
     <section class="tab-panel" id="panel-controle" role="tabpanel" aria-labelledby="tab-controle" hidden>
+      <p class="view-intro">Vérifie, pour chaque couple filière × action, que tous les pôles attendus (d'après BDD NOMS) ont bien une ligne dans IMPORT DONNEES — indépendamment de leur avancement — afin de repérer les actions dont la saisie est incomplète plutôt que de les découvrir au hasard d'une réunion.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -900,7 +910,7 @@
         </div>
         <div class="doc-section">
           <h3>Territoires</h3>
-          <p>Un territoire est une lettre ou un numéro (ex. <code>Territoire A</code>, <code>Territoire 3</code>) propre à chaque filière, associé à une liste de régions (ex. <code>HDF - IDF - GE</code>). Les deux nomenclatures (lettrée / numérotée) coexistent selon les filières — c'est normal, chacune est propre à sa filière (cf. CLAUDE.md).</p>
+          <p>Un territoire est une lettre ou un numéro (ex. <code>Territoire A</code>, <code>Territoire 3</code>) propre à chaque filière, associé à une liste de régions (ex. <code>HDF - IDF - GE</code>). Les deux nomenclatures (lettrée / numérotée) coexistent selon les filières — c'est normal, chacune est propre à sa filière (cf. README.md).</p>
         </div>
         <div class="doc-section">
           <h3>Limites connues</h3>
@@ -1420,7 +1430,7 @@
 
       // ---------------------------------------------------------------
       // Filtres — peuplés depuis les données déjà chargées, jamais codés en
-      // dur (cf. CLAUDE.md : "tout ce qui varie vit dans un Sheet").
+      // dur (cf. README.md : "tout ce qui varie vit dans un Sheet").
       // ---------------------------------------------------------------
       function distinctSorted(values) {
         return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right, 'fr'));
