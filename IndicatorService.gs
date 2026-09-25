@@ -26,7 +26,12 @@ function getFactRecords_() {
       thematique: cleanValue_(record[columns.thematique]),
       avancement: cleanValue_(record[columns.avancement]),
       filiere: cleanValue_(record[columns.filiere]),
-      actionSocle: cleanValue_(record[columns.actionSocle])
+      actionSocle: cleanValue_(record[columns.actionSocle]),
+      // Valeurs affichées brutes (ex. "-0,10%" ou "-59 700 kgCO2") :
+      // l'unité est interprétée côté client (cf. parseReduction dans
+      // Index.html et README.md, « Sujet ouvert : CO2 en kg/% »).
+      reductionADate: columns.reductionADate ? cleanValue_(record[columns.reductionADate]) : '',
+      reductionCible: columns.reductionCible ? cleanValue_(record[columns.reductionCible]) : ''
     }))
     .filter((fact) => fact.poleCode && fact.action);
 }
@@ -44,7 +49,10 @@ function findFactColumns_(headers) {
     // supplémentaires — cf. diagnosticActionSocles et Index.html, utilisé
     // pour la coche "actions actuellement suivies". Optionnelle : un
     // classeur plus ancien peut ne pas avoir cette colonne.
-    actionSocle: findOptionalHeader_(headers, 'action socle')
+    actionSocle: findOptionalHeader_(headers, 'action socle'),
+    // Optionnelles pour la même raison.
+    reductionADate: findOptionalHeader_(headers, 'reduction carbone a date'),
+    reductionCible: findOptionalHeader_(headers, 'reduction carbone cible')
   };
 }
 
@@ -122,7 +130,9 @@ function getDashboardBootstrap() {
     avancement: fact.avancement,
     filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
     territoire: resolveFactTerritoire_(fact, poleReference),
-    actionSocle: fact.actionSocle
+    actionSocle: fact.actionSocle,
+    reductionADate: fact.reductionADate,
+    reductionCible: fact.reductionCible
   }));
 
   // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
@@ -144,7 +154,8 @@ function getDashboardBootstrap() {
     appVersion: config.APP_VERSION,
     generatedAt: new Date().toISOString(),
     facts: facts,
-    poles: poles
+    poles: poles,
+    toolLinks: getToolLinks_()
   };
 }
 
@@ -161,5 +172,38 @@ function testDashboardBootstrap() {
     poleCount: bootstrap.poles.length,
     sampleFact: bootstrap.facts[0],
     samplePole: bootstrap.poles[0]
+  }, null, 2));
+}
+
+// À exécuter manuellement depuis l'éditeur : recense les formats réellement
+// présents dans les colonnes "Réduction carbone à date / cible" de la zone
+// SYNTHESE (en %, en kg, vide, autre), pour vérifier que parseReduction
+// (Index.html) couvre bien tous les cas avant de se fier aux chiffres.
+function diagnosticReductionCarbone() {
+  const facts = getFactRecords_();
+  const classify = (value) => {
+    const compact = String(value || '').replace(/[\s  ]/g, '');
+    if (!compact) return 'vide';
+    if (/kg/i.test(compact)) return 'kg';
+    if (/^[+\-−]?\d+(?:[.,]\d+)?%$/.test(compact)) return '%';
+    return 'autre';
+  };
+  const counts = {};
+  const otherSamples = {};
+  const kgPoles = {};
+  facts.forEach((fact) => {
+    ['reductionADate', 'reductionCible'].forEach((field) => {
+      const kind = classify(fact[field]);
+      const key = `${field} | ${kind}`;
+      counts[key] = (counts[key] || 0) + 1;
+      if (kind === 'autre' && Object.keys(otherSamples).length < 15) otherSamples[fact[field]] = true;
+      if (kind === 'kg') kgPoles[fact.poleCode] = true;
+    });
+  });
+  Logger.log(JSON.stringify({
+    lignes: facts.length,
+    formats: counts,
+    exemplesAutres: Object.keys(otherSamples),
+    polesAvecKg: Object.keys(kgPoles).sort()
   }, null, 2));
 }

@@ -468,6 +468,23 @@
         font-size: 0.76rem;
         color: var(--text-secondary);
       }
+      .poste-card-co2 {
+        margin-top: 4px;
+        font-size: 0.8rem;
+      }
+      .poste-card-co2 small { color: var(--text-muted); }
+      .co2-summary {
+        margin: 0 0 18px;
+        font-size: 0.86rem;
+        color: var(--text-secondary);
+      }
+      .co2-summary strong { color: var(--text-primary); }
+      .tool-links {
+        margin: -8px 0 16px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+      .tool-links a { color: var(--series-1); font-weight: 600; }
       .gauge { display: inline-flex; gap: 2px; }
       .gauge span {
         width: 18px;
@@ -774,6 +791,7 @@
             <label for="synthese-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
+        <p class="tool-links" id="synthese-tool-links" hidden></p>
         <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
         <p class="filter-hint">« Actions socle uniquement » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
       </section>
@@ -879,6 +897,7 @@
             <label for="detail-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
+        <p class="tool-links" id="detail-tool-links" hidden></p>
       </section>
 
       <section class="panel">
@@ -971,13 +990,16 @@
             <label for="poste-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
-        <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. La réduction carbone (⬇ %) n'est pas encore affichée : les colonnes correspondantes ne sont pas lues (sujet ouvert, cf. README).</p>
+        <p class="tool-links" id="poste-tool-links" hidden></p>
+        <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. </p>
+        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. Les pôles pilotes du bilan carbone 2023, dont les réductions sont saisies en kgCO2, sont exclus tant que leur bilan total n'est pas disponible dans le classeur national.</p>
       </section>
 
       <section class="panel">
         <div class="panel-header">
           <h2 id="poste-title">Avancement par poste d'émissions</h2>
         </div>
+        <p class="co2-summary" id="poste-co2-summary"></p>
         <div class="poste-grid" id="poste-grid"></div>
         <p class="matrix-empty" id="poste-empty" hidden>Aucune action ne correspond à ces filtres.</p>
       </section>
@@ -1127,6 +1149,10 @@
         posteTrackedOnly: document.getElementById('poste-tracked-only'),
         posteTitle: document.getElementById('poste-title'),
         posteGrid: document.getElementById('poste-grid'),
+        posteCo2Summary: document.getElementById('poste-co2-summary'),
+        syntheseToolLinks: document.getElementById('synthese-tool-links'),
+        detailToolLinks: document.getElementById('detail-tool-links'),
+        posteToolLinks: document.getElementById('poste-tool-links'),
         posteEmpty: document.getElementById('poste-empty')
       };
 
@@ -1912,6 +1938,7 @@
         const options = resolveSyntheseOptions();
         const snapshot = computeSnapshot(state.bootstrap, options);
         state.syntheseSnapshot = snapshot;
+        renderToolLinks(elements.syntheseToolLinks, options.filiere);
         updateChartTitle(options);
         renderChart(snapshot);
         renderComparisonChart(options);
@@ -2528,6 +2555,7 @@
 
       function renderMatrix() {
         const filiere = elements.detailFiliere.value;
+        renderToolLinks(elements.detailToolLinks, filiere);
         if (!filiere) {
           state.matrix = null;
           elements.matrixTable.hidden = true;
@@ -2685,12 +2713,13 @@
           const action = fact.action || UNKNOWN_LABEL;
           if (!byPoste.has(poste)) byPoste.set(poste, new Map());
           const actions = byPoste.get(poste);
-          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0});
+          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0, facts: []});
           const bucket = actions.get(action);
           if (isConcerne(fact.avancement)) {
             bucket.concernes += 1;
             bucket.somme += parseAvancementFraction(fact.avancement);
             if (isTermine(fact.avancement)) bucket.terminees += 1;
+            bucket.facts.push(fact);
           }
         });
 
@@ -2705,9 +2734,101 @@
               terminees: bucket.terminees,
               // null = aucun pôle concerné (toutes lignes abandonnées) :
               // affiché comme donnée non disponible, jamais comme 0 %.
-              tauxMoyenAvancement: bucket.concernes ? roundRate(bucket.somme, bucket.concernes) : null
-            }))
+              tauxMoyenAvancement: bucket.concernes ? roundRate(bucket.somme, bucket.concernes) : null,
+              co2: aggregateReductionByPole(bucket.facts)
+            })),
+          co2: aggregateReductionByPole([...byPoste.get(poste).values()].flatMap((bucket) => bucket.facts))
         }));
+      }
+
+      // ---------------------------------------------------------------
+      // Réduction carbone (cf. README, « Sujet ouvert : CO2 en kg/% ») :
+      // - pôles non pilotes : valeurs en points de % du bilan total du pôle
+      //   (ex. "-0,10%"), additionnables entre actions d'un même pôle ;
+      // - pôles pilotes du bilan carbone 2023 : certaines lignes en kgCO2
+      //   (ex. "-59 700 kgCO2"), convertibles seulement avec le bilan total
+      //   du pôle, pas encore disponible dans le classeur national. Un pôle
+      //   ayant au moins une valeur en kg est donc exclu entièrement
+      //   (sinon ses seules lignes en % donneraient un total tronqué).
+      // ---------------------------------------------------------------
+      function parseReduction(raw) {
+        const compact = String(raw || '').replace(/[\s\u00a0\u202f]/g, '').replace(/−/g, '-');
+        if (!compact) return null;
+        if (/kg/i.test(compact)) return {unit: 'kg'};
+        const match = compact.replace(',', '.').match(/^([+-]?\d+(?:\.\d+)?)%$/);
+        return match ? {unit: 'pct', value: Number(match[1])} : null;
+      }
+
+      function computePilotPoleCodes(bootstrap) {
+        const codes = new Set();
+        bootstrap.facts.forEach((fact) => {
+          [fact.reductionADate, fact.reductionCible].forEach((raw) => {
+            const parsed = parseReduction(raw);
+            if (parsed && parsed.unit === 'kg') codes.add(normalizePoleCode(fact.poleCode));
+          });
+        });
+        return codes;
+      }
+
+      // Somme par pôle des réductions de ses lignes (en points de %), puis
+      // moyenne simple entre pôles. Méthode d'agrégation de Simon non
+      // connue à ce jour (cf. README) : à confirmer avant usage officiel.
+      function aggregateReductionByPole(facts) {
+        const pilots = state.pilotPoleCodes || new Set();
+        const byPole = new Map();
+        const excludedPilots = new Set();
+        facts.forEach((fact) => {
+          const code = normalizePoleCode(fact.poleCode);
+          if (pilots.has(code)) {
+            excludedPilots.add(code);
+            return;
+          }
+          const aDate = parseReduction(fact.reductionADate);
+          const cible = parseReduction(fact.reductionCible);
+          if (!aDate && !cible) return;
+          if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
+          const pole = byPole.get(code);
+          if (aDate) pole.aDate += aDate.value;
+          if (cible) pole.cible += cible.value;
+        });
+        const poles = [...byPole.values()];
+        const mean = (key) => poles.length ? poles.reduce((sum, pole) => sum + pole[key], 0) / poles.length : null;
+        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size};
+      }
+
+      function formatReduction(value) {
+        if (value === null) return '—';
+        return `${value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} %`;
+      }
+
+      function describeReduction(co2) {
+        if (!co2.poleCount) return '';
+        return `⬇ ${formatReduction(co2.aDate)} à date · cible ${formatReduction(co2.cible)}`;
+      }
+
+      // ---------------------------------------------------------------
+      // Liens vers l'outil de suivi de la filière choisie (onglet
+      // "Liens outils", colonne Code filière comparée au nom de filière du
+      // dashboard, sans tenir compte de la casse ni des accents). Plusieurs
+      // liens possibles pour une même filière (ex. CRC Nord / Sud).
+      // ---------------------------------------------------------------
+      function renderToolLinks(container, filiere) {
+        const links = filiere
+          ? (state.bootstrap.toolLinks || []).filter((link) => normalizeSearchText(link.filiereCode) === normalizeSearchText(filiere))
+          : [];
+        container.replaceChildren();
+        container.hidden = links.length === 0;
+        if (!links.length) return;
+        container.append(links.length > 1 ? 'Outils de suivi de la filière : ' : 'Outil de suivi de la filière : ');
+        links.forEach((link, index) => {
+          if (index > 0) container.append(' · ');
+          const anchor = document.createElement('a');
+          anchor.href = link.url;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          anchor.textContent = link.title || link.label;
+          container.append(anchor);
+        });
       }
 
       // Paliers de la légende du support de Simon (>0 / >25 / >50 / >75 %),
@@ -2753,6 +2874,15 @@
         sub.textContent = `${formatCount(card.terminees)} / ${formatCount(card.concernes)} pôles concernés à 100 %`;
 
         element.append(title, value, sub);
+        if (card.co2.poleCount) {
+          const co2 = document.createElement('div');
+          co2.className = 'poste-card-co2';
+          co2.textContent = describeReduction(card.co2) + ' ';
+          const detail = document.createElement('small');
+          detail.textContent = `(${formatCount(card.co2.poleCount)} pôle${card.co2.poleCount > 1 ? 's' : ''})`;
+          co2.append(detail);
+          element.append(co2);
+        }
         return element;
       }
 
@@ -2763,7 +2893,29 @@
           territoire: elements.posteTerritoire.value,
           trackedOnly: state.trackedOnly
         };
+        renderToolLinks(elements.posteToolLinks, options.filiere);
         const groups = computePosteCards(state.bootstrap, options);
+        // Toutes actions du périmètre confondues (mêmes filtres que les
+        // cartes) : somme par pôle, puis moyenne entre pôles.
+        const total = aggregateReductionByPole(state.bootstrap.facts.filter((fact) =>
+          (!options.filiere || fact.filiere === options.filiere) &&
+          (!options.filiere || !options.territoire || fact.territoire === options.territoire) &&
+          (!options.trackedOnly || isCurrentlyTrackedAction(fact)) &&
+          isConcerne(fact.avancement)));
+        elements.posteCo2Summary.replaceChildren();
+        if (total.poleCount) {
+          const strong = document.createElement('strong');
+          strong.textContent = describeReduction(total);
+          elements.posteCo2Summary.append('Réduction du bilan carbone, moyenne par pôle : ', strong,
+            ` — ${formatCount(total.poleCount)} pôles`);
+        } else {
+          elements.posteCo2Summary.append('Réduction du bilan carbone : aucune valeur en % exploitable dans ce périmètre');
+        }
+        if (total.excludedPilotCount) {
+          elements.posteCo2Summary.append(`, ${formatCount(total.excludedPilotCount)} pôle(s) pilote(s) exclu(s) (valeurs en kgCO2).`);
+        } else {
+          elements.posteCo2Summary.append('.');
+        }
         const scopeBits = [options.filiere || 'Toutes les filières', options.filiere ? options.territoire : ''].filter(Boolean);
         elements.posteTitle.textContent = `Avancement par poste d'émissions · ${scopeBits.join(' · ')}`;
 
@@ -2775,6 +2927,11 @@
           const count = document.createElement('small');
           count.textContent = `(${group.cards.length} action${group.cards.length > 1 ? 's' : ''})`;
           heading.append(count);
+          if (group.co2.poleCount) {
+            const co2 = document.createElement('small');
+            co2.textContent = ` · ${describeReduction(group.co2)}`;
+            heading.append(co2);
+          }
           const cards = document.createElement('div');
           cards.className = 'poste-cards';
           cards.append(...group.cards.map(buildPosteCard));
@@ -2834,6 +2991,7 @@
       google.script.run
         .withSuccessHandler((bootstrap) => {
           state.bootstrap = bootstrap;
+          state.pilotPoleCodes = computePilotPoleCodes(bootstrap);
           const generated = new Date(bootstrap.generatedAt);
           elements.status.textContent =
             `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;

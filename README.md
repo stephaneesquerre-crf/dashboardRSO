@@ -20,6 +20,12 @@ redécouvrir un par un.
 - **`IndicatorService.gs`** — lit `IMPORT DONNEES` (table de faits pôle ×
   action), reclasse PADOM en PA/DOM, joint faits et pôles, assemble
   `getDashboardBootstrap()`.
+- **`ToolLinksService.gs`** — lit l'onglet `Liens outils` (liens vers les
+  outils de suivi par filière, saisis en chips intelligentes). Nécessite le
+  **service avancé Sheets** (éditeur Apps Script → Services → Google
+  Sheets API, identifiant `Sheets`) : les chips ne sont lisibles que par
+  l'API Sheets (champ `chipRuns`), pas par `SpreadsheetApp`. Sans ce
+  service, le dashboard se charge normalement, sans les liens.
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   et journalise les connexions/incidents. Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
@@ -61,7 +67,7 @@ apostrophes, espaces).
 | Filière                         | `filiere`     | oui (repli seulement si le pôle est introuvable dans BDD NOMS) |
 | Action socles                   | `actionSocle` | oui (voir plus bas) |
 | Objectif, Référent de l'action, Mise en place (texte), Outil, Noms | — | non |
-| **Réduction carbone à date / cible** | — | **non — voir « Sujet ouvert : CO2 en kg/% » ci-dessous** |
+| Réduction carbone à date / cible | `reductionADate` / `reductionCible` | oui, vue Par poste — pôles non pilotes seulement (voir « Sujet ouvert : CO2 en kg/% ») |
 
 ## Les 3 indicateurs (vue Synthèse)
 
@@ -154,8 +160,18 @@ comme la synthèse, plus la coche partagée. Chaque carte affiche :
   support de Simon (43 % → 2 cases, 50 % → 3, 98 % → 4) ;
 - le nombre de pôles concernés à 100 %.
 
-Pas encore affichés, par rapport au support de Simon : la réduction
-carbone (⬇ %, cf. sujet ouvert CO2), la part du poste dans l'empreinte, et
+- la **réduction carbone** (⬇ à date / cible), par carte, par poste et
+  pour tout le périmètre : somme par pôle des réductions (points de % du
+  bilan du pôle), puis **moyenne simple entre pôles**. Les pôles pilotes
+  (au moins une valeur en kgCO2) sont exclus en entier et comptés à part.
+  La méthode d'agrégation de Simon n'est pas connue : à confirmer avec lui
+  avant usage officiel.
+
+Le lien vers l'outil de suivi de la filière choisie (onglet `Liens outils`,
+colonne Code filière) s'affiche sous les filtres des vues Synthèse, Détail
+et Par poste.
+
+Pas encore affichés, par rapport au support de Simon : la part du poste dans l'empreinte, et
 les indicateurs spécifiques qui ne sont pas des avancements (ex. taille de
 flotte, part de véhicules électriques).
 
@@ -222,6 +238,12 @@ des sites, non encore reportées dans le code) :
   `SOMME.SI.ENS` somme `PAS_Massues[Réduction cible]` avec le critère
   `PA_Massues[Poste d'émissions]` (plages de deux tableaux différents) —
   probablement une erreur de saisie, à vérifier.
+
+**Implémenté pour les pôles non pilotes** (vue Par poste) : les valeurs
+affichées sont lues telles quelles (`"-0,10%"`), une valeur contenant
+« kg » marque le pôle comme pilote et l'exclut. `diagnosticReductionCarbone()`
+(IndicatorService.gs, à lancer depuis l'éditeur) recense les formats
+réellement présents et la liste des pôles détectés comme pilotes.
 
 Combiner les deux en un seul indicateur nécessite de savoir si les
 pourcentages sont exprimés par rapport à un total (bilan carbone du pôle)
