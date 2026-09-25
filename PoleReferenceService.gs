@@ -1,15 +1,14 @@
 // Lit BDD NOMS : une ligne = un pôle. Sert à connaître l'univers des pôles
 // attendus par filière (nécessaire pour la ligne de qualité), et plus tard
 // pour l'axe territoire. Les colonnes territoire/régions sont ajoutées et
-// figées à la main dans le Sheet (voir CLAUDE.md) : le code se contente d'un
+// figées à la main dans le Sheet (voir README.md) : le code se contente d'un
 // lookup, jamais d'un recalcul des regex d'extraction.
 function getPoleReference_() {
   const config = getConfig_();
   const records = readSheetRecords_(
     config.SPREADSHEET_ID,
     config.POLE_REFERENCE_SHEET_NAME,
-    config.HEADER_ROW,
-    config.MAX_REFERENCE_ROWS
+    config.HEADER_ROW
   );
 
   if (records.length === 0) {

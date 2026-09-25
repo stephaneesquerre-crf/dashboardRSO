@@ -33,8 +33,10 @@ function findOptionalHeader_(headers, expectedPrefix) {
 }
 
 // Lit un onglet et renvoie un objet par ligne, clé = en-tête (ligne headerRow).
-// Les lignes entièrement vides sont ignorées.
-function readSheetRecords_(spreadsheetId, sheetName, headerRow, maxRows) {
+// Les lignes entièrement vides sont ignorées. Lit jusqu'à la vraie dernière
+// ligne de la feuille : un plafond arbitraire tronquerait silencieusement les
+// données au-delà (bug vécu sur IMPORT DONNEES, cf. historique de ce fichier).
+function readSheetRecords_(spreadsheetId, sheetName, headerRow) {
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   const sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) {
@@ -48,9 +50,8 @@ function readSheetRecords_(spreadsheetId, sheetName, headerRow, maxRows) {
 
   const headers = values[headerRow - 1];
   const dataRows = values.slice(headerRow);
-  const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
 
-  return limitedRows
+  return dataRows
     .filter((row) => row.some((value) => cleanValue_(value)))
     .map((row) => headers.reduce((record, header, index) => {
       if (header) {
@@ -63,7 +64,9 @@ function readSheetRecords_(spreadsheetId, sheetName, headerRow, maxRows) {
 // Variante restreinte à une plage de colonnes (ex. AM:AZ), nécessaire quand
 // les mêmes intitulés de colonnes se répètent ailleurs sur la feuille : une
 // recherche d'en-tête sans cette restriction trouverait la mauvaise zone.
-function readSheetRecordsInColumnRange_(spreadsheetId, sheetName, headerRow, firstColumn, lastColumn, maxRows) {
+// Lit jusqu'à la vraie dernière ligne de la feuille (sheet.getLastRow()), sans
+// plafond arbitraire (cf. readSheetRecords_ ci-dessus).
+function readSheetRecordsInColumnRange_(spreadsheetId, sheetName, headerRow, firstColumn, lastColumn) {
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   const sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) {
@@ -79,9 +82,8 @@ function readSheetRecordsInColumnRange_(spreadsheetId, sheetName, headerRow, fir
   const values = range.getDisplayValues();
   const headers = values[0];
   const dataRows = values.slice(1);
-  const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
 
-  return limitedRows
+  return dataRows
     .filter((row) => row.some((value) => cleanValue_(value)))
     .map((row) => headers.reduce((record, header, index) => {
       if (header) {

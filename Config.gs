@@ -14,8 +14,6 @@ const CONFIG = Object.freeze({
   POLE_REFERENCE_SHEET_NAME: 'BDD NOMS',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
-  MAX_DASHBOARD_ROWS: 5000,
-  MAX_REFERENCE_ROWS: 1000,
   // Cache applicatif des droits (mis en place lors de l'ajout de la couche droits).
   RIGHTS_CACHE_TTL_SECONDS: 300
 });

@@ -1,4 +1,4 @@
-// Affichage minimal (voir CLAUDE.md : éprouver lecture -> calcul -> affichage
+// Affichage minimal (voir README.md : éprouver lecture -> calcul -> affichage
 // sur l'indicateur unique avant d'élargir). Pas de couche droits complète ici
 // : simple restriction de domaine, cohérente avec IdentityService.gs déjà en
 // place. La demande d'accès / gestion des rôles reste à construire à part.
