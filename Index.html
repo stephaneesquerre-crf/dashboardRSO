@@ -36,6 +36,11 @@
         --series-2:       #0d9296; /* vert Croix-Rouge — moyenne d'avancement */
         --series-3:       #803ac0; /* violet Croix-Rouge — taux de réponse */
         --status-critical:#d03b3b; /* réservé : "Abandonnée" dans la matrice détail */
+        /* Jauge de la vue Par poste (paliers repris du support de Simon) :
+           palette de statut du skill dataviz, identique en clair et en
+           sombre ; jamais seule, toujours accompagnée du % en texte. */
+        --status-good:    #0ca30c;
+        --status-serious: #ec835a;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .viz-root {
@@ -421,6 +426,61 @@
       }
 
       /* ---------------------------------------------------------------
+         Vue par poste d'émissions (cartes par action, cf. support
+         « Trajectoire décarbonation 2024/2026 » de Simon)
+         --------------------------------------------------------------- */
+      .poste-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        align-items: start;
+      }
+      .poste-group h3 {
+        margin: 0 0 10px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .poste-group h3 small {
+        font-weight: 400;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+      }
+      .poste-cards { display: grid; gap: 10px; }
+      .poste-card {
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: var(--surface-2);
+      }
+      .poste-card-title {
+        margin: 0 0 6px;
+        font-weight: 600;
+        font-size: 0.86rem;
+      }
+      .poste-card-value {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .poste-card-sub {
+        margin-top: 4px;
+        font-size: 0.76rem;
+        color: var(--text-secondary);
+      }
+      .gauge { display: inline-flex; gap: 2px; }
+      .gauge span {
+        width: 18px;
+        height: 12px;
+        border-radius: 2px;
+        background: var(--line);
+      }
+      .gauge[data-level="1"] span.on { background: var(--status-critical); }
+      .gauge[data-level="2"] span.on { background: var(--status-serious); }
+      .gauge[data-level="3"] span.on,
+      .gauge[data-level="4"] span.on { background: var(--status-good); }
+
+      /* ---------------------------------------------------------------
          Vue contrôle
          --------------------------------------------------------------- */
       .control-toggle-field {
@@ -673,6 +733,7 @@
       <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
       <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle</button>
+      <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Par poste d'émissions</button>
       <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
     </div>
 
@@ -710,11 +771,11 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="synthese-tracked-only">
-            <label for="synthese-tracked-only">Actions actuellement suivies uniquement</label>
+            <label for="synthese-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
         <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
-        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="filter-hint">« Actions socle uniquement » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
       </section>
 
       <div class="synthese-chart-grid">
@@ -815,7 +876,7 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="detail-tracked-only">
-            <label for="detail-tracked-only">Actions actuellement suivies uniquement</label>
+            <label for="detail-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
       </section>
@@ -865,11 +926,11 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="control-tracked-only">
-            <label for="control-tracked-only">Actions actuellement suivies uniquement</label>
+            <label for="control-tracked-only">Actions socle uniquement</label>
           </div>
         </div>
         <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
-        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="filter-hint">« Actions socle uniquement » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
       </section>
 
       <section class="panel">
@@ -887,6 +948,38 @@
           </table>
         </div>
         <p class="matrix-empty" id="control-empty" hidden>Aucune ligne ne correspond à ces filtres.</p>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
+      <p class="view-intro">Pour chaque poste d'émissions, une carte par action : moyenne d'avancement des pôles concernés, jauge en 4 paliers et nombre de pôles ayant terminé l'action — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="poste-filiere">Filière</label>
+            <select id="poste-filiere"></select>
+          </div>
+          <div class="filter-field">
+            <label for="poste-territoire">Territoire</label>
+            <select id="poste-territoire" disabled><option value="">Toute la filière</option></select>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="poste-tracked-only">
+            <label for="poste-tracked-only">Actions socle uniquement</label>
+          </div>
+        </div>
+        <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. La réduction carbone (⬇ %) n'est pas encore affichée : les colonnes correspondantes ne sont pas lues (sujet ouvert, cf. README).</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="poste-title">Avancement par poste d'émissions</h2>
+        </div>
+        <div class="poste-grid" id="poste-grid"></div>
+        <p class="matrix-empty" id="poste-empty" hidden>Aucune action ne correspond à ces filtres.</p>
       </section>
     </section>
 
@@ -969,10 +1062,12 @@
         tabSynthese: document.getElementById('tab-synthese'),
         tabDetail: document.getElementById('tab-detail'),
         tabControle: document.getElementById('tab-controle'),
+        tabPoste: document.getElementById('tab-poste'),
         tabDoc: document.getElementById('tab-doc'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
         panelControle: document.getElementById('panel-controle'),
+        panelPoste: document.getElementById('panel-poste'),
         panelDoc: document.getElementById('panel-doc'),
 
         syntheseFiliere: document.getElementById('synthese-filiere'),
@@ -1025,7 +1120,14 @@
         controlTableHead: document.getElementById('control-table-head'),
         controlTableBody: document.getElementById('control-table-body'),
         controlEmpty: document.getElementById('control-empty'),
-        exportControlCsv: document.getElementById('export-control-csv')
+        exportControlCsv: document.getElementById('export-control-csv'),
+
+        posteFiliere: document.getElementById('poste-filiere'),
+        posteTerritoire: document.getElementById('poste-territoire'),
+        posteTrackedOnly: document.getElementById('poste-tracked-only'),
+        posteTitle: document.getElementById('poste-title'),
+        posteGrid: document.getElementById('poste-grid'),
+        posteEmpty: document.getElementById('poste-empty')
       };
 
       // ---------------------------------------------------------------
@@ -1098,15 +1200,18 @@
         elements.tabSynthese.setAttribute('aria-selected', String(name === 'synthese'));
         elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
         elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
+        elements.tabPoste.setAttribute('aria-selected', String(name === 'poste'));
         elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
         elements.panelControle.hidden = name !== 'controle';
+        elements.panelPoste.hidden = name !== 'poste';
         elements.panelDoc.hidden = name !== 'doc';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
       elements.tabControle.addEventListener('click', () => selectTab('controle'));
+      elements.tabPoste.addEventListener('click', () => selectTab('poste'));
       elements.tabDoc.addEventListener('click', () => selectTab('doc'));
 
       // ---------------------------------------------------------------
@@ -1561,7 +1666,7 @@
       // seul état dans state.trackedOnly) : cocher/décocher dans une vue
       // met à jour les deux autres et recalcule tout, plutôt que 3 réglages
       // indépendants qu'on pourrait oublier de resynchroniser.
-      const trackedOnlyCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly];
+      const trackedOnlyCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly, elements.posteTrackedOnly];
       function setTrackedOnly(checked) {
         state.trackedOnly = checked;
         trackedOnlyCheckboxes.forEach((checkbox) => { checkbox.checked = checked; });
@@ -1569,6 +1674,7 @@
         renderSynthese();
         renderMatrix();
         renderControl();
+        renderPoste();
       }
       trackedOnlyCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', (event) => setTrackedOnly(event.target.checked));
@@ -2559,6 +2665,131 @@
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-detail-${scopeSuffix}-${dateStamp()}.csv`);
       });
 
+      // ---------------------------------------------------------------
+      // Vue par poste d'émissions — reprend la mise en forme des fiches
+      // « Trajectoire décarbonation » de Simon (une carte par action,
+      // groupées par poste), avec les indicateurs déjà calculés ailleurs :
+      // moyenne d'avancement et terminées / concernées. Même filtre
+      // filière / territoire que la synthèse, sans le mode « Tous les
+      // territoires (détail) » (pas de comparaison ici).
+      // ---------------------------------------------------------------
+      function computePosteCards(bootstrap, options) {
+        const filiere = options.filiere || '';
+        const territoire = filiere ? (options.territoire || '') : '';
+        const byPoste = new Map();
+        bootstrap.facts.forEach((fact) => {
+          if (filiere && fact.filiere !== filiere) return;
+          if (territoire && fact.territoire !== territoire) return;
+          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return;
+          const poste = fact.thematique || UNKNOWN_LABEL;
+          const action = fact.action || UNKNOWN_LABEL;
+          if (!byPoste.has(poste)) byPoste.set(poste, new Map());
+          const actions = byPoste.get(poste);
+          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0});
+          const bucket = actions.get(action);
+          if (isConcerne(fact.avancement)) {
+            bucket.concernes += 1;
+            bucket.somme += parseAvancementFraction(fact.avancement);
+            if (isTermine(fact.avancement)) bucket.terminees += 1;
+          }
+        });
+
+        const byName = (left, right) => left.localeCompare(right, 'fr');
+        return [...byPoste.keys()].sort(byName).map((poste) => ({
+          poste,
+          cards: [...byPoste.get(poste).values()]
+            .sort((left, right) => byName(left.action, right.action))
+            .map((bucket) => ({
+              action: bucket.action,
+              concernes: bucket.concernes,
+              terminees: bucket.terminees,
+              // null = aucun pôle concerné (toutes lignes abandonnées) :
+              // affiché comme donnée non disponible, jamais comme 0 %.
+              tauxMoyenAvancement: bucket.concernes ? roundRate(bucket.somme, bucket.concernes) : null
+            }))
+        }));
+      }
+
+      // Paliers de la légende du support de Simon (>0 / >25 / >50 / >75 %),
+      // vérifiés sur ses exemples : 43 % -> 2 cases, 50 % -> 3, 98 % -> 4.
+      function gaugeLevel(rate) {
+        if (rate === null || rate <= 0) return 0;
+        if (rate >= 75) return 4;
+        if (rate >= 50) return 3;
+        if (rate >= 25) return 2;
+        return 1;
+      }
+
+      function buildGauge(rate) {
+        const level = gaugeLevel(rate);
+        const gauge = document.createElement('span');
+        gauge.className = 'gauge';
+        gauge.dataset.level = String(level);
+        gauge.setAttribute('aria-hidden', 'true');
+        for (let index = 1; index <= 4; index += 1) {
+          const cell = document.createElement('span');
+          if (index <= level) cell.className = 'on';
+          gauge.append(cell);
+        }
+        return gauge;
+      }
+
+      function buildPosteCard(card) {
+        const element = document.createElement('div');
+        element.className = 'poste-card';
+
+        const title = document.createElement('p');
+        title.className = 'poste-card-title';
+        title.textContent = card.action;
+
+        const value = document.createElement('div');
+        value.className = 'poste-card-value';
+        const rateText = document.createElement('span');
+        rateText.textContent = card.tauxMoyenAvancement === null ? 'Donnée non disponible' : `📈 ${formatRate(card.tauxMoyenAvancement)}`;
+        value.append(rateText, buildGauge(card.tauxMoyenAvancement));
+
+        const sub = document.createElement('div');
+        sub.className = 'poste-card-sub';
+        sub.textContent = `${formatCount(card.terminees)} / ${formatCount(card.concernes)} pôles concernés à 100 %`;
+
+        element.append(title, value, sub);
+        return element;
+      }
+
+      function renderPoste() {
+        if (!state.bootstrap) return;
+        const options = {
+          filiere: elements.posteFiliere.value,
+          territoire: elements.posteTerritoire.value,
+          trackedOnly: state.trackedOnly
+        };
+        const groups = computePosteCards(state.bootstrap, options);
+        const scopeBits = [options.filiere || 'Toutes les filières', options.filiere ? options.territoire : ''].filter(Boolean);
+        elements.posteTitle.textContent = `Avancement par poste d'émissions · ${scopeBits.join(' · ')}`;
+
+        elements.posteGrid.replaceChildren(...groups.map((group) => {
+          const section = document.createElement('section');
+          section.className = 'poste-group';
+          const heading = document.createElement('h3');
+          heading.textContent = group.poste + ' ';
+          const count = document.createElement('small');
+          count.textContent = `(${group.cards.length} action${group.cards.length > 1 ? 's' : ''})`;
+          heading.append(count);
+          const cards = document.createElement('div');
+          cards.className = 'poste-cards';
+          cards.append(...group.cards.map(buildPosteCard));
+          section.append(heading, cards);
+          return section;
+        }));
+        elements.posteEmpty.hidden = groups.length > 0;
+      }
+
+      elements.posteFiliere.addEventListener('change', () => {
+        populateTerritoireSelect(elements.posteTerritoire, elements.posteFiliere.value, 'Toute la filière');
+        renderPoste();
+      });
+      elements.posteTerritoire.addEventListener('change', renderPoste);
+
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
       // (Synthèse, Détail, Contrôle), sur ce qui est actuellement affiché
       // dans chaque vue — pour l'envoi groupé à un tiers plutôt que 3 clics
@@ -2609,6 +2840,7 @@
           populateFiliereSelect(elements.syntheseFiliere, true);
           populateFiliereSelect(elements.detailFiliere, false);
           populateFiliereSelect(elements.controlFiliere, true);
+          populateFiliereSelect(elements.posteFiliere, true);
           updateNiveauAvailability();
           // Page chargée sur la vue "toutes filières" par défaut : même
           // règle que dans l'écouteur de synthese-filiere ci-dessus.
@@ -2616,6 +2848,7 @@
           renderSynthese();
           renderMatrix();
           renderControl();
+          renderPoste();
         })
         .withFailureHandler((error) => {
           elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';
