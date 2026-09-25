@@ -20,6 +20,12 @@ redécouvrir un par un.
 - **`IndicatorService.gs`** — lit `IMPORT DONNEES` (table de faits pôle ×
   action), reclasse PADOM en PA/DOM, joint faits et pôles, assemble
   `getDashboardBootstrap()`.
+- **`ToolLinksService.gs`** — lit l'onglet `Liens outils` (liens vers les
+  outils de suivi par filière, saisis en chips intelligentes). Nécessite le
+  **service avancé Sheets** (éditeur Apps Script → Services → Google
+  Sheets API, identifiant `Sheets`) : les chips ne sont lisibles que par
+  l'API Sheets (champ `chipRuns`), pas par `SpreadsheetApp`. Sans ce
+  service, le dashboard se charge normalement, sans les liens.
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   et journalise les connexions/incidents. Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
@@ -61,7 +67,7 @@ apostrophes, espaces).
 | Filière                         | `filiere`     | oui (repli seulement si le pôle est introuvable dans BDD NOMS) |
 | Action socles                   | `actionSocle` | oui (voir plus bas) |
 | Objectif, Référent de l'action, Mise en place (texte), Outil, Noms | — | non |
-| **Réduction carbone à date / cible** | — | **non — voir « Sujet ouvert : CO2 en kg/% » ci-dessous** |
+| Réduction carbone à date / cible | `reductionADate` / `reductionCible` | oui, vue Par poste — pôles non pilotes seulement (voir « Sujet ouvert : CO2 en kg/% ») |
 
 ## Les 3 indicateurs (vue Synthèse)
 
@@ -97,7 +103,7 @@ Un territoire est une lettre ou un numéro (`Territoire A`, `Territoire 3`),
 propre à chaque filière, associé à une liste de régions. Les deux
 nomenclatures coexistent selon les filières, c'est normal.
 
-## Colonne "Action socles" et coche "actions actuellement suivies"
+## Colonne "Action socles" et coche "Actions socle uniquement"
 
 La colonne AZ d'IMPORT DONNEES (`Action socles`) compte 9 valeurs réelles
 observées (diagnostic du 24/09/2026) :
@@ -114,8 +120,9 @@ observées (diagnostic du 24/09/2026) :
 | `Action structurante` | 57 |
 | `#N/A` | 4 |
 
-La coche **« Actions actuellement suivies uniquement »** (un seul état
-partagé entre les vues Synthèse, Détail et Contrôle — `state.trackedOnly`
+La coche **« Actions socle uniquement »** (renommée le 25/09/2026, ex-
+« Actions actuellement suivies » ; un seul état partagé entre les vues
+Synthèse, Détail, Contrôle et Par poste — `state.trackedOnly`
 dans `Index.html`, fonction `isCurrentlyTrackedAction`) ne garde **que**
 les lignes `Action socle <année>`, toutes années confondues. Décision
 explicite du 24/09/2026 : les catégories `Action filière`, `Action
@@ -138,6 +145,38 @@ chose qu'un pôle à 0 % : c'est une action non renseignée du tout par le
 référent, pas une action en retard. Née d'un cas trouvé manuellement (des
 sites CRC n'ayant jamais renseigné "Optimisation de la flotte") puis
 généralisée à toutes les actions.
+
+## Vue Par poste d'émissions
+
+Reprend la mise en forme des fiches « Trajectoire décarbonation 2024/2026 »
+de Simon : une carte par action, groupées par poste d'émissions (colonne
+`Poste d'émissions`, champ `thematique`). Filtres filière / territoire
+comme la synthèse, plus la coche partagée. Chaque carte affiche :
+
+- la **moyenne d'avancement** des couples pôle × action concernés (même
+  calcul — non vérifié — que l'indicateur de la synthèse) ;
+- une **jauge en 4 paliers** : 1 case dès > 0 %, 2 à partir de 25 %, 3 à
+  partir de 50 %, 4 à partir de 75 %. Seuils relevés sur les exemples du
+  support de Simon (43 % → 2 cases, 50 % → 3, 98 % → 4) ;
+- le nombre de pôles concernés à 100 %.
+
+- la **réduction carbone** (⬇ à date / cible), par carte, par poste et
+  pour tout le périmètre : somme par pôle des réductions (points de % du
+  bilan du pôle), puis **moyenne simple entre pôles**. Les pôles pilotes
+  (au moins une valeur en kgCO2) sont exclus en entier et comptés à part.
+  La méthode d'agrégation de Simon n'est pas connue : à confirmer avec lui
+  avant usage officiel.
+
+Le lien vers l'outil de suivi de la filière choisie (onglet `Liens outils`,
+colonne Code filière) s'affiche sous les filtres des vues Synthèse, Détail
+et Par poste. Une ligne sans code filière est ignorée ; `testToolLinks()`
+la signale comme « FILIERE INCONNUE » (au 25/09/2026 : 4 liens sans code
+sous le tableau — Petite enfance, PADOM, Protection de l'enfance,
+Outre-mer).
+
+Pas encore affichés, par rapport au support de Simon : la part du poste dans l'empreinte, et
+les indicateurs spécifiques qui ne sont pas des avancements (ex. taille de
+flotte, part de véhicules électriques).
 
 ## Limites connues
 
@@ -163,11 +202,33 @@ généralisée à toutes les actions.
    manuellement n'ont jamais renseigné "Optimisation de la flotte" (voir
    Vue Contrôle) ; à lui remonter.
 2. **`Action filière` / `Action spécifique filière` / `Action structurante`**
-   — doivent-elles compter comme « actuellement suivies » dans la coche
+   — doivent-elles compter dans la coche « Actions socle uniquement »
    partagée ? Actuellement exclues par défaut.
 3. **Colonnes "Réduction carbone à date" et "Réduction carbone cible"** —
    voir section suivante : les valeurs mélangent kgCO2 et pourcentages
    selon les lignes, sans référence de conversion connue à ce jour.
+4. **Pôles avec des réductions en kgCO2** — résultat de
+   `diagnosticReductionCarbone()` le 25/09/2026 (6 939 lignes, zone
+   SYNTHESE) :
+
+   | Colonne | en % | en kgCO2 | vide | autre |
+   |---|---|---|---|---|
+   | Réduction carbone à date | 4 661 | 324 | 1 954 | 0 |
+   | Réduction carbone cible | 4 048 | 324 | 2 567 | 0 |
+
+   Questions à poser :
+   - **21 pôles** ont au moins une valeur en kg, et leurs codes sont tous
+     de la forme `Territoire X : régions_numéros` (ex. `Territoire A : HDF
+     - IDF - GE_1915`). Sont-ce bien les pôles pilotes du bilan carbone
+     2023 ? Liste complète : relancer `diagnosticReductionCarbone()`.
+   - `CMCR DES MASSUES`, pilote confirmé (valeurs en kg dans son fichier
+     de suivi), n'apparaît **pas** dans cette liste : ses lignes en kg
+     remontent-elles dans IMPORT DONNEES, et sous quel code ?
+   - **613 lignes** ont une réduction à date en % mais **pas de cible**
+     (4 661 − 4 048), alors que dans les fichiers de suivi « à date » est
+     calculé à partir de la cible (cible × avancement). Les moyennes « à
+     date » et « cible » de la vue Par poste ne portent donc pas exactement
+     sur les mêmes lignes.
 
 ## Sujet ouvert : un indicateur unique de CO2 économisé (kg vs %)
 
@@ -180,6 +241,34 @@ selon la ligne, pour un même pôle :
 - D'autres actions, pour le **même pôle**, sont chiffrées en pourcentage,
   ex. `CMCR DES MASSUES` / *Tri des emballages* : `-0,49 %` à date / cible
   identique.
+
+**Avancée du 25/09/2026** (formules relevées dans les fichiers de suivi
+des sites, non encore reportées dans le code) :
+
+- Sites non pilotes (ex. CMPR Le Clousis) : toutes les réductions sont en
+  **points de % du bilan total du site**. Cible = réduction du catalogue ×
+  part du poste dans le site ÷ part générique du poste (`'BDD - Bilan
+  carbone'`) ; à date = cible × avancement.
+- Sites pilotes du bilan carbone 2023 (ex. CMCR DES MASSUES, bilan 2021
+  de 6 224,5 tCO2) : le tableau `PA_<site>` est en **kgCO2** (divisé par
+  1000 dans le bilan du site), le tableau `PAS_<site>` en **% du bilan
+  total** (multiplié par le total, cellule H18). Les deux se convertissent
+  donc exactement avec le bilan total du pôle : −59 700 kg / 6 224,5 t =
+  −0,96 point.
+- Décision : l'indicateur affiché sera **un % par pôle**. Il manque le
+  bilan total de chaque pôle pilote dans le classeur national (il n'est
+  que dans le fichier de suivi de chaque site) — `'BDD - Bilan carbone'`
+  ne contient que des répartitions génériques en %, pas de tonnes.
+- À signaler : dans la formule du bilan cible de MASSUES, le second
+  `SOMME.SI.ENS` somme `PAS_Massues[Réduction cible]` avec le critère
+  `PA_Massues[Poste d'émissions]` (plages de deux tableaux différents) —
+  probablement une erreur de saisie, à vérifier.
+
+**Implémenté pour les pôles non pilotes** (vue Par poste) : les valeurs
+affichées sont lues telles quelles (`"-0,10%"`), une valeur contenant
+« kg » marque le pôle comme pilote et l'exclut. `diagnosticReductionCarbone()`
+(IndicatorService.gs, à lancer depuis l'éditeur) recense les formats
+réellement présents et la liste des pôles détectés comme pilotes.
 
 Combiner les deux en un seul indicateur nécessite de savoir si les
 pourcentages sont exprimés par rapport à un total (bilan carbone du pôle)

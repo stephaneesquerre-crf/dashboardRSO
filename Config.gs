@@ -12,6 +12,12 @@ const CONFIG = Object.freeze({
   IMPORT_SYNTHESE_FIRST_COLUMN: 'AM',
   IMPORT_SYNTHESE_LAST_COLUMN: 'AZ',
   POLE_REFERENCE_SHEET_NAME: 'BDD NOMS',
+  // Liens vers les outils de suivi par filière : colonne B = libellé,
+  // C = code filière (tel qu'affiché dans le dashboard), D = lien sous forme
+  // de chip intelligente. Plage ouverte vers le bas pour absorber les
+  // ajouts de lignes. Lu via le service avancé Sheets (cf. ToolLinksService.gs).
+  TOOL_LINKS_SHEET_NAME: 'Liens outils',
+  TOOL_LINKS_RANGE: 'B2:D',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
   // Cache applicatif des droits (mis en place lors de l'ajout de la couche droits).
