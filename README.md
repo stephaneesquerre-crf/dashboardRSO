@@ -169,7 +169,10 @@ comme la synthèse, plus la coche partagée. Chaque carte affiche :
 
 Le lien vers l'outil de suivi de la filière choisie (onglet `Liens outils`,
 colonne Code filière) s'affiche sous les filtres des vues Synthèse, Détail
-et Par poste.
+et Par poste. Une ligne sans code filière est ignorée ; `testToolLinks()`
+la signale comme « FILIERE INCONNUE » (au 25/09/2026 : 4 liens sans code
+sous le tableau — Petite enfance, PADOM, Protection de l'enfance,
+Outre-mer).
 
 Pas encore affichés, par rapport au support de Simon : la part du poste dans l'empreinte, et
 les indicateurs spécifiques qui ne sont pas des avancements (ex. taille de
@@ -204,6 +207,28 @@ flotte, part de véhicules électriques).
 3. **Colonnes "Réduction carbone à date" et "Réduction carbone cible"** —
    voir section suivante : les valeurs mélangent kgCO2 et pourcentages
    selon les lignes, sans référence de conversion connue à ce jour.
+4. **Pôles avec des réductions en kgCO2** — résultat de
+   `diagnosticReductionCarbone()` le 25/09/2026 (6 939 lignes, zone
+   SYNTHESE) :
+
+   | Colonne | en % | en kgCO2 | vide | autre |
+   |---|---|---|---|---|
+   | Réduction carbone à date | 4 661 | 324 | 1 954 | 0 |
+   | Réduction carbone cible | 4 048 | 324 | 2 567 | 0 |
+
+   Questions à poser :
+   - **21 pôles** ont au moins une valeur en kg, et leurs codes sont tous
+     de la forme `Territoire X : régions_numéros` (ex. `Territoire A : HDF
+     - IDF - GE_1915`). Sont-ce bien les pôles pilotes du bilan carbone
+     2023 ? Liste complète : relancer `diagnosticReductionCarbone()`.
+   - `CMCR DES MASSUES`, pilote confirmé (valeurs en kg dans son fichier
+     de suivi), n'apparaît **pas** dans cette liste : ses lignes en kg
+     remontent-elles dans IMPORT DONNEES, et sous quel code ?
+   - **613 lignes** ont une réduction à date en % mais **pas de cible**
+     (4 661 − 4 048), alors que dans les fichiers de suivi « à date » est
+     calculé à partir de la cible (cible × avancement). Les moyennes « à
+     date » et « cible » de la vue Par poste ne portent donc pas exactement
+     sur les mêmes lignes.
 
 ## Sujet ouvert : un indicateur unique de CO2 économisé (kg vs %)
 
