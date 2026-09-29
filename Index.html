@@ -452,7 +452,7 @@
          --------------------------------------------------------------- */
       .evolution-grid {
         display: grid;
-        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 20px;
         align-items: start;
       }
@@ -477,6 +477,23 @@
         vertical-align: middle;
         border-radius: 1px;
       }
+      .evolution-multiples {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .evolution-multiple-title {
+        margin: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        min-height: 2.4em;
+      }
+      .evolution-multiple-value {
+        margin: 2px 0 4px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .evolution-multiple-value span { font-size: 0.75rem; }
       #tooltip .tooltip-row { display: flex; align-items: center; gap: 6px; }
       #tooltip .tooltip-row .line-key { margin-right: 0; }
       .delta-up { color: var(--status-good); font-weight: 600; }
@@ -1017,30 +1034,48 @@
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
+          <div class="actions">
+            <button type="button" id="export-evolution-csv">Exporter la vue (CSV)</button>
+          </div>
         </div>
         <div class="filters">
-          <div class="filter-field">
-            <label for="evolution-campagne">Campagne</label>
-            <select id="evolution-campagne"></select>
-          </div>
           <div class="filter-field">
             <label for="evolution-filiere">Filière</label>
             <select id="evolution-filiere"></select>
           </div>
+          <div class="filter-field">
+            <label for="evolution-indicateur">Indicateur</label>
+            <select id="evolution-indicateur">
+              <option value="tauxTerminees">Taux de terminés parmi les concernés</option>
+              <option value="moyenneAvancement">Moyenne d'avancement (archives 09/25 et 10/25 seulement)</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="evolution-campagne">Détail : campagne</label>
+            <select id="evolution-campagne"></select>
+          </div>
         </div>
-        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière). Un mois sans valeur interrompt la courbe au lieu d'être compté comme 0.</p>
+        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière) ; la moyenne d'avancement n'existe que dans ces deux archives. Un mois sans valeur interrompt la courbe au lieu d'être compté comme 0.</p>
         <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
       </section>
 
+      <section class="panel chart-panel" id="chart-panel-evolution-campagnes">
+        <div class="panel-header">
+          <h2 id="evolution-campagnes-title">Avancée de chaque année socle</h2>
+          <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-campagnes">⤢ Plein écran</button>
+        </div>
+        <div class="line-legend" id="evolution-campagnes-legend"></div>
+        <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par année socle"></svg>
+        <p class="chart-note">Moyenne simple des actions de chaque campagne ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
+      </section>
+
       <div class="evolution-grid">
-        <section class="panel chart-panel" id="chart-panel-evolution">
+        <section class="panel">
           <div class="panel-header">
-            <h2 id="evolution-chart-title">Taux de terminés parmi les concernés</h2>
-            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution">⤢ Plein écran</button>
+            <h2 id="evolution-multiples-title">Détail par action</h2>
           </div>
-          <div class="line-legend" id="evolution-legend"></div>
-          <svg class="line-chart" id="evolution-chart" role="img" tabindex="0" aria-label="Évolution du taux de terminés par action"></svg>
-          <p class="chart-note">Survol ou flèches ← → : valeurs de toutes les actions pour un mois.</p>
+          <div class="evolution-multiples" id="evolution-multiples"></div>
+          <p class="chart-note">Un petit graphique par action, même échelle 0-100 % pour tous : on compare les pentes d'un coup d'œil. Survol : valeurs du mois.</p>
         </section>
 
         <section class="panel">
@@ -1049,7 +1084,7 @@
           </div>
           <div style="overflow-x:auto">
             <table id="evolution-table">
-              <thead><tr><th scope="col">Action</th><th scope="col" id="evolution-first-head">Début</th><th scope="col" id="evolution-last-head">Dernier mois</th><th scope="col">Évolution</th><th scope="col">Sur le dernier mois</th><th scope="col">Rythme moyen</th></tr></thead>
+              <thead><tr><th scope="col">Action</th><th scope="col">Début</th><th scope="col">Dernier mois</th><th scope="col">Évolution</th><th scope="col">Sur le dernier mois</th><th scope="col">Rythme moyen</th></tr></thead>
               <tbody id="evolution-table-body"></tbody>
             </table>
           </div>
@@ -1064,7 +1099,7 @@
         </div>
         <div class="line-legend" id="evolution-reponse-legend"></div>
         <svg class="line-chart" id="evolution-reponse-chart" role="img" tabindex="0" aria-label="Évolution du taux de réponse par filière"></svg>
-        <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, par filière, toutes campagnes confondues (lignes « Nombre de structures » des archives).</p>
+        <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, toutes campagnes confondues. Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
       </section>
     </section>
 
@@ -1221,9 +1256,13 @@
         evolutionCampagne: document.getElementById('evolution-campagne'),
         evolutionFiliere: document.getElementById('evolution-filiere'),
         evolutionEmpty: document.getElementById('evolution-empty'),
-        evolutionChartTitle: document.getElementById('evolution-chart-title'),
-        evolutionLegend: document.getElementById('evolution-legend'),
-        evolutionChart: document.getElementById('evolution-chart'),
+        evolutionIndicateur: document.getElementById('evolution-indicateur'),
+        evolutionCampagnesTitle: document.getElementById('evolution-campagnes-title'),
+        evolutionCampagnesLegend: document.getElementById('evolution-campagnes-legend'),
+        evolutionCampagnesChart: document.getElementById('evolution-campagnes-chart'),
+        evolutionMultiplesTitle: document.getElementById('evolution-multiples-title'),
+        evolutionMultiples: document.getElementById('evolution-multiples'),
+        exportEvolutionCsv: document.getElementById('export-evolution-csv'),
         evolutionTableTitle: document.getElementById('evolution-table-title'),
         evolutionTableBody: document.getElementById('evolution-table-body'),
         evolutionReponseLegend: document.getElementById('evolution-reponse-legend'),
@@ -2012,7 +2051,11 @@
         const clickable = target ? Boolean(target.clickable) : true;
         const indicateur = INDICATEUR_META[indicateurKey];
         const groups = snapshot.groups;
-        const plottable = groups.filter((item) => item[indicateurKey] !== null);
+        // Barres toujours triées de la plus grande à la plus petite (demande
+        // du 30/09/2026), à égalité par libellé ; le tableau garde son ordre.
+        const plottable = groups
+          .filter((item) => item[indicateurKey] !== null)
+          .sort((left, right) => right[indicateurKey] - left[indicateurKey] || left.label.localeCompare(right.label, 'fr'));
         const skipped = groups.filter((item) => item[indicateurKey] === null);
 
         note.textContent = skipped.length
@@ -3113,7 +3156,7 @@
 
       function populateEvolutionFilters() {
         const rows = historyRows();
-        const campaigns = distinctSorted(rows.filter((row) => row[1] && row[4] === 'tauxTerminees').map((row) => row[1]));
+        const campaigns = distinctSorted(rows.filter((row) => row[1] && (row[4] === 'tauxTerminees' || row[4] === 'moyenneAvancement')).map((row) => row[1]));
         populateValueSelect(elements.evolutionCampagne, campaigns, 'Choisir une campagne…');
         if (!elements.evolutionCampagne.value && campaigns.length) elements.evolutionCampagne.value = campaigns[0];
         const filieres = distinctSorted(rows.filter((row) => row[4] === 'tauxTerminees' && row[3] !== HISTORY_TOTAL).map((row) => row[3]));
@@ -3121,12 +3164,9 @@
         elements.evolutionFiliere.replaceChildren(new Option('Ensemble (TOTAL)', HISTORY_TOTAL));
         filieres.forEach((name) => elements.evolutionFiliere.append(new Option(name, name)));
         if ([...elements.evolutionFiliere.options].some((option) => option.value === current)) elements.evolutionFiliere.value = current;
-        elements.evolutionFiliere.disabled = false;
         elements.evolutionEmpty.hidden = rows.length > 0;
       }
 
-      // Séries du graphique principal : une par action de la campagne,
-      // valeurs en % (0-100) indexées par mois.
       // Le libellé d'une action varie parfois d'une archive à l'autre (ex.
       // "Tri des déchets diffus" / "Tri des déchets diffus (piles &
       // batteries, …)") : les séries sont regroupées sur le libellé
@@ -3136,12 +3176,14 @@
         return normalizeSearchText(action).split('(')[0].replace(/[*\s]+$/, '').trim();
       }
 
-      function computeEvolutionSeries(campaign, filiere) {
+      // Une série par action : {campaign, label, points: Map(mois -> %)}.
+      function computeActionSeries(indicator, filiere, campaign) {
         const byAction = new Map();
-        historyRows().forEach(([month, rowCampaign, action, rowFiliere, indicator, value]) => {
-          if (indicator !== 'tauxTerminees' || rowCampaign !== campaign || rowFiliere !== filiere || !action) return;
-          const key = evolutionActionKey(action);
-          if (!byAction.has(key)) byAction.set(key, {label: action, labelMonth: month, points: new Map()});
+        historyRows().forEach(([month, rowCampaign, action, rowFiliere, rowIndicator, value]) => {
+          if (rowIndicator !== indicator || rowFiliere !== filiere || !action || !rowCampaign) return;
+          if (campaign && rowCampaign !== campaign) return;
+          const key = `${rowCampaign}|${evolutionActionKey(action)}`;
+          if (!byAction.has(key)) byAction.set(key, {campaign: rowCampaign, label: action, labelMonth: month, points: new Map()});
           const series = byAction.get(key);
           if (month > series.labelMonth) {
             series.label = action;
@@ -3149,9 +3191,30 @@
           }
           series.points.set(month, value * 100);
         });
-        return [...byAction.values()]
-          .sort((left, right) => left.label.localeCompare(right.label, 'fr'))
-          .map(({label, points}) => ({label, points}));
+        return [...byAction.values()].sort((left, right) => left.label.localeCompare(right.label, 'fr'));
+      }
+
+      // Une série par campagne ("année socle") : moyenne simple, mois par
+      // mois, des actions de la campagne ayant une valeur ce mois-là.
+      function computeCampaignSeries(indicator, filiere) {
+        const byCampaign = new Map();
+        computeActionSeries(indicator, filiere, '').forEach((series) => {
+          if (!byCampaign.has(series.campaign)) byCampaign.set(series.campaign, new Map());
+          const perMonth = byCampaign.get(series.campaign);
+          series.points.forEach((value, month) => {
+            const bucket = perMonth.get(month) || {sum: 0, count: 0};
+            bucket.sum += value;
+            bucket.count += 1;
+            perMonth.set(month, bucket);
+          });
+        });
+        return [...byCampaign.entries()]
+          .sort((left, right) => left[0].localeCompare(right[0], 'fr'))
+          .map(([campaign, perMonth]) => {
+            const points = new Map();
+            perMonth.forEach((bucket, month) => points.set(month, bucket.sum / bucket.count));
+            return {label: campaign.replace(/^actions? socles?\s*/i, 'Socle '), points};
+          });
       }
 
       // Taux de réponse par filière = nbRepondants ÷ nbStructures (lignes
@@ -3185,14 +3248,22 @@
       // suivantes ne sont pas tracées et une note le signale). Survol ou
       // flèches : ligne verticale sur le mois le plus proche + infobulle
       // listant toutes les séries.
+      // options.compact : petit multiple (pas de légende, graduations
+      // réduites, une seule série) ; options.directLabels : étiquette en bout
+      // de courbe (réservé à 3 séries au plus) ; options.emphasis : libellé de
+      // la série mise en avant, les autres passent en gris.
       function renderLineChart(svg, legendEl, seriesList, options) {
+        const compact = Boolean(options.compact);
         const drawn = seriesList.slice(0, CAT_COLORS.length);
-        const months = distinctSorted(drawn.flatMap((series) => [...series.points.keys()]));
+        const months = options.months || distinctSorted(drawn.flatMap((series) => [...series.points.keys()]));
         svg.textContent = '';
-        legendEl.replaceChildren();
-        const width = 760;
-        const height = 300;
-        const margin = {top: 12, right: 20, bottom: 30, left: 44};
+        if (legendEl) legendEl.replaceChildren();
+        const directLabels = Boolean(options.directLabels) && drawn.length <= 3;
+        const width = compact ? 300 : 760;
+        const height = compact ? 130 : 300;
+        const margin = compact
+          ? {top: 8, right: 10, bottom: 18, left: 40}
+          : {top: 12, right: directLabels ? 90 : 20, bottom: 30, left: 44};
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         if (!months.length) {
           const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
@@ -3207,22 +3278,30 @@
         const xOf = (month) => margin.left + (months.length === 1 ? plotWidth / 2 : ((monthIndex(month) - firstIndex) / span) * plotWidth);
         const yOf = (value) => margin.top + plotHeight - (value / 100) * plotHeight;
 
-        [0, 25, 50, 75, 100].forEach((tick) => {
+        (compact ? [0, 50, 100] : [0, 25, 50, 75, 100]).forEach((tick) => {
           svg.appendChild(svgEl('line', {class: 'axis-line', x1: margin.left, x2: width - margin.right, y1: yOf(tick), y2: yOf(tick)}));
-          const label = svgEl('text', {class: 'axis-text', x: margin.left - 8, y: yOf(tick) + 3, 'text-anchor': 'end'});
+          const label = svgEl('text', {class: 'axis-text', x: margin.left - 6, y: yOf(tick) + 3, 'text-anchor': 'end'});
           label.textContent = `${tick} %`;
           svg.appendChild(label);
         });
-        months.forEach((month) => {
-          const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - 10, 'text-anchor': 'middle'});
+        (compact ? [months[0], months[months.length - 1]] : months).forEach((month, position, list) => {
+          const anchor = compact ? (position === 0 ? 'start' : 'end') : 'middle';
+          const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - (compact ? 4 : 10), 'text-anchor': list.length === 1 ? 'middle' : anchor});
           label.textContent = formatMonth(month);
           svg.appendChild(label);
         });
 
-        drawn.forEach((series, index) => {
-          const color = resolveColor(CAT_COLORS[index]);
-          // Segments continus uniquement entre deux mois d'archive
-          // consécutifs où la série a une valeur.
+        const colorOf = (series, index) => {
+          if (options.color) return resolveColor(options.color);
+          if (options.emphasis && series.label !== options.emphasis) return resolveColor('var(--text-muted)');
+          return resolveColor(CAT_COLORS[index]);
+        };
+        const order = drawn.map((series, index) => ({series, index}));
+        // La série mise en avant est dessinée en dernier (au-dessus).
+        if (options.emphasis) order.sort((left, right) => (left.series.label === options.emphasis) - (right.series.label === options.emphasis));
+        order.forEach(({series, index}) => {
+          const color = colorOf(series, index);
+          const muted = options.emphasis && series.label !== options.emphasis;
           let path = '';
           let previous = null;
           months.forEach((month) => {
@@ -3231,22 +3310,38 @@
             path += `${previous === null ? 'M' : 'L'} ${xOf(month)} ${yOf(value)} `;
             previous = value;
           });
-          svg.appendChild(svgEl('path', {d: path.trim(), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
-          series.points.forEach((value, month) => {
-            svg.appendChild(svgEl('circle', {cx: xOf(month), cy: yOf(value), r: 4, fill: color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
-          });
-
-          const item = document.createElement('span');
-          const key = document.createElement('span');
-          key.className = 'line-key';
-          key.style.background = color;
-          item.append(key, document.createTextNode(series.label));
-          legendEl.append(item);
+          const line = svgEl('path', {d: path.trim(), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
+          if (muted) line.setAttribute('stroke-opacity', '0.45');
+          svg.appendChild(line);
+          if (!muted) {
+            series.points.forEach((value, month) => {
+              svg.appendChild(svgEl('circle', {cx: xOf(month), cy: yOf(value), r: compact ? 3 : 4, fill: color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': compact ? 1.5 : 2}));
+            });
+          }
+          if (directLabels) {
+            const lastMonth = [...series.points.keys()].sort().pop();
+            if (lastMonth) {
+              const text = svgEl('text', {class: 'category-text', x: xOf(lastMonth) + 8, y: yOf(series.points.get(lastMonth)) + 4});
+              text.textContent = series.label;
+              svg.appendChild(text);
+            }
+          }
         });
-        if (seriesList.length > drawn.length) {
-          const more = document.createElement('span');
-          more.textContent = `(+${seriesList.length - drawn.length} série(s) non tracée(s), voir tableau)`;
-          legendEl.append(more);
+
+        if (legendEl) {
+          drawn.forEach((series, index) => {
+            const item = document.createElement('span');
+            const key = document.createElement('span');
+            key.className = 'line-key';
+            key.style.background = colorOf(series, index);
+            item.append(key, document.createTextNode(series.label));
+            legendEl.append(item);
+          });
+          if (seriesList.length > drawn.length) {
+            const more = document.createElement('span');
+            more.textContent = `(+${seriesList.length - drawn.length} série(s) non tracée(s), voir tableau)`;
+            legendEl.append(more);
+          }
         }
 
         // Réticule + infobulle.
@@ -3276,7 +3371,7 @@
               row.className = 'tooltip-row';
               const key = document.createElement('span');
               key.className = 'line-key';
-              key.style.background = resolveColor(CAT_COLORS[index]);
+              key.style.background = colorOf(series, index);
               const strong = document.createElement('strong');
               strong.textContent = value === null ? '—' : formatRate(Math.round(value * 10) / 10);
               row.append(key, strong, document.createTextNode(` ${series.label}`));
@@ -3313,34 +3408,76 @@
         };
       }
 
+      function seriesSummary(series) {
+        const months = [...series.points.keys()].sort();
+        const first = months[0];
+        const last = months[months.length - 1];
+        const previous = months.length > 1 ? months[months.length - 2] : null;
+        const firstValue = series.points.get(first);
+        const lastValue = series.points.get(last);
+        const delta = months.length > 1 ? lastValue - firstValue : null;
+        const lastDelta = previous ? lastValue - series.points.get(previous) : null;
+        const elapsed = months.length > 1 ? monthIndex(last) - monthIndex(first) : 0;
+        return {first, last, firstValue, lastValue, delta, lastDelta, pace: elapsed > 0 ? delta / elapsed : null};
+      }
+
+      // Petits multiples : un graphique par action, même axe des mois et même
+      // échelle pour tous (comparaison des pentes), une seule couleur.
+      function renderEvolutionMultiples(seriesList, months) {
+        const container = elements.evolutionMultiples;
+        container.replaceChildren();
+        if (!seriesList.length) {
+          const empty = document.createElement('p');
+          empty.className = 'ranking-empty';
+          empty.textContent = 'Aucune valeur pour ce choix.';
+          container.append(empty);
+          return;
+        }
+        seriesList.forEach((series) => {
+          const summary = seriesSummary(series);
+          const cell = document.createElement('div');
+          cell.className = 'evolution-multiple';
+          const title = document.createElement('p');
+          title.className = 'evolution-multiple-title';
+          title.textContent = series.label;
+          const value = document.createElement('p');
+          value.className = 'evolution-multiple-value';
+          value.append(formatRate(Math.round(summary.lastValue * 10) / 10));
+          if (summary.delta !== null) {
+            const delta = document.createElement('span');
+            delta.className = Math.abs(summary.delta) < 0.05 ? '' : (summary.delta > 0 ? 'delta-up' : 'delta-down');
+            delta.textContent = ` ${formatPoints(summary.delta)} depuis ${formatMonth(summary.first)}`;
+            value.append(delta);
+          }
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          svg.setAttribute('class', 'line-chart');
+          svg.setAttribute('role', 'img');
+          svg.setAttribute('tabindex', '0');
+          svg.setAttribute('aria-label', `${series.label} : ${formatRate(Math.round(summary.lastValue * 10) / 10)} en ${formatMonth(summary.last)}`);
+          cell.append(title, value, svg);
+          container.append(cell);
+          renderLineChart(svg, null, [series], {compact: true, months, color: 'var(--cat-1)', tooltipSuffix: series.label});
+        });
+      }
+
       function renderEvolutionTable(seriesList) {
         const body = elements.evolutionTableBody;
         body.replaceChildren();
         seriesList.forEach((series) => {
-          const months = [...series.points.keys()].sort();
-          const first = months[0];
-          const last = months[months.length - 1];
-          const previous = months.length > 1 ? months[months.length - 2] : null;
-          const firstValue = series.points.get(first);
-          const lastValue = series.points.get(last);
-          const delta = months.length > 1 ? lastValue - firstValue : null;
-          const lastDelta = previous ? lastValue - series.points.get(previous) : null;
-          const elapsed = months.length > 1 ? monthIndex(last) - monthIndex(first) : 0;
-          const pace = elapsed > 0 ? delta / elapsed : null;
-
+          const summary = seriesSummary(series);
           const row = document.createElement('tr');
           const cells = [
             series.label,
-            `${formatRate(Math.round(firstValue * 10) / 10)} (${formatMonth(first)})`,
-            `${formatRate(Math.round(lastValue * 10) / 10)} (${formatMonth(last)})`,
-            formatPoints(delta),
-            formatPoints(lastDelta),
-            pace === null ? '—' : `${formatPoints(pace)} / mois`
+            `${formatRate(Math.round(summary.firstValue * 10) / 10)} (${formatMonth(summary.first)})`,
+            `${formatRate(Math.round(summary.lastValue * 10) / 10)} (${formatMonth(summary.last)})`,
+            formatPoints(summary.delta),
+            formatPoints(summary.lastDelta),
+            summary.pace === null ? '—' : `${formatPoints(summary.pace)} / mois`
           ];
           cells.forEach((text, index) => {
             const cell = document.createElement('td');
             cell.textContent = text;
-            const signed = index === 3 ? delta : index === 4 ? lastDelta : null;
+            const signed = index === 3 ? summary.delta : index === 4 ? summary.lastDelta : null;
             if (signed !== null && Math.abs(signed) >= 0.05) cell.className = signed > 0 ? 'delta-up' : 'delta-down';
             row.append(cell);
           });
@@ -3360,15 +3497,50 @@
         if (!state.bootstrap) return;
         const campaign = elements.evolutionCampagne.value;
         const filiere = elements.evolutionFiliere.value || HISTORY_TOTAL;
+        const indicator = elements.evolutionIndicateur.value;
+        const indicatorLabel = elements.evolutionIndicateur.selectedOptions[0].textContent.replace(/\s*\(.*\)$/, '');
         const filiereLabel = filiere === HISTORY_TOTAL ? 'ensemble' : filiere;
-        const series = campaign ? computeEvolutionSeries(campaign, filiere) : [];
-        elements.evolutionChartTitle.textContent = `Taux de terminés parmi les concernés — ${campaign || '…'} · ${filiereLabel}`;
+
+        const campaignSeries = computeCampaignSeries(indicator, filiere);
+        elements.evolutionCampagnesTitle.textContent = `Avancée de chaque année socle — ${indicatorLabel} · ${filiereLabel}`;
+        renderLineChart(elements.evolutionCampagnesChart, elements.evolutionCampagnesLegend, campaignSeries, {directLabels: true, tooltipSuffix: filiereLabel});
+
+        const actionSeries = campaign ? computeActionSeries(indicator, filiere, campaign) : [];
+        const months = distinctSorted(computeActionSeries(indicator, filiere, '').flatMap((series) => [...series.points.keys()]));
+        elements.evolutionMultiplesTitle.textContent = `Détail par action — ${campaign || '…'} · ${filiereLabel}`;
         elements.evolutionTableTitle.textContent = `Évolution par action — ${campaign || '…'} · ${filiereLabel}`;
-        renderLineChart(elements.evolutionChart, elements.evolutionLegend, series, {tooltipSuffix: filiereLabel});
-        renderEvolutionTable(series);
-        renderLineChart(elements.evolutionReponseChart, elements.evolutionReponseLegend, computeResponseSeries(), {});
+        renderEvolutionMultiples(actionSeries, months);
+        renderEvolutionTable(actionSeries);
+
+        renderLineChart(elements.evolutionReponseChart, elements.evolutionReponseLegend, computeResponseSeries(), {emphasis: filiere === HISTORY_TOTAL ? '' : filiere});
+        state.evolutionExport = {indicatorLabel, filiereLabel, campaignSeries, campaign, actionSeries};
       }
 
+      // Export CSV de la vue : une ligne par série × mois (format long, prêt
+      // pour un tableau croisé), plus le tableau des évolutions.
+      function buildEvolutionCsv(data) {
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const number = (value) => (value === null || value === undefined ? '' : String(Math.round(value * 10) / 10).replace('.', ','));
+        const lines = [['Bloc', 'Série', 'Filière', 'Indicateur', 'Mois', 'Valeur (%)'].map(escapeCsv).join(';')];
+        const pushSeries = (bloc, series) => [...series.points.keys()].sort().forEach((month) => {
+          lines.push([bloc, series.label, data.filiereLabel, data.indicatorLabel, month, number(series.points.get(month))].map(escapeCsv).join(';'));
+        });
+        data.campaignSeries.forEach((series) => pushSeries('Année socle (moyenne des actions)', series));
+        data.actionSeries.forEach((series) => pushSeries(`Action — ${data.campaign}`, series));
+        lines.push('');
+        lines.push(['Action', 'Début', 'Valeur début (%)', 'Dernier mois', 'Valeur dernier mois (%)', 'Évolution (pts)', 'Sur le dernier mois (pts)', 'Rythme (pts / mois)'].map(escapeCsv).join(';'));
+        data.actionSeries.forEach((series) => {
+          const summary = seriesSummary(series);
+          lines.push([series.label, summary.first, number(summary.firstValue), summary.last, number(summary.lastValue), number(summary.delta), number(summary.lastDelta), number(summary.pace)].map(escapeCsv).join(';'));
+        });
+        return lines.join('\r\n');
+      }
+
+      elements.exportEvolutionCsv.addEventListener('click', () => {
+        if (!state.evolutionExport) return;
+        downloadBlob(new Blob([String.fromCharCode(0xfeff) + buildEvolutionCsv(state.evolutionExport)], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-evolution-${dateStamp()}.csv`);
+      });
+      elements.evolutionIndicateur.addEventListener('change', renderEvolution);
       elements.evolutionCampagne.addEventListener('change', renderEvolution);
       elements.evolutionFiliere.addEventListener('change', renderEvolution);
 

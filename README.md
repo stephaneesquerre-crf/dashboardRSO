@@ -104,8 +104,9 @@ sans ambiguïté.
 
 ## Mise en page de la vue Synthèse
 
-Graphique principal, graphique de comparaison et fiche d'identité sur une
-même ligne (sous 1200px de large, le graphique principal passe seul sur sa
+Barres toujours triées de la plus grande à la plus petite valeur (le
+tableau garde son ordre). Graphique principal, graphique de comparaison et
+fiche d'identité sur une même ligne (sous 1200px de large, le graphique principal passe seul sur sa
 ligne). Au-delà de 10 groupes (`HORIZONTAL_BAR_THRESHOLD`), les graphiques
 passent en barres horizontales pour que les libellés restent lisibles
 (ex. regroupement par action).
@@ -257,17 +258,36 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 
 ## Vue Évolution
 
-Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Filtres campagne et filière
-(ou ensemble). Contenu :
+Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Filtres : filière (ou
+ensemble), indicateur (taux de terminés parmi les concernés ; moyenne
+d'avancement, présente seulement dans les archives 09/25 et 10/25),
+campagne pour le détail. Contenu (choix argumenté le 30/09/2026, voir
+ci-dessous) :
 
-- courbes du **taux de terminés parmi les concernés**, une par action de
-  la campagne, mois réels en abscisse (un mois sans valeur interrompt la
-  courbe) ; survol ou flèches ← → pour lire toutes les valeurs d'un mois ;
-- tableau **Évolution par action** : première et dernière valeur,
-  évolution totale et sur le dernier mois (en points), rythme moyen par
-  mois ;
-- courbes du **taux de réponse par filière** (structures ayant répondu ÷
-  nombre total de structures).
+- **Avancée de chaque année socle** : une courbe par campagne (moyenne
+  simple des actions de la campagne ayant une valeur ce mois-là),
+  étiquetée en bout de courbe ;
+- **Détail par action** : petits multiples, un graphique par action de la
+  campagne choisie, même échelle 0-100 % et mêmes mois pour tous ;
+- **Évolution par action** : première et dernière valeur, évolution
+  totale et sur le dernier mois (en points), rythme moyen par mois ;
+- **Taux de réponse par filière** (répondants ÷ structures) : la filière
+  choisie est mise en avant, les autres en gris ;
+- export CSV de la vue (séries au format long + tableau).
+
+Pourquoi des courbes et pas un radar : l'axe du temps est la dimension
+principale ; un radar la replie en cercle, rend l'ordre des axes
+arbitraire et devient illisible au-delà de 2-3 séries superposées
+(Stephen Few, *Keep Radar Graphs Below the Radar*, 2005 ; data-to-viz,
+*The Radar chart and its caveats*). Les 7-8 courbes superposées de la
+première version sont remplacées par des petits multiples, et le nombre
+de séries par graphique est limité à 3 (années socle) ou mis en retrait
+(filière mise en avant), conformément au skill dataviz (« series-count
+ladder », forme « emphasis »).
+
+Mois de l'historique : Google Sheets convertit « 2026-09 » en date à
+l'écriture ; la colonne Mois est désormais écrite en texte brut et toute
+date relue est ramenée au format AAAA-MM (`historyMonthKey_`).
 
 Les libellés d'action qui changent d'une archive à l'autre sont
 regroupés (libellé sans sa parenthèse). Couleurs : palette catégorielle

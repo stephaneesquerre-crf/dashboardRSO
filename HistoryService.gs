@@ -20,6 +20,11 @@ function getHistoryForDashboard_() {
     }
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HISTORY_HEADERS_.length).getValues();
 
+    // Google Sheets convertit "2026-09" en date à l'écriture (constaté le
+    // 30/09/2026 : mois relu comme "Tue Sep 01 2026 … GMT+0200") : on
+    // ramène toute date au format "AAAA-MM" avant tout traitement.
+    values.forEach((row) => { row[0] = historyMonthKey_(row[0]); });
+
     const sourcesByMonth = {};
     values.forEach((row) => {
       const month = cleanValue_(row[0]);
@@ -43,4 +48,11 @@ function getHistoryForDashboard_() {
     console.warn(`Historique : lecture impossible (${error.message}).`);
     return {rows: []};
   }
+}
+
+function historyMonthKey_(value) {
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM');
+  }
+  return cleanValue_(value);
 }

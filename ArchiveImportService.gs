@@ -85,15 +85,17 @@ function importArchiveSheets_(source, sheetNames) {
   // tant que ARCHIVES_SPREADSHEET_ID est vide.
   const target = source;
   const history = target.getSheetByName(config.HISTORY_SHEET_NAME) || target.insertSheet(config.HISTORY_SHEET_NAME);
-  const existing = history.getLastRow() > 1
+  const existing = (history.getLastRow() > 1
     ? history.getRange(2, 1, history.getLastRow() - 1, HISTORY_HEADERS_.length).getValues()
-    : [];
+    : []).map((row) => [historyMonthKey_(row[0])].concat(row.slice(1)));
   const replaced = new Set(sheetNames);
   const kept = existing.filter((row) => !replaced.has(String(row[1])));
   const allRows = kept.concat(newRows);
 
   history.clearContents();
   history.getRange(1, 1, 1, HISTORY_HEADERS_.length).setValues([HISTORY_HEADERS_]);
+  // Colonne Mois en texte brut : sinon Sheets convertit "2026-09" en date.
+  history.getRange('A:A').setNumberFormat('@');
   if (allRows.length) {
     history.getRange(2, 1, allRows.length, HISTORY_HEADERS_.length).setValues(allRows);
   }
