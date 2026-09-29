@@ -28,6 +28,8 @@ redécouvrir un par un.
   service, le dashboard se charge normalement, sans les liens.
 - **`ActionReferenceService.gs`** — lit le référentiel `BDD - Actions
   supplémentaires` (poste d'émissions de chaque action).
+- **`ArchiveImportService.gs`** — importe les archives mensuelles du
+  `Tableau de bord VA` dans `HISTORIQUE TDB VA` (voir plus bas).
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   et journalise les connexions/incidents. Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
@@ -199,6 +201,38 @@ Outre-mer).
 Pas encore affichés, par rapport au support de Simon : la part du poste dans l'empreinte, et
 les indicateurs spécifiques qui ne sont pas des avancements (ex. taille de
 flotte, part de véhicules électriques).
+
+## Historique du Tableau de bord VA (base de la future vue Évolution)
+
+Le `Tableau de bord VA` est archivé à la main chaque mois dans un onglet
+`Archives MMAA` (ex. `Archives 1125`, `Archives 09.26`).
+`importArchivesTableauDeBord()` (`ArchiveImportService.gs`, à lancer depuis
+l'éditeur après chaque nouvelle archive) relit tous ces onglets et les
+réécrit dans l'onglet **`HISTORIQUE TDB VA`**, au format long : une ligne
+= Mois, Onglet source, Campagne, Action, Filière (libellé source),
+Filière (nom du dashboard), Indicateur, Valeur, Importé le.
+
+- Indicateurs : `tauxTerminees`, `terminees`, `concernes` (par action et
+  filière, plus TOTAL), `nbStructures`, `nbRepondants`, `tauxReponse` (par
+  filière).
+- Repérage par le contenu (titre « TX DE TERMINES PARMIS LES
+  CONCERNES », colonne TOTAL), pas par numéros de ligne : la mise en page
+  varie d'une archive à l'autre. Seul le premier bloc de chaque onglet est
+  lu (certains en contiennent une copie plus bas). Cellules en erreur
+  (`#REF!`, `#DIV/0!`) ignorées.
+- Réimporter un onglet remplace ses lignes (pas de doublon).
+- Filières : `PETITE ENFANCE` / `PET E` / `PET. ENF.` → `PET E`,
+  `SANITAIRE` → `SAN`, `PROTECTION DE L'ENFANCE` / `PROT. ENF.` →
+  `PROT ENFANCE`. `PADOM` n'est pas séparé en PA / DOM dans les archives.
+  `DNOM` gardé tel quel (aucune valeur à ce jour).
+- Vérifié sur l'export des 8 archives (11/2025 à 09/2026) : ex.
+  09/2026, Repas végétariens : TOTAL 67,9 %, SAN 11 / 14, PSH 33 / 38.
+- Non lu : le bloc « % de réponses » par année en bas de l'onglet.
+
+À noter : la colonne TOTAL de ce tableau est un **taux de terminés parmi
+les concernés** (ex. 127 / 187 = 67,9 % pour les repas végétariens en
+09/2026), et c'est cette valeur que le calcul de trajectoire de Simon
+utilise comme « avancement » — pas une moyenne des % d'avancement.
 
 ## Limites connues
 

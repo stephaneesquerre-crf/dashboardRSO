@@ -21,6 +21,13 @@ const CONFIG = Object.freeze({
   // d'émissions de chaque action, les fichiers des pôles n'étant pas
   // toujours cohérents entre eux (cf. ActionReferenceService.gs).
   ACTIONS_REFERENCE_SHEET_NAME: 'BDD - Actions supplémentaires',
+  // Archives mensuelles du "Tableau de bord VA" (copies manuelles, un onglet
+  // par mois : "Archives 1125", "Archives 09.26"...) et onglet de sortie au
+  // format long exploitable par le dashboard (cf. ArchiveImportService.gs).
+  // ARCHIVES_SPREADSHEET_ID vide = même classeur que SPREADSHEET_ID.
+  ARCHIVES_SPREADSHEET_ID: '',
+  ARCHIVES_SHEET_PREFIX: 'Archives',
+  HISTORY_SHEET_NAME: 'HISTORIQUE TDB VA',
   TOOL_LINKS_RANGE: 'B2:D',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
