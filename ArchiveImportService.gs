@@ -147,7 +147,11 @@ function parseArchiveValues_(values, sheetName) {
     }
   }
   if (titleRow === -1) {
-    warnings.push('bloc "TX DE TERMINES PARMIS LES CONCERNES" introuvable');
+    // Mise en page antérieure à 11/2025 : bloc « Tableau de la moyenne
+    // des avancements » (cf. parseLegacyArchiveValues_).
+    const legacy = parseLegacyArchiveValues_(values, sheetName, month);
+    if (legacy) return {month, rows: legacy, warnings};
+    warnings.push('ni bloc "TX DE TERMINES PARMIS LES CONCERNES" ni bloc "Tableau de la moyenne des avancements" trouvé');
     return {month, rows, warnings};
   }
 
@@ -209,7 +213,7 @@ function parseArchiveValues_(values, sheetName) {
       let indicator = '';
       let rowCampaign = '';
       if (label.indexOf('nombre total de structures') === 0) indicator = 'nbStructures';
-      else if (label.indexOf('nombre de structures ayant repondu') === 0) indicator = 'nbRepondants';
+      else if (label.indexOf('nombre de structures ayant') === 0) indicator = 'nbRepondants';
       else if (label.indexOf('de reponses') !== -1) {
         indicator = 'tauxReponse';
         const match = text(row, actionCol).match(/actions? socles? (\d{4})/i);
@@ -223,6 +227,101 @@ function parseArchiveValues_(values, sheetName) {
   }
 
   return {month, rows, warnings};
+}
+
+// Mise en page des archives 09/25 et 10/25 (relevée avec
+// diagnosticArchiveLayout le 30/09/2026) :
+// - bloc de gauche, titre « Tableau de la moyenne des avancements » (col.
+//   A), puis en-têtes % | # terminés | Total | Total concerné | (sans
+//   titre : taux de terminés parmi les concernés, ex. 71 / 165 = 43 %),
+//   puis une ligne par action (campagne en col. A, action en col. B) ;
+//   uniquement le TOTAL, pas de détail par filière. Les indicateurs DIP
+//   (colonne "# terminés" contenant "(objectif …)") sont ignorés.
+// - bloc de droite, même titre plus bas : # terminés par filière (pas de
+//   concernés, donc pas de taux par filière). Lignes contenant des valeurs
+//   non entières (indicateurs DIP en %) ignorées.
+// - réponses : "Nombre total de structures" / "Nombre de structures ayant
+//   répondu", filières sur la ligne au-dessus.
+// Renvoie null si le bloc n'est pas trouvé.
+function parseLegacyArchiveValues_(values, sheetName, month) {
+  const text = (row, col) => String((values[row] || [])[col] === undefined || (values[row] || [])[col] === null ? '' : values[row][col]).trim();
+  const label = (row, col) => normalizeArchiveLabel_(text(row, col));
+  const numberAt = (row, col) => {
+    const value = (values[row] || [])[col];
+    return typeof value === 'number' && isFinite(value) ? value : null;
+  };
+  const titles = [];
+  values.forEach((row, rowIndex) => row.forEach((cell, colIndex) => {
+    if (normalizeArchiveLabel_(cell).indexOf('tableau de la moyenne des avan') === 0) titles.push({row: rowIndex, col: colIndex});
+  }));
+  if (!titles.length) return null;
+
+  const rows = [];
+  const push = (campaign, action, filiereLabel, indicator, value) => {
+    if (value === null) return;
+    rows.push([month || '', sheetName, campaign, action, filiereLabel, mapArchiveFiliere_(filiereLabel), indicator, value]);
+  };
+  const isEnd = (row, actionCol) => !text(row, actionCol) || text(row, actionCol).charAt(0) === '*';
+
+  // Bloc de gauche (TOTAL).
+  const left = titles[0];
+  const headerRow = left.row + 1;
+  const rateCol = values[headerRow].findIndex((cell) => normalizeArchiveLabel_(cell) === '%');
+  const doneCol = values[headerRow].findIndex((cell) => normalizeArchiveLabel_(cell).indexOf('# termines') === 0);
+  const concernedCol = values[headerRow].findIndex((cell) => normalizeArchiveLabel_(cell).indexOf('total concerne') === 0);
+  let campaign = '';
+  for (let row = headerRow + 1; row < values.length; row += 1) {
+    if (text(row, left.col)) campaign = text(row, left.col);
+    const action = text(row, left.col + 1);
+    if (isEnd(row, left.col + 1)) break;
+    const doneRaw = doneCol === -1 ? '' : text(row, doneCol);
+    if (doneRaw && numberAt(row, doneCol) === null) continue; // indicateur DIP "(objectif …)"
+    if (rateCol !== -1) push(campaign, action, 'TOTAL', 'moyenneAvancement', numberAt(row, rateCol));
+    if (doneCol !== -1) push(campaign, action, 'TOTAL', 'terminees', numberAt(row, doneCol));
+    if (concernedCol !== -1) {
+      push(campaign, action, 'TOTAL', 'concernes', numberAt(row, concernedCol));
+      push(campaign, action, 'TOTAL', 'tauxTerminees', numberAt(row, concernedCol + 1));
+    }
+  }
+
+  // Bloc de droite (# terminés par filière).
+  if (titles.length > 1) {
+    const right = titles[1];
+    const filieres = [];
+    for (let col = right.col + 2; col < values[right.row].length; col += 1) {
+      if (text(right.row, col)) filieres.push({label: text(right.row, col), col});
+    }
+    let rightCampaign = '';
+    for (let row = right.row + 2; row < values.length; row += 1) {
+      if (text(row, right.col)) rightCampaign = text(row, right.col);
+      if (isEnd(row, right.col + 1)) break;
+      const counts = filieres.map((filiere) => numberAt(row, filiere.col));
+      if (counts.some((value) => value !== null && Math.round(value) !== value)) continue;
+      filieres.forEach((filiere, index) => push(rightCampaign, text(row, right.col + 1), filiere.label, 'terminees', counts[index]));
+    }
+  }
+
+  // Réponses.
+  values.forEach((row, rowIndex) => row.forEach((cell, colIndex) => {
+    const key = normalizeArchiveLabel_(cell);
+    let indicator = '';
+    if (key.indexOf('nombre total de structures') === 0) indicator = 'nbStructures';
+    else if (key.indexOf('nombre de structures ayant') === 0) indicator = 'nbRepondants';
+    if (!indicator) return;
+    // En-têtes de filière : première ligne au-dessus dont la cellule
+    // voisine est un texte (et non un nombre).
+    let headerRowIndex = rowIndex - 1;
+    while (headerRowIndex >= 0 && !(text(headerRowIndex, colIndex + 1) && numberAt(headerRowIndex, colIndex + 1) === null)) {
+      headerRowIndex -= 1;
+    }
+    if (headerRowIndex < 0) return;
+    for (let col = colIndex + 1; col < row.length; col += 1) {
+      const filiere = text(headerRowIndex, col);
+      if (filiere) push('', '', filiere, indicator, numberAt(rowIndex, col));
+    }
+  }));
+
+  return rows;
 }
 
 // "Archives 1125" -> "2025-11" ; "Archives 09.26" ou "Archives 09/26" ->

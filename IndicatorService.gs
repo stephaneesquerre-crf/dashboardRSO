@@ -156,7 +156,8 @@ function getDashboardBootstrap() {
     generatedAt: new Date().toISOString(),
     facts: facts,
     poles: poles,
-    toolLinks: getToolLinks_()
+    toolLinks: getToolLinks_(),
+    history: getHistoryForDashboard_()
   };
 }
 

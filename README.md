@@ -30,6 +30,7 @@ redécouvrir un par un.
   supplémentaires` (poste d'émissions de chaque action).
 - **`ArchiveImportService.gs`** — importe les archives mensuelles du
   `Tableau de bord VA` dans `HISTORIQUE TDB VA` (voir plus bas).
+- **`HistoryService.gs`** — lit `HISTORIQUE TDB VA` pour la vue Évolution.
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   et journalise les connexions/incidents. Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
@@ -241,11 +242,41 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 - Vérifié sur l'export des 8 archives (11/2025 à 09/2026) : ex.
   09/2026, Repas végétariens : TOTAL 67,9 %, SAN 11 / 14, PSH 33 / 38.
 - Non lu : le bloc « % de réponses » par année en bas de l'onglet.
-- Premier import réel (29/09/2026, 14 onglets, 4 550 lignes) : `Archives
-  09/25` et `Archives 10/25` non reconnus (mise en page plus ancienne, sans
-  bloc « TX DE TERMINES PARMIS LES CONCERNES ») — à adapter avec
-  `diagnosticArchiveLayout('Archives 09/25')` ; `Archives 01/26 2` est une
-  seconde copie de janvier 2026.
+- Archives antérieures à 11/2025 (`09/25`, `10/25`) : autre mise en page,
+  bloc « Tableau de la moyenne des avancements » (`parseLegacyArchiveValues_`,
+  relevée avec `diagnosticArchiveLayout`). On y lit, pour l'ensemble
+  seulement, la moyenne d'avancement, les terminés, les concernés et le
+  taux de terminés ; par filière, seulement le nombre de terminés (pas de
+  taux). Les indicateurs DIP (« (objectif …) ») sont ignorés.
+- Mois en double (ex. `Archives 01/26` et `Archives 01/26 2`) : signalés à
+  l'import ; la vue Évolution ne garde que l'onglet au nom le plus court.
+- Classeur des archives : `Archives REPORTING NATIONAL`
+  (`ARCHIVES_SPREADSHEET_ID`). Les utilisateurs du dashboard doivent
+  pouvoir le lire, sinon la vue Évolution reste vide (sans bloquer le
+  reste).
+
+## Vue Évolution
+
+Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Filtres campagne et filière
+(ou ensemble). Contenu :
+
+- courbes du **taux de terminés parmi les concernés**, une par action de
+  la campagne, mois réels en abscisse (un mois sans valeur interrompt la
+  courbe) ; survol ou flèches ← → pour lire toutes les valeurs d'un mois ;
+- tableau **Évolution par action** : première et dernière valeur,
+  évolution totale et sur le dernier mois (en points), rythme moyen par
+  mois ;
+- courbes du **taux de réponse par filière** (structures ayant répondu ÷
+  nombre total de structures).
+
+Les libellés d'action qui changent d'une archive à l'autre sont
+regroupés (libellé sans sa parenthèse). Couleurs : palette catégorielle
+de référence du skill dataviz, 8 séries au plus.
+
+Anomalie relevée dans les archives : Protection de l'enfance à 0
+répondant sur 17 en 07/2026 et 08/2026 (16 en 06 et 09/2026) — valeur de
+l'archive elle-même, probablement une formule cassée au moment de la
+copie.
 
 À noter : la colonne TOTAL de ce tableau est un **taux de terminés parmi
 les concernés** (ex. 127 / 187 = 67,9 % pour les repas végétariens en

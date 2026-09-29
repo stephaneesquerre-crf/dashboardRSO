@@ -41,6 +41,11 @@
            sombre ; jamais seule, toujours accompagnée du % en texte. */
         --status-good:    #0ca30c;
         --status-serious: #ec835a;
+        /* Courbes de la vue Évolution : palette catégorielle de référence du
+           skill dataviz (8 teintes, ordre validé CVD pour des lignes),
+           ordre fixe, jamais recyclé. */
+        --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a; --cat-4: #eda100;
+        --cat-5: #e87ba4; --cat-6: #008300; --cat-7: #4a3aa7; --cat-8: #e34948;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .viz-root {
@@ -55,6 +60,8 @@
           --series-2:       #009da7;
           --series-3:       #7830b6;
           --status-critical:#e66767;
+          --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
+          --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
         }
       }
       :root[data-theme="dark"] .viz-root {
@@ -69,6 +76,8 @@
         --series-2:       #009da7;
         --series-3:       #7830b6;
         --status-critical:#e66767;
+        --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
+        --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
       }
 
       * { box-sizing: border-box; }
@@ -438,6 +447,40 @@
         color: var(--text-secondary);
       }
       .tool-links a { color: var(--series-1); font-weight: 600; }
+      /* ---------------------------------------------------------------
+         Vue Évolution
+         --------------------------------------------------------------- */
+      .evolution-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1100px) {
+        .evolution-grid { grid-template-columns: 1fr; }
+      }
+      svg.line-chart { display: block; width: 100%; max-width: 900px; height: auto; }
+      svg.line-chart:focus { outline: 2px solid var(--series-1); outline-offset: 2px; }
+      .line-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        margin: 0 0 10px;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+      }
+      .line-key {
+        display: inline-block;
+        width: 16px;
+        height: 2px;
+        margin-right: 6px;
+        vertical-align: middle;
+        border-radius: 1px;
+      }
+      #tooltip .tooltip-row { display: flex; align-items: center; gap: 6px; }
+      #tooltip .tooltip-row .line-key { margin-right: 0; }
+      .delta-up { color: var(--status-good); font-weight: 600; }
+      .delta-down { color: var(--status-critical); font-weight: 600; }
       .gauge { display: inline-flex; gap: 2px; }
       .gauge span {
         width: 12px;
@@ -704,6 +747,7 @@
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
       <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle</button>
       <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Par poste d'émissions</button>
+      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="false" aria-controls="panel-evolution">Évolution</button>
       <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
     </div>
 
@@ -968,6 +1012,62 @@
       </section>
     </section>
 
+    <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution" hidden>
+      <p class="view-intro">Évolution mois par mois des indicateurs du « Tableau de bord VA », à partir de ses archives mensuelles (onglet HISTORIQUE TDB VA du classeur des archives, alimenté par importArchivesTableauDeBord).</p>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="evolution-campagne">Campagne</label>
+            <select id="evolution-campagne"></select>
+          </div>
+          <div class="filter-field">
+            <label for="evolution-filiere">Filière</label>
+            <select id="evolution-filiere"></select>
+          </div>
+        </div>
+        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière). Un mois sans valeur interrompt la courbe au lieu d'être compté comme 0.</p>
+        <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
+      </section>
+
+      <div class="evolution-grid">
+        <section class="panel chart-panel" id="chart-panel-evolution">
+          <div class="panel-header">
+            <h2 id="evolution-chart-title">Taux de terminés parmi les concernés</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="evolution-legend"></div>
+          <svg class="line-chart" id="evolution-chart" role="img" tabindex="0" aria-label="Évolution du taux de terminés par action"></svg>
+          <p class="chart-note">Survol ou flèches ← → : valeurs de toutes les actions pour un mois.</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="evolution-table-title">Évolution par action</h2>
+          </div>
+          <div style="overflow-x:auto">
+            <table id="evolution-table">
+              <thead><tr><th scope="col">Action</th><th scope="col" id="evolution-first-head">Début</th><th scope="col" id="evolution-last-head">Dernier mois</th><th scope="col">Évolution</th><th scope="col">Sur le dernier mois</th><th scope="col">Rythme moyen</th></tr></thead>
+              <tbody id="evolution-table-body"></tbody>
+            </table>
+          </div>
+          <p class="chart-note">Évolutions en points de pourcentage. Rythme moyen = évolution ÷ nombre de mois écoulés entre la première et la dernière valeur.</p>
+        </section>
+      </div>
+
+      <section class="panel chart-panel" id="chart-panel-evolution-reponse">
+        <div class="panel-header">
+          <h2 id="evolution-reponse-title">Taux de réponse par filière</h2>
+          <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-reponse">⤢ Plein écran</button>
+        </div>
+        <div class="line-legend" id="evolution-reponse-legend"></div>
+        <svg class="line-chart" id="evolution-reponse-chart" role="img" tabindex="0" aria-label="Évolution du taux de réponse par filière"></svg>
+        <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, par filière, toutes campagnes confondues (lignes « Nombre de structures » des archives).</p>
+      </section>
+    </section>
+
     <section class="tab-panel" id="panel-doc" role="tabpanel" aria-labelledby="tab-doc" hidden>
       <section class="panel">
         <div class="doc-section">
@@ -1055,11 +1155,13 @@
         tabDetail: document.getElementById('tab-detail'),
         tabControle: document.getElementById('tab-controle'),
         tabPoste: document.getElementById('tab-poste'),
+        tabEvolution: document.getElementById('tab-evolution'),
         tabDoc: document.getElementById('tab-doc'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
         panelControle: document.getElementById('panel-controle'),
         panelPoste: document.getElementById('panel-poste'),
+        panelEvolution: document.getElementById('panel-evolution'),
         panelDoc: document.getElementById('panel-doc'),
 
         syntheseFiliere: document.getElementById('synthese-filiere'),
@@ -1116,6 +1218,16 @@
         posteTrackedOnly: document.getElementById('poste-tracked-only'),
         posteTitle: document.getElementById('poste-title'),
         posteGrid: document.getElementById('poste-grid'),
+        evolutionCampagne: document.getElementById('evolution-campagne'),
+        evolutionFiliere: document.getElementById('evolution-filiere'),
+        evolutionEmpty: document.getElementById('evolution-empty'),
+        evolutionChartTitle: document.getElementById('evolution-chart-title'),
+        evolutionLegend: document.getElementById('evolution-legend'),
+        evolutionChart: document.getElementById('evolution-chart'),
+        evolutionTableTitle: document.getElementById('evolution-table-title'),
+        evolutionTableBody: document.getElementById('evolution-table-body'),
+        evolutionReponseLegend: document.getElementById('evolution-reponse-legend'),
+        evolutionReponseChart: document.getElementById('evolution-reponse-chart'),
         posteReductionMode: document.getElementById('poste-reduction-mode'),
         posteCo2Summary: document.getElementById('poste-co2-summary'),
         syntheseToolLinks: document.getElementById('synthese-tool-links'),
@@ -1132,6 +1244,7 @@
         elements.themeToggle.textContent = theme === 'dark' ? '☀️ Mode clair' : '🌙 Mode sombre';
         try { window.localStorage.setItem('pnrso.theme', theme); } catch (error) { /* stockage indisponible : pas bloquant */ }
         if (state.syntheseSnapshot) renderChart(state.syntheseSnapshot);
+        if (state.bootstrap) renderEvolution();
       }
       elements.themeToggle.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -1213,17 +1326,20 @@
         elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
         elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
         elements.tabPoste.setAttribute('aria-selected', String(name === 'poste'));
+        elements.tabEvolution.setAttribute('aria-selected', String(name === 'evolution'));
         elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
         elements.panelControle.hidden = name !== 'controle';
         elements.panelPoste.hidden = name !== 'poste';
+        elements.panelEvolution.hidden = name !== 'evolution';
         elements.panelDoc.hidden = name !== 'doc';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
       elements.tabControle.addEventListener('click', () => selectTab('controle'));
       elements.tabPoste.addEventListener('click', () => selectTab('poste'));
+      elements.tabEvolution.addEventListener('click', () => selectTab('evolution'));
       elements.tabDoc.addEventListener('click', () => selectTab('doc'));
 
       // ---------------------------------------------------------------
@@ -2969,6 +3085,293 @@
         renderPoste();
       });
 
+      // ---------------------------------------------------------------
+      // Vue Évolution — historique mensuel du Tableau de bord VA
+      // (bootstrap.history.rows : [mois "AAAA-MM", campagne, action,
+      // filière, indicateur, valeur], cf. HistoryService.gs).
+      // ---------------------------------------------------------------
+      const CAT_COLORS = ['var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)', 'var(--cat-5)', 'var(--cat-6)', 'var(--cat-7)', 'var(--cat-8)'];
+      const HISTORY_TOTAL = 'TOTAL';
+      const MONTH_NAMES = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+      function historyRows() {
+        return (state.bootstrap.history && state.bootstrap.history.rows) || [];
+      }
+      function monthIndex(month) {
+        const [year, monthNumber] = month.split('-').map(Number);
+        return year * 12 + (monthNumber - 1);
+      }
+      function formatMonth(month) {
+        const [year, monthNumber] = month.split('-');
+        return `${MONTH_NAMES[Number(monthNumber) - 1]} ${year.slice(2)}`;
+      }
+      function formatPoints(value) {
+        if (value === null) return '—';
+        const rounded = Math.round(value * 10) / 10;
+        return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString('fr-FR')} pt${Math.abs(rounded) >= 2 ? 's' : ''}`;
+      }
+
+      function populateEvolutionFilters() {
+        const rows = historyRows();
+        const campaigns = distinctSorted(rows.filter((row) => row[1] && row[4] === 'tauxTerminees').map((row) => row[1]));
+        populateValueSelect(elements.evolutionCampagne, campaigns, 'Choisir une campagne…');
+        if (!elements.evolutionCampagne.value && campaigns.length) elements.evolutionCampagne.value = campaigns[0];
+        const filieres = distinctSorted(rows.filter((row) => row[4] === 'tauxTerminees' && row[3] !== HISTORY_TOTAL).map((row) => row[3]));
+        const current = elements.evolutionFiliere.value;
+        elements.evolutionFiliere.replaceChildren(new Option('Ensemble (TOTAL)', HISTORY_TOTAL));
+        filieres.forEach((name) => elements.evolutionFiliere.append(new Option(name, name)));
+        if ([...elements.evolutionFiliere.options].some((option) => option.value === current)) elements.evolutionFiliere.value = current;
+        elements.evolutionFiliere.disabled = false;
+        elements.evolutionEmpty.hidden = rows.length > 0;
+      }
+
+      // Séries du graphique principal : une par action de la campagne,
+      // valeurs en % (0-100) indexées par mois.
+      // Le libellé d'une action varie parfois d'une archive à l'autre (ex.
+      // "Tri des déchets diffus" / "Tri des déchets diffus (piles &
+      // batteries, …)") : les séries sont regroupées sur le libellé
+      // normalisé sans sa parenthèse, et affichées sous le libellé le plus
+      // récent.
+      function evolutionActionKey(action) {
+        return normalizeSearchText(action).split('(')[0].replace(/[*\s]+$/, '').trim();
+      }
+
+      function computeEvolutionSeries(campaign, filiere) {
+        const byAction = new Map();
+        historyRows().forEach(([month, rowCampaign, action, rowFiliere, indicator, value]) => {
+          if (indicator !== 'tauxTerminees' || rowCampaign !== campaign || rowFiliere !== filiere || !action) return;
+          const key = evolutionActionKey(action);
+          if (!byAction.has(key)) byAction.set(key, {label: action, labelMonth: month, points: new Map()});
+          const series = byAction.get(key);
+          if (month > series.labelMonth) {
+            series.label = action;
+            series.labelMonth = month;
+          }
+          series.points.set(month, value * 100);
+        });
+        return [...byAction.values()]
+          .sort((left, right) => left.label.localeCompare(right.label, 'fr'))
+          .map(({label, points}) => ({label, points}));
+      }
+
+      // Taux de réponse par filière = nbRepondants ÷ nbStructures (lignes
+      // disponibles dans toutes les mises en page d'archive).
+      function computeResponseSeries() {
+        const byFiliere = new Map();
+        historyRows().forEach(([month, , , filiere, indicator, value]) => {
+          if (indicator !== 'nbStructures' && indicator !== 'nbRepondants') return;
+          if (!byFiliere.has(filiere)) byFiliere.set(filiere, new Map());
+          const perMonth = byFiliere.get(filiere);
+          if (!perMonth.has(month)) perMonth.set(month, {});
+          perMonth.get(month)[indicator] = value;
+        });
+        return [...byFiliere.entries()]
+          .map(([label, perMonth]) => {
+            const points = new Map();
+            perMonth.forEach((counts, month) => {
+              if (counts.nbStructures > 0 && typeof counts.nbRepondants === 'number') {
+                points.set(month, Math.min(100, (counts.nbRepondants / counts.nbStructures) * 100));
+              }
+            });
+            return {label, points};
+          })
+          .filter((series) => series.points.size > 0)
+          .sort((left, right) => (left.label === HISTORY_TOTAL ? -1 : right.label === HISTORY_TOTAL ? 1 : left.label.localeCompare(right.label, 'fr')));
+      }
+
+      // Graphique en courbes : axe X = mois réels (un mois manquant laisse un
+      // écart), axe Y 0-100 %, lignes 2px + points 8px, couleur fixe par
+      // position de série (jamais recyclée : au-delà de 8 séries, les
+      // suivantes ne sont pas tracées et une note le signale). Survol ou
+      // flèches : ligne verticale sur le mois le plus proche + infobulle
+      // listant toutes les séries.
+      function renderLineChart(svg, legendEl, seriesList, options) {
+        const drawn = seriesList.slice(0, CAT_COLORS.length);
+        const months = distinctSorted(drawn.flatMap((series) => [...series.points.keys()]));
+        svg.textContent = '';
+        legendEl.replaceChildren();
+        const width = 760;
+        const height = 300;
+        const margin = {top: 12, right: 20, bottom: 30, left: 44};
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        if (!months.length) {
+          const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
+          empty.textContent = 'Aucune valeur pour ce choix.';
+          svg.appendChild(empty);
+          return;
+        }
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const firstIndex = monthIndex(months[0]);
+        const span = Math.max(1, monthIndex(months[months.length - 1]) - firstIndex);
+        const xOf = (month) => margin.left + (months.length === 1 ? plotWidth / 2 : ((monthIndex(month) - firstIndex) / span) * plotWidth);
+        const yOf = (value) => margin.top + plotHeight - (value / 100) * plotHeight;
+
+        [0, 25, 50, 75, 100].forEach((tick) => {
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: margin.left, x2: width - margin.right, y1: yOf(tick), y2: yOf(tick)}));
+          const label = svgEl('text', {class: 'axis-text', x: margin.left - 8, y: yOf(tick) + 3, 'text-anchor': 'end'});
+          label.textContent = `${tick} %`;
+          svg.appendChild(label);
+        });
+        months.forEach((month) => {
+          const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - 10, 'text-anchor': 'middle'});
+          label.textContent = formatMonth(month);
+          svg.appendChild(label);
+        });
+
+        drawn.forEach((series, index) => {
+          const color = resolveColor(CAT_COLORS[index]);
+          // Segments continus uniquement entre deux mois d'archive
+          // consécutifs où la série a une valeur.
+          let path = '';
+          let previous = null;
+          months.forEach((month) => {
+            const value = series.points.has(month) ? series.points.get(month) : null;
+            if (value === null) { previous = null; return; }
+            path += `${previous === null ? 'M' : 'L'} ${xOf(month)} ${yOf(value)} `;
+            previous = value;
+          });
+          svg.appendChild(svgEl('path', {d: path.trim(), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}));
+          series.points.forEach((value, month) => {
+            svg.appendChild(svgEl('circle', {cx: xOf(month), cy: yOf(value), r: 4, fill: color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
+          });
+
+          const item = document.createElement('span');
+          const key = document.createElement('span');
+          key.className = 'line-key';
+          key.style.background = color;
+          item.append(key, document.createTextNode(series.label));
+          legendEl.append(item);
+        });
+        if (seriesList.length > drawn.length) {
+          const more = document.createElement('span');
+          more.textContent = `(+${seriesList.length - drawn.length} série(s) non tracée(s), voir tableau)`;
+          legendEl.append(more);
+        }
+
+        // Réticule + infobulle.
+        const crosshair = svgEl('line', {class: 'axis-line', x1: 0, x2: 0, y1: margin.top, y2: margin.top + plotHeight, visibility: 'hidden'});
+        crosshair.style.stroke = resolveColor('var(--text-muted)');
+        svg.appendChild(crosshair);
+        const overlay = svgEl('rect', {x: margin.left - 10, y: margin.top, width: plotWidth + 20, height: plotHeight, fill: 'transparent'});
+        svg.appendChild(overlay);
+        let activeIndex = months.length - 1;
+        const showAt = (monthPosition, clientX, clientY) => {
+          activeIndex = monthPosition;
+          const month = months[monthPosition];
+          crosshair.setAttribute('x1', xOf(month));
+          crosshair.setAttribute('x2', xOf(month));
+          crosshair.setAttribute('visibility', 'visible');
+          const tooltip = elements.tooltip;
+          tooltip.replaceChildren();
+          const title = document.createElement('div');
+          title.className = 'tooltip-label';
+          title.textContent = `${formatMonth(month)}${options.tooltipSuffix ? ' — ' + options.tooltipSuffix : ''}`;
+          tooltip.append(title);
+          drawn
+            .map((series, index) => ({series, index, value: series.points.has(month) ? series.points.get(month) : null}))
+            .sort((left, right) => (right.value === null ? -1 : right.value) - (left.value === null ? -1 : left.value))
+            .forEach(({series, index, value}) => {
+              const row = document.createElement('div');
+              row.className = 'tooltip-row';
+              const key = document.createElement('span');
+              key.className = 'line-key';
+              key.style.background = resolveColor(CAT_COLORS[index]);
+              const strong = document.createElement('strong');
+              strong.textContent = value === null ? '—' : formatRate(Math.round(value * 10) / 10);
+              row.append(key, strong, document.createTextNode(` ${series.label}`));
+              tooltip.append(row);
+            });
+          tooltip.style.left = `${clientX}px`;
+          tooltip.style.top = `${clientY}px`;
+          tooltip.classList.add('is-visible');
+        };
+        const nearestMonth = (event) => {
+          const box = svg.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * width;
+          let best = 0;
+          months.forEach((month, position) => {
+            if (Math.abs(xOf(month) - x) < Math.abs(xOf(months[best]) - x)) best = position;
+          });
+          return best;
+        };
+        overlay.addEventListener('pointermove', (event) => showAt(nearestMonth(event), event.clientX, event.clientY));
+        overlay.addEventListener('pointerleave', () => {
+          crosshair.setAttribute('visibility', 'hidden');
+          hideTooltip();
+        });
+        svg.onkeydown = (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          const next = Math.max(0, Math.min(months.length - 1, activeIndex + (event.key === 'ArrowRight' ? 1 : -1)));
+          const box = svg.getBoundingClientRect();
+          showAt(next, box.left + (xOf(months[next]) / width) * box.width, box.top + box.height * 0.2);
+        };
+        svg.onblur = () => {
+          crosshair.setAttribute('visibility', 'hidden');
+          hideTooltip();
+        };
+      }
+
+      function renderEvolutionTable(seriesList) {
+        const body = elements.evolutionTableBody;
+        body.replaceChildren();
+        seriesList.forEach((series) => {
+          const months = [...series.points.keys()].sort();
+          const first = months[0];
+          const last = months[months.length - 1];
+          const previous = months.length > 1 ? months[months.length - 2] : null;
+          const firstValue = series.points.get(first);
+          const lastValue = series.points.get(last);
+          const delta = months.length > 1 ? lastValue - firstValue : null;
+          const lastDelta = previous ? lastValue - series.points.get(previous) : null;
+          const elapsed = months.length > 1 ? monthIndex(last) - monthIndex(first) : 0;
+          const pace = elapsed > 0 ? delta / elapsed : null;
+
+          const row = document.createElement('tr');
+          const cells = [
+            series.label,
+            `${formatRate(Math.round(firstValue * 10) / 10)} (${formatMonth(first)})`,
+            `${formatRate(Math.round(lastValue * 10) / 10)} (${formatMonth(last)})`,
+            formatPoints(delta),
+            formatPoints(lastDelta),
+            pace === null ? '—' : `${formatPoints(pace)} / mois`
+          ];
+          cells.forEach((text, index) => {
+            const cell = document.createElement('td');
+            cell.textContent = text;
+            const signed = index === 3 ? delta : index === 4 ? lastDelta : null;
+            if (signed !== null && Math.abs(signed) >= 0.05) cell.className = signed > 0 ? 'delta-up' : 'delta-down';
+            row.append(cell);
+          });
+          body.append(row);
+        });
+        if (!seriesList.length) {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 6;
+          cell.textContent = 'Aucune valeur pour ce choix.';
+          row.append(cell);
+          body.append(row);
+        }
+      }
+
+      function renderEvolution() {
+        if (!state.bootstrap) return;
+        const campaign = elements.evolutionCampagne.value;
+        const filiere = elements.evolutionFiliere.value || HISTORY_TOTAL;
+        const filiereLabel = filiere === HISTORY_TOTAL ? 'ensemble' : filiere;
+        const series = campaign ? computeEvolutionSeries(campaign, filiere) : [];
+        elements.evolutionChartTitle.textContent = `Taux de terminés parmi les concernés — ${campaign || '…'} · ${filiereLabel}`;
+        elements.evolutionTableTitle.textContent = `Évolution par action — ${campaign || '…'} · ${filiereLabel}`;
+        renderLineChart(elements.evolutionChart, elements.evolutionLegend, series, {tooltipSuffix: filiereLabel});
+        renderEvolutionTable(series);
+        renderLineChart(elements.evolutionReponseChart, elements.evolutionReponseLegend, computeResponseSeries(), {});
+      }
+
+      elements.evolutionCampagne.addEventListener('change', renderEvolution);
+      elements.evolutionFiliere.addEventListener('change', renderEvolution);
+
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
       // (Synthèse, Détail, Contrôle), sur ce qui est actuellement affiché
       // dans chaque vue — pour l'envoi groupé à un tiers plutôt que 3 clics
@@ -3029,6 +3432,8 @@
           renderMatrix();
           renderControl();
           renderPoste();
+          populateEvolutionFilters();
+          renderEvolution();
         })
         .withFailureHandler((error) => {
           elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';
