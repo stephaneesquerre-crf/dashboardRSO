@@ -374,9 +374,12 @@
          --------------------------------------------------------------- */
       .poste-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
         gap: 20px;
         align-items: start;
+      }
+      @media (max-width: 520px) {
+        .poste-grid { grid-template-columns: 1fr; }
       }
       .poste-group {
         padding: 14px;
@@ -384,43 +387,45 @@
         border-radius: 12px;
       }
       .poste-group h3 {
+        margin: 0 0 4px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .poste-group-meta {
         margin: 0 0 10px;
-        font-size: 0.95rem;
-        font-weight: 600;
-      }
-      .poste-group h3 small {
-        font-weight: 400;
-        color: var(--text-muted);
         font-size: 0.78rem;
-      }
-      .poste-cards { display: grid; gap: 10px; }
-      .poste-card {
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: var(--surface-2);
-      }
-      .poste-card-title {
-        margin: 0 0 6px;
-        font-weight: 600;
-        font-size: 0.86rem;
-      }
-      .poste-card-value {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 0.95rem;
-        font-weight: 600;
-      }
-      .poste-card-sub {
-        margin-top: 4px;
-        font-size: 0.76rem;
         color: var(--text-secondary);
       }
-      .poste-card-co2 {
-        margin-top: 4px;
+      table.poste-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.8rem;
       }
-      .poste-card-co2 small { color: var(--text-muted); }
+      table.poste-table th {
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 0 6px 4px;
+        border-bottom: 1px solid var(--line);
+      }
+      table.poste-table td {
+        padding: 5px 6px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+      table.poste-table tr:last-child td { border-bottom: none; }
+      table.poste-table .num { text-align: right; white-space: nowrap; }
+      .poste-rate {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
       .co2-summary {
         margin: 0 0 18px;
         font-size: 0.86rem;
@@ -435,8 +440,8 @@
       .tool-links a { color: var(--series-1); font-weight: 600; }
       .gauge { display: inline-flex; gap: 2px; }
       .gauge span {
-        width: 18px;
-        height: 12px;
+        width: 12px;
+        height: 10px;
         border-radius: 2px;
         background: var(--line);
       }
@@ -918,7 +923,7 @@
     </section>
 
     <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
-      <p class="view-intro">Pour chaque poste d'émissions, une carte par action : moyenne d'avancement des pôles concernés, jauge en 4 paliers et nombre de pôles ayant terminé l'action — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <p class="view-intro">Une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date (cible au survol) — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -940,10 +945,17 @@
             <input type="checkbox" id="poste-filiere-specific">
             <label for="poste-filiere-specific">Actions spécifiques filière</label>
           </div>
+          <div class="filter-field">
+            <label for="poste-reduction-mode">Réduction « à date »</label>
+            <select id="poste-reduction-mode">
+              <option value="avancement">Selon l'avancement déclaré</option>
+              <option value="termines">Pôles ayant terminé seulement</option>
+            </select>
+          </div>
         </div>
         <p class="tool-links" id="poste-tool-links" hidden></p>
         <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. </p>
-        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. Les pôles pilotes du bilan carbone 2023, dont les réductions sont saisies en kgCO2, sont exclus tant que leur bilan total n'est pas disponible dans le classeur national.</p>
+        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Les pôles pilotes du bilan carbone 2023, dont les réductions sont saisies en kgCO2, sont exclus tant que leur bilan total n'est pas disponible dans le classeur national.</p>
       </section>
 
       <section class="panel">
@@ -1029,7 +1041,10 @@
         // vues, sous forme de clé ('socle', 'filiere', 'socle|filiere' ou ''
         // = aucun filtre). "Actions socle" cochée par défaut (demande de
         // Simon, 29/09/2026).
-        actionTypes: 'socle'
+        actionTypes: 'socle',
+        // Calcul de la réduction "à date" de la vue Par poste (cf.
+        // aggregateReductionByPole) : 'avancement' ou 'termines'.
+        reductionMode: 'avancement'
       };
 
       const elements = {
@@ -1101,6 +1116,7 @@
         posteTrackedOnly: document.getElementById('poste-tracked-only'),
         posteTitle: document.getElementById('poste-title'),
         posteGrid: document.getElementById('poste-grid'),
+        posteReductionMode: document.getElementById('poste-reduction-mode'),
         posteCo2Summary: document.getElementById('poste-co2-summary'),
         syntheseToolLinks: document.getElementById('synthese-tool-links'),
         detailToolLinks: document.getElementById('detail-tool-links'),
@@ -2663,6 +2679,18 @@
       // filière / territoire que la synthèse, sans le mode « Tous les
       // territoires (détail) » (pas de comparaison ici).
       // ---------------------------------------------------------------
+      // Ordre fixe des tuiles de poste, identique pour tout le monde :
+      // postes les plus lourds de l'empreinte d'abord (ordre du support de
+      // Simon : énergie, mobilité, achats, déchets), puis les autres. Un
+      // poste absent de cette liste est placé à la fin, par ordre
+      // alphabétique. Modifiable ici sans toucher au reste.
+      const POSTE_ORDER = ['energie', 'transport', 'mobilite', 'achats de biens', 'achats de services', 'immobilisations', 'dechets', 'hors energie', 'sols et forets'];
+      function posteRank(poste) {
+        const key = normalizeSearchText(poste);
+        const index = POSTE_ORDER.findIndex((prefix) => key.indexOf(prefix) === 0);
+        return index === -1 ? POSTE_ORDER.length : index;
+      }
+
       function computePosteCards(bootstrap, options) {
         const filiere = options.filiere || '';
         const territoire = filiere ? (options.territoire || '') : '';
@@ -2686,10 +2714,19 @@
         });
 
         const byName = (left, right) => left.localeCompare(right, 'fr');
-        return [...byPoste.keys()].sort(byName).map((poste) => ({
+        // Actions triées par avancement décroissant (les données non
+        // disponibles en dernier), puis par nom.
+        const byRate = (left, right) => {
+          const leftRate = left.concernes ? left.somme / left.concernes : -1;
+          const rightRate = right.concernes ? right.somme / right.concernes : -1;
+          return rightRate - leftRate || byName(left.action, right.action);
+        };
+        return [...byPoste.keys()]
+          .sort((left, right) => posteRank(left) - posteRank(right) || byName(left, right))
+          .map((poste) => ({
           poste,
           cards: [...byPoste.get(poste).values()]
-            .sort((left, right) => byName(left.action, right.action))
+            .sort(byRate)
             .map((bucket) => ({
               action: bucket.action,
               concernes: bucket.concernes,
@@ -2750,7 +2787,14 @@
           if (!aDate && !cible) return;
           if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
           const pole = byPole.get(code);
-          if (aDate) pole.aDate += aDate.value;
+          if (state.reductionMode === 'termines') {
+            // Variante "terminés seulement" : réduction cible si l'action
+            // est à 100 % pour ce pôle, 0 sinon. Repli sur la valeur à date
+            // quand la cible manque (à date = cible × 100 % dans ce cas).
+            if (isTermine(fact.avancement)) pole.aDate += (cible || aDate).value;
+          } else if (aDate) {
+            pole.aDate += aDate.value;
+          }
           if (cible) pole.cible += cible.value;
         });
         const poles = [...byPole.values()];
@@ -2817,35 +2861,51 @@
         return gauge;
       }
 
-      function buildPosteCard(card) {
-        const element = document.createElement('div');
-        element.className = 'poste-card';
+      // Une ligne par action dans la tuile du poste (plus dense que des
+      // cartes) : avancement + jauge, pôles à 100 %, réduction à date.
+      function buildPosteRow(card) {
+        const row = document.createElement('tr');
+        const name = document.createElement('td');
+        name.textContent = card.action;
 
-        const title = document.createElement('p');
-        title.className = 'poste-card-title';
-        title.textContent = card.action;
+        const rate = document.createElement('td');
+        const rateBox = document.createElement('div');
+        rateBox.className = 'poste-rate';
+        rateBox.append(card.tauxMoyenAvancement === null ? '—' : formatRate(card.tauxMoyenAvancement), buildGauge(card.tauxMoyenAvancement));
+        rate.append(rateBox);
 
-        const value = document.createElement('div');
-        value.className = 'poste-card-value';
-        const rateText = document.createElement('span');
-        rateText.textContent = card.tauxMoyenAvancement === null ? 'Donnée non disponible' : `📈 ${formatRate(card.tauxMoyenAvancement)}`;
-        value.append(rateText, buildGauge(card.tauxMoyenAvancement));
+        const done = document.createElement('td');
+        done.className = 'num';
+        done.textContent = `${formatCount(card.terminees)} / ${formatCount(card.concernes)}`;
 
-        const sub = document.createElement('div');
-        sub.className = 'poste-card-sub';
-        sub.textContent = `${formatCount(card.terminees)} / ${formatCount(card.concernes)} pôles concernés à 100 %`;
-
-        element.append(title, value, sub);
+        const co2 = document.createElement('td');
+        co2.className = 'num';
+        co2.textContent = card.co2.poleCount ? formatReduction(card.co2.aDate) : '—';
         if (card.co2.poleCount) {
-          const co2 = document.createElement('div');
-          co2.className = 'poste-card-co2';
-          co2.textContent = describeReduction(card.co2) + ' ';
-          const detail = document.createElement('small');
-          detail.textContent = `(${formatCount(card.co2.poleCount)} pôle${card.co2.poleCount > 1 ? 's' : ''})`;
-          co2.append(detail);
-          element.append(co2);
+          co2.title = `Cible ${formatReduction(card.co2.cible)} — moyenne sur ${formatCount(card.co2.poleCount)} pôle(s)`;
         }
-        return element;
+
+        row.append(name, rate, done, co2);
+        return row;
+      }
+
+      function buildPosteTable(cards) {
+        const table = document.createElement('table');
+        table.className = 'poste-table';
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        [['Action', ''], ['📈 Avancement', 'num'], ['À 100 %', 'num'], ['⬇ À date', 'num']].forEach(([label, className]) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          th.textContent = label;
+          if (className) th.className = className;
+          headRow.append(th);
+        });
+        head.append(headRow);
+        const body = document.createElement('tbody');
+        body.append(...cards.map(buildPosteRow));
+        table.append(head, body);
+        return table;
       }
 
       function renderPoste() {
@@ -2868,7 +2928,8 @@
         if (total.poleCount) {
           const strong = document.createElement('strong');
           strong.textContent = describeReduction(total);
-          elements.posteCo2Summary.append('Réduction du bilan carbone, moyenne par pôle : ', strong,
+          const modeLabel = state.reductionMode === 'termines' ? ' (pôles ayant terminé seulement)' : '';
+          elements.posteCo2Summary.append(`Réduction du bilan carbone${modeLabel}, moyenne par pôle : `, strong,
             ` — ${formatCount(total.poleCount)} pôles`);
         } else {
           elements.posteCo2Summary.append('Réduction du bilan carbone : aucune valeur en % exploitable dans ce périmètre');
@@ -2885,19 +2946,14 @@
           const section = document.createElement('section');
           section.className = 'poste-group';
           const heading = document.createElement('h3');
-          heading.textContent = group.poste + ' ';
-          const count = document.createElement('small');
-          count.textContent = `(${group.cards.length} action${group.cards.length > 1 ? 's' : ''})`;
-          heading.append(count);
-          if (group.co2.poleCount) {
-            const co2 = document.createElement('small');
-            co2.textContent = ` · ${describeReduction(group.co2)}`;
-            heading.append(co2);
-          }
-          const cards = document.createElement('div');
-          cards.className = 'poste-cards';
-          cards.append(...group.cards.map(buildPosteCard));
-          section.append(heading, cards);
+          heading.textContent = group.poste;
+          const meta = document.createElement('p');
+          meta.className = 'poste-group-meta';
+          meta.textContent = [
+            `${group.cards.length} action${group.cards.length > 1 ? 's' : ''}`,
+            group.co2.poleCount ? describeReduction(group.co2) : ''
+          ].filter(Boolean).join(' · ');
+          section.append(heading, meta, buildPosteTable(group.cards));
           return section;
         }));
         elements.posteEmpty.hidden = groups.length > 0;
@@ -2908,6 +2964,10 @@
         renderPoste();
       });
       elements.posteTerritoire.addEventListener('change', renderPoste);
+      elements.posteReductionMode.addEventListener('change', () => {
+        state.reductionMode = elements.posteReductionMode.value;
+        renderPoste();
+      });
 
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
       // (Synthèse, Détail, Contrôle), sur ce qui est actuellement affiché

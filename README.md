@@ -172,10 +172,13 @@ généralisée à toutes les actions.
 
 ## Vue Par poste d'émissions
 
-Reprend la mise en forme des fiches « Trajectoire décarbonation 2024/2026 »
-de Simon : une carte par action, groupées par poste d'émissions (colonne
-`Poste d'émissions`, champ `thematique`). Filtres filière / territoire
-comme la synthèse, plus la coche partagée. Chaque carte affiche :
+Reprend l'esprit des fiches « Trajectoire décarbonation 2024/2026 » de
+Simon : une tuile encadrée par poste d'émissions, dans un ordre fixe
+(`POSTE_ORDER` dans `Index.html` : énergie, transport/mobilité, achats,
+immobilisations, déchets…, les postes inconnus à la fin), et dans chaque
+tuile une ligne par action, triée par avancement décroissant. Filtres
+filière / territoire comme la synthèse, plus les coches partagées. Chaque
+ligne affiche :
 
 - la **moyenne d'avancement** des couples pôle × action concernés (même
   calcul — non vérifié — que l'indicateur de la synthèse) ;
@@ -188,8 +191,14 @@ comme la synthèse, plus la coche partagée. Chaque carte affiche :
   pour tout le périmètre : somme par pôle des réductions (points de % du
   bilan du pôle), puis **moyenne simple entre pôles**. Les pôles pilotes
   (au moins une valeur en kgCO2) sont exclus en entier et comptés à part.
-  La méthode d'agrégation de Simon n'est pas connue : à confirmer avec lui
-  avant usage officiel.
+  Menu « Réduction à date » : **selon l'avancement déclaré** (valeur de
+  la colonne « Réduction carbone à date », par défaut) ou **pôles ayant
+  terminé seulement** (réduction cible si l'action est à 100 % pour le
+  pôle, 0 sinon — même logique que Simon, qui utilise le taux de terminés
+  parmi les concernés ; repli sur la valeur à date quand la cible manque).
+  Les autres différences avec le calcul de Simon (potentiel national non
+  adapté au pôle, repas végétariens au tiers, cas déchets / véhicules
+  électriques) restent.
 
 Le lien vers l'outil de suivi de la filière choisie (onglet `Liens outils`,
 colonne Code filière) s'affiche sous les filtres des vues Synthèse, Détail
@@ -205,10 +214,14 @@ flotte, part de véhicules électriques).
 ## Historique du Tableau de bord VA (base de la future vue Évolution)
 
 Le `Tableau de bord VA` est archivé à la main chaque mois dans un onglet
-`Archives MMAA` (ex. `Archives 1125`, `Archives 09.26`).
+`Archives MM/AA` (ex. `Archives 11/25`, `Archives 09.26`, `Archives 1125` ;
+un suffixe comme `Archives 01/26 2` est toléré, le mois en double est
+signalé).
 `importArchivesTableauDeBord()` (`ArchiveImportService.gs`, à lancer depuis
 l'éditeur après chaque nouvelle archive) relit tous ces onglets et les
-réécrit dans l'onglet **`HISTORIQUE TDB VA`**, au format long : une ligne
+réécrit dans l'onglet **`HISTORIQUE TDB VA` du classeur des archives**
+(`ARCHIVES_SPREADSHEET_ID` dans `Config.gs` ; vide = classeur national),
+au format long : une ligne
 = Mois, Onglet source, Campagne, Action, Filière (libellé source),
 Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 
@@ -228,6 +241,11 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 - Vérifié sur l'export des 8 archives (11/2025 à 09/2026) : ex.
   09/2026, Repas végétariens : TOTAL 67,9 %, SAN 11 / 14, PSH 33 / 38.
 - Non lu : le bloc « % de réponses » par année en bas de l'onglet.
+- Premier import réel (29/09/2026, 14 onglets, 4 550 lignes) : `Archives
+  09/25` et `Archives 10/25` non reconnus (mise en page plus ancienne, sans
+  bloc « TX DE TERMINES PARMIS LES CONCERNES ») — à adapter avec
+  `diagnosticArchiveLayout('Archives 09/25')` ; `Archives 01/26 2` est une
+  seconde copie de janvier 2026.
 
 À noter : la colonne TOTAL de ce tableau est un **taux de terminés parmi
 les concernés** (ex. 127 / 187 = 67,9 % pour les repas végétariens en

@@ -59,6 +59,7 @@ function importArchiveSheets_(source, sheetNames) {
   const importedAt = new Date();
   const newRows = [];
   const report = [];
+  const sheetsByMonth = {};
   sheetNames.forEach((name) => {
     const sheet = source.getSheetByName(name);
     if (!sheet) {
@@ -66,11 +67,23 @@ function importArchiveSheets_(source, sheetNames) {
       return;
     }
     const parsed = parseArchiveValues_(sheet.getDataRange().getValues(), name);
+    if (parsed.month) {
+      sheetsByMonth[parsed.month] = (sheetsByMonth[parsed.month] || []).concat([name]);
+    }
     parsed.rows.forEach((row) => newRows.push(row.concat([importedAt])));
     report.push(`${name} : ${parsed.rows.length} valeurs (mois ${parsed.month || '?'})${parsed.warnings.length ? ' — ' + parsed.warnings.join(' ; ') : ''}`);
   });
 
-  const target = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  Object.keys(sheetsByMonth).forEach((month) => {
+    if (sheetsByMonth[month].length > 1) {
+      report.push(`ATTENTION ${month} : plusieurs onglets pour le même mois (${sheetsByMonth[month].join(', ')}) — à dédoublonner à la source ou à filtrer par "Onglet source".`);
+    }
+  });
+
+  // L'historique est écrit dans le classeur des archives (le classeur
+  // national n'est alors pas modifié) ; même classeur que SPREADSHEET_ID
+  // tant que ARCHIVES_SPREADSHEET_ID est vide.
+  const target = source;
   const history = target.getSheetByName(config.HISTORY_SHEET_NAME) || target.insertSheet(config.HISTORY_SHEET_NAME);
   const existing = history.getLastRow() > 1
     ? history.getRange(2, 1, history.getLastRow() - 1, HISTORY_HEADERS_.length).getValues()
@@ -85,6 +98,26 @@ function importArchiveSheets_(source, sheetNames) {
     history.getRange(2, 1, allRows.length, HISTORY_HEADERS_.length).setValues(allRows);
   }
   Logger.log(report.concat([`${allRows.length} lignes au total dans "${config.HISTORY_SHEET_NAME}".`]).join('\n'));
+}
+
+// À lancer depuis l'éditeur quand un onglet n'est pas reconnu (message
+// « bloc ... introuvable ») : affiche le texte des 45 premières lignes
+// pour adapter le repérage. Ex. : function diag0925() { diagnosticArchiveLayout('Archives 09/25'); }
+function diagnosticArchiveLayout(sheetName) {
+  const config = getConfig_();
+  const sheet = SpreadsheetApp.openById(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID).getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log(`Onglet introuvable : ${sheetName}`);
+    return;
+  }
+  const values = sheet.getRange(1, 1, Math.min(sheet.getLastRow(), 45), Math.min(sheet.getLastColumn(), 32)).getDisplayValues();
+  const columnName = (index) => (index >= 26 ? String.fromCharCode(64 + Math.floor(index / 26)) : '') + String.fromCharCode(65 + (index % 26));
+  Logger.log(values.map((row, rowIndex) => {
+    const cells = row
+      .map((value, colIndex) => (String(value).trim() ? `${columnName(colIndex)}=${String(value).trim().slice(0, 30)}` : ''))
+      .filter(Boolean);
+    return cells.length ? `${rowIndex + 1} | ${cells.join(' | ')}` : '';
+  }).filter(Boolean).join('\n'));
 }
 
 // Cœur du parsing, sans appel à SpreadsheetApp (testable hors Apps
@@ -192,9 +225,12 @@ function parseArchiveValues_(values, sheetName) {
   return {month, rows, warnings};
 }
 
-// "Archives 1125" -> "2025-11" ; "Archives 09.26" -> "2026-09".
+// "Archives 1125" -> "2025-11" ; "Archives 09.26" ou "Archives 09/26" ->
+// "2026-09" ; "Archives 01/26 2" (seconde copie d'un mois) -> "2026-01" :
+// on prend le premier groupe MM[./]AA du nom, le suffixe éventuel est
+// ignoré (les doublons de mois sont signalés à l'import).
 function archiveMonthFromName_(sheetName) {
-  const match = String(sheetName).match(/(\d{2})\D?(\d{2})\s*$/);
+  const match = String(sheetName).match(/(\d{2})[.\/]?(\d{2})(?!\d)/);
   if (!match) return '';
   const month = Number(match[1]);
   if (month < 1 || month > 12) return '';

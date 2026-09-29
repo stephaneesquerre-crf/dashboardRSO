@@ -22,9 +22,11 @@ const CONFIG = Object.freeze({
   // toujours cohérents entre eux (cf. ActionReferenceService.gs).
   ACTIONS_REFERENCE_SHEET_NAME: 'BDD - Actions supplémentaires',
   // Archives mensuelles du "Tableau de bord VA" (copies manuelles, un onglet
-  // par mois : "Archives 1125", "Archives 09.26"...) et onglet de sortie au
-  // format long exploitable par le dashboard (cf. ArchiveImportService.gs).
-  // ARCHIVES_SPREADSHEET_ID vide = même classeur que SPREADSHEET_ID.
+  // par mois : "Archives 11/25", "Archives 09.26"...) et onglet de sortie
+  // au format long, écrit DANS LE CLASSEUR DES ARCHIVES (cf.
+  // ArchiveImportService.gs). ARCHIVES_SPREADSHEET_ID vide = même classeur
+  // que SPREADSHEET_ID ; pour le classeur dédié "Archives REPORTING
+  // NATIONAL", y coller son ID (la partie entre /d/ et /edit de l'URL).
   ARCHIVES_SPREADSHEET_ID: '',
   ARCHIVES_SHEET_PREFIX: 'Archives',
   HISTORY_SHEET_NAME: 'HISTORIQUE TDB VA',
