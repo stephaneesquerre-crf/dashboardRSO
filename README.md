@@ -26,6 +26,8 @@ redécouvrir un par un.
   Sheets API, identifiant `Sheets`) : les chips ne sont lisibles que par
   l'API Sheets (champ `chipRuns`), pas par `SpreadsheetApp`. Sans ce
   service, le dashboard se charge normalement, sans les liens.
+- **`ActionReferenceService.gs`** — lit le référentiel `BDD - Actions
+  supplémentaires` (poste d'émissions de chaque action).
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   et journalise les connexions/incidents. Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
@@ -62,7 +64,7 @@ apostrophes, espaces).
 | Site                          | `poleCode`    | oui |
 | Action envisagée               | `action`      | oui |
 | Type d'action                  | `volet`       | oui |
-| Poste d'émissions               | `thematique`  | oui |
+| Poste d'émissions               | `thematique`  | oui, mais remplacé par le poste du référentiel `BDD - Actions supplémentaires` quand l'action y figure (voir ci-dessous) |
 | Avancement                      | `avancement`  | oui |
 | Filière                         | `filiere`     | oui (repli seulement si le pôle est introuvable dans BDD NOMS) |
 | Action socles                   | `actionSocle` | oui (voir plus bas) |
@@ -97,13 +99,32 @@ chaque pôle PADOM (50 au total) n'apparaît jamais qu'avec l'une des deux
 valeurs dans IMPORT DONNEES, jamais les deux — le reclassement est donc
 sans ambiguïté.
 
+## Mise en page de la vue Synthèse
+
+Graphique principal, graphique de comparaison et fiche d'identité sur une
+même ligne (sous 1200px de large, le graphique principal passe seul sur sa
+ligne). Au-delà de 10 groupes (`HORIZONTAL_BAR_THRESHOLD`), les graphiques
+passent en barres horizontales pour que les libellés restent lisibles
+(ex. regroupement par action).
+
+## Poste d'émissions (thématique) d'une action
+
+Une même action est parfois rattachée à des postes différents selon les
+fichiers des pôles (constat de Simon, 29/09/2026). Le poste affiché vient
+donc du référentiel **`BDD - Actions supplémentaires`** du classeur
+national (`ActionReferenceService.gs`) : colonne « Action… » et colonne
+« Poste… » / « Catégorie… » / « Thématique… », la ligne d'en-tête étant
+cherchée dans les 10 premières lignes. Une action absente du référentiel
+garde le poste saisi par le pôle. `testActionReference()` (à lancer
+depuis l'éditeur) liste les actions absentes et les postes modifiés.
+
 ## Territoires
 
 Un territoire est une lettre ou un numéro (`Territoire A`, `Territoire 3`),
 propre à chaque filière, associé à une liste de régions. Les deux
 nomenclatures coexistent selon les filières, c'est normal.
 
-## Colonne "Action socles" et coche "Actions socle uniquement"
+## Colonne "Action socles" et coches de type d'action
 
 La colonne AZ d'IMPORT DONNEES (`Action socles`) compte 9 valeurs réelles
 observées (diagnostic du 24/09/2026) :
@@ -120,20 +141,21 @@ observées (diagnostic du 24/09/2026) :
 | `Action structurante` | 57 |
 | `#N/A` | 4 |
 
-La coche **« Actions socle uniquement »** (renommée le 25/09/2026, ex-
-« Actions actuellement suivies » ; un seul état partagé entre les vues
-Synthèse, Détail, Contrôle et Par poste — `state.trackedOnly`
-dans `Index.html`, fonction `isCurrentlyTrackedAction`) ne garde **que**
-les lignes `Action socle <année>`, toutes années confondues. Décision
-explicite du 24/09/2026 : les catégories `Action filière`, `Action
-spécifique filière` et `Action structurante` restent à trancher avec Simon
-et sont donc exclues pour l'instant, comme `Action supplémentaire` et les
-lignes non classées.
+Deux coches, partagées entre toutes les vues (un seul état,
+`state.actionTypes` dans `Index.html`, fonctions `actionTypeOf` /
+`passesActionTypeFilter`), décidées avec Simon le 29/09/2026 :
 
-Le **Top 3 / Bottom 3** de la vue Synthèse applique une règle **séparée et
-plus stricte** : uniquement l'année `Action socle` la plus récente trouvée
-dans les données (détectée dynamiquement, `computeLatestActionSocleYear` —
-jamais une année figée en dur), sans compter `Action filière` etc.
+- **« Actions socle »** — lignes `Action socle <année>`, toutes années
+  confondues. **Cochée par défaut.**
+- **« Actions spécifiques filière »** — lignes `Action filière` et
+  `Action spécifique filière`.
+
+Les deux sont cumulables. Aucune cochée = aucun filtre : toutes les
+lignes, y compris `Action structurante`, `Action supplémentaire` et les
+lignes non classées (qui ne ressortent que dans ce cas).
+
+Le Top 3 / Bottom 3 de la vue Synthèse a été retiré le 29/09/2026 (demande
+de Simon).
 
 ## Vue Contrôle
 
@@ -201,9 +223,10 @@ flotte, part de véhicules électriques).
 1. **Sites ne renseignant pas certaines actions** — des sites CRC identifiés
    manuellement n'ont jamais renseigné "Optimisation de la flotte" (voir
    Vue Contrôle) ; à lui remonter.
-2. **`Action filière` / `Action spécifique filière` / `Action structurante`**
-   — doivent-elles compter dans la coche « Actions socle uniquement »
-   partagée ? Actuellement exclues par défaut.
+2. ~~Catégories `Action filière` / `Action spécifique filière`~~ —
+   tranché le 29/09/2026 : coche dédiée « Actions spécifiques filière »
+   (voir plus haut). `Action structurante` et `Action supplémentaire`
+   n'ont pas de coche dédiée.
 3. **Colonnes "Réduction carbone à date" et "Réduction carbone cible"** —
    voir section suivante : les valeurs mélangent kgCO2 et pourcentages
    selon les lignes, sans référence de conversion connue à ce jour.

@@ -47,7 +47,7 @@ function findFactColumns_(headers) {
     // Colonne "Action socles" (dernière colonne AZ) : distingue actions
     // socle (par année de campagne), actions filière et actions
     // supplémentaires — cf. diagnosticActionSocles et Index.html, utilisé
-    // pour la coche "actions actuellement suivies". Optionnelle : un
+    // pour les coches "Actions socle" / "Actions spécifiques filière". Optionnelle : un
     // classeur plus ancien peut ne pas avoir cette colonne.
     actionSocle: findOptionalHeader_(headers, 'action socle'),
     // Optionnelles pour la même raison.
@@ -121,12 +121,13 @@ function getDashboardBootstrap() {
   const poleReference = getPoleReference_();
   const factRecords = getFactRecords_();
   const padomOverrides = derivePadomOverrides_(factRecords);
+  const actionThematiques = getActionThematiqueReference_();
 
   const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
     action: fact.action,
     volet: fact.volet,
-    thematique: fact.thematique,
+    thematique: resolveFactThematique_(fact, actionThematiques),
     avancement: fact.avancement,
     filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
     territoire: resolveFactTerritoire_(fact, poleReference),

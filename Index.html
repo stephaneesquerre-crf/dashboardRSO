@@ -290,31 +290,29 @@
       }
 
       /* ---------------------------------------------------------------
-         Vue synthèse : graphique principal + colonne latérale (comparaison,
-         fiche d'identité, top/bottom 3), et plein écran natif sur les
-         graphiques.
+         Vue synthèse : graphique principal, graphique de comparaison et
+         fiche d'identité sur une même ligne (demande du 29/09/2026 ; le
+         Top/Bottom 3 a été retiré), et plein écran natif sur les
+         graphiques. .chart-sidebar est "transparent" (display: contents)
+         pour que ses deux panneaux soient des colonnes de la grille ; en
+         dessous de 1200px, le graphique principal passe seul sur sa ligne.
          --------------------------------------------------------------- */
       .synthese-chart-grid {
         display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(220px, 0.8fr);
         gap: 20px;
         align-items: start;
       }
 
-      @media (max-width: 900px) {
+      .chart-sidebar { display: contents; }
+
+      @media (max-width: 1200px) {
+        .synthese-chart-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .synthese-chart-grid > #chart-panel-main { grid-column: 1 / -1; }
+      }
+
+      @media (max-width: 700px) {
         .synthese-chart-grid { grid-template-columns: 1fr; }
-      }
-
-      .chart-sidebar {
-        display: grid;
-        gap: 20px;
-        position: sticky;
-        top: 12px;
-        align-self: start;
-      }
-
-      @media (max-width: 900px) {
-        .chart-sidebar { position: static; }
       }
 
       .panel.compact { padding: 16px; }
@@ -368,61 +366,6 @@
         font-size: 0.72rem;
         font-weight: 400;
         color: var(--text-muted);
-      }
-
-      .ranking-block + .ranking-block { margin-top: 16px; }
-
-      .ranking-block h3 {
-        margin: 0 0 8px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: var(--text-secondary);
-      }
-
-      .ranking-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: grid;
-        gap: 8px;
-      }
-
-      .ranking-item {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
-        gap: 4px 10px;
-        font-size: 0.82rem;
-      }
-
-      .ranking-item-label {
-        grid-column: 1 / -1;
-        white-space: normal;
-      }
-
-      .ranking-item-value {
-        font-weight: 600;
-      }
-
-      .ranking-bar-track {
-        grid-column: 1 / -1;
-        height: 6px;
-        border-radius: 3px;
-        background: var(--surface-2);
-        overflow: hidden;
-      }
-
-      .ranking-bar-fill {
-        height: 100%;
-        border-radius: 3px;
-        background: var(--series-1);
-      }
-
-      .ranking-empty {
-        color: var(--text-muted);
-        font-size: 0.8rem;
       }
 
       /* ---------------------------------------------------------------
@@ -755,7 +698,7 @@
     </div>
 
     <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
-      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. La colonne de droite replace le graphique dans son contexte plus large (comparaison, fiche d'identité, top/bottom 3 des actions).</p>
+      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. À côté du graphique, un graphique de comparaison et la fiche d'identité replacent le périmètre dans son contexte plus large.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -787,13 +730,17 @@
             </select>
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="synthese-tracked-only">
-            <label for="synthese-tracked-only">Actions socle uniquement</label>
+            <input type="checkbox" id="synthese-tracked-only" checked>
+            <label for="synthese-tracked-only">Actions socle</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="synthese-filiere-specific">
+            <label for="synthese-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
         <p class="tool-links" id="synthese-tool-links" hidden></p>
         <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
-        <p class="filter-hint">« Actions socle uniquement » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="filter-hint">« Actions socle » garde les lignes « Action socle » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <div class="synthese-chart-grid">
@@ -832,19 +779,6 @@
             <dl class="identity-stats" id="identity-stats"></dl>
           </section>
 
-          <section class="panel compact">
-            <div class="panel-header">
-              <h2 id="ranking-title">Top 3 / Bottom 3 des actions</h2>
-            </div>
-            <div class="ranking-block">
-              <h3>Top 3 — Terminées / concernées</h3>
-              <ol class="ranking-list" id="ranking-top"></ol>
-            </div>
-            <div class="ranking-block">
-              <h3>Bottom 3 — Terminées / concernées</h3>
-              <ol class="ranking-list" id="ranking-bottom"></ol>
-            </div>
-          </section>
         </div>
       </div>
 
@@ -893,8 +827,12 @@
             <input type="search" id="detail-pole-search" placeholder="Nom ou code du pôle…">
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="detail-tracked-only">
-            <label for="detail-tracked-only">Actions socle uniquement</label>
+            <input type="checkbox" id="detail-tracked-only" checked>
+            <label for="detail-tracked-only">Actions socle</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="detail-filiere-specific">
+            <label for="detail-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
         <p class="tool-links" id="detail-tool-links" hidden></p>
@@ -944,12 +882,16 @@
             <label for="control-problems-only">Couverture incomplète uniquement</label>
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="control-tracked-only">
-            <label for="control-tracked-only">Actions socle uniquement</label>
+            <input type="checkbox" id="control-tracked-only" checked>
+            <label for="control-tracked-only">Actions socle</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="control-filiere-specific">
+            <label for="control-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
         <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
-        <p class="filter-hint">« Actions socle uniquement » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="filter-hint">« Actions socle » garde les lignes « Action socle » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <section class="panel">
@@ -986,8 +928,12 @@
             <select id="poste-territoire" disabled><option value="">Toute la filière</option></select>
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="poste-tracked-only">
-            <label for="poste-tracked-only">Actions socle uniquement</label>
+            <input type="checkbox" id="poste-tracked-only" checked>
+            <label for="poste-tracked-only">Actions socle</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="poste-filiere-specific">
+            <label for="poste-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
         <p class="tool-links" id="poste-tool-links" hidden></p>
@@ -1062,6 +1008,9 @@
       // territoire) : bascule le graphique en comparaison des territoires
       // entre eux, plutôt que d'être un niveau de regroupement séparé.
       const TERRITOIRE_DETAIL_VALUE = '__territoires_detail__';
+      // Nombre de groupes au-delà duquel les graphiques de la synthèse
+      // passent en barres horizontales (cf. renderChart).
+      const HORIZONTAL_BAR_THRESHOLD = 10;
 
       const state = {
         bootstrap: null,
@@ -1070,11 +1019,12 @@
         matrix: null,
         controlRows: null,
         controlVisibleRows: null,
-        // Coche "actions actuellement suivies" (cf. isCurrentlyTrackedAction) :
-        // un seul état partagé par les 3 vues (Synthèse, Détail, Contrôle),
-        // décoché par défaut pour ne rien masquer tant qu'on ne l'a pas
-        // demandé explicitement.
-        trackedOnly: false
+        // Coches "Actions socle" / "Actions spécifiques filière" (cf.
+        // passesActionTypeFilter) : un seul état partagé par toutes les
+        // vues, sous forme de clé ('socle', 'filiere', 'socle|filiere' ou ''
+        // = aucun filtre). "Actions socle" cochée par défaut (demande de
+        // Simon, 29/09/2026).
+        actionTypes: 'socle'
       };
 
       const elements = {
@@ -1115,9 +1065,6 @@
         comparisonChartNote: document.getElementById('comparison-chart-note'),
         identityCardTitle: document.getElementById('identity-card-title'),
         identityStats: document.getElementById('identity-stats'),
-        rankingTitle: document.getElementById('ranking-title'),
-        rankingTop: document.getElementById('ranking-top'),
-        rankingBottom: document.getElementById('ranking-bottom'),
 
         detailFiliere: document.getElementById('detail-filiere'),
         detailTerritoire: document.getElementById('detail-territoire'),
@@ -1205,6 +1152,24 @@
           `L ${x + width - r} ${top}`,
           `Q ${x + width} ${top} ${x + width} ${top + r}`,
           `L ${x + width} ${bottom}`,
+          'Z'
+        ].join(' ');
+      }
+
+      // Équivalent horizontal : barre ancrée à gauche (ligne de base),
+      // extrémité droite arrondie.
+      function buildRoundedRightBarPath(x, y, width, height, radius) {
+        const r = Math.max(0, Math.min(radius, height / 2, width));
+        if (width <= 0) return '';
+        const right = x + width;
+        const bottom = y + height;
+        return [
+          `M ${x} ${y}`,
+          `L ${right - r} ${y}`,
+          `Q ${right} ${y} ${right} ${y + r}`,
+          `L ${right} ${bottom - r}`,
+          `Q ${right} ${bottom} ${right - r} ${bottom}`,
+          `L ${x} ${bottom}`,
           'Z'
         ].join(' ');
       }
@@ -1308,25 +1273,26 @@
       }
 
       // Colonne "Action socles" d'IMPORT DONNEES (cf. diagnostic du
-      // 2026-xx) : 9 valeurs réelles observées — "(vide)"/"#N/A" (lignes
+      // 24/09/2026) : 9 valeurs réelles observées — "(vide)"/"#N/A" (lignes
       // anciennes non classées), "Action socle 2024/2025/2026", "Action
       // structurante", "Action supplémentaire", "Action filière" et
-      // "Action spécifique filière". La coche "actions actuellement
-      // suivies" ne garde QUE les actions socle, toutes années confondues
-      // — décision explicite : les catégories filière restent à trancher
-      // avec Simon, donc exclues pour l'instant comme les autres non-socle.
-      function isCurrentlyTrackedAction(fact) {
-        return normalizeSearchText(fact.actionSocle).indexOf('action socle') === 0;
+      // "Action spécifique filière". Décision avec Simon (29/09/2026) :
+      // coche "Actions socle" = toutes les années socle ; coche "Actions
+      // spécifiques filière" = "Action filière" + "Action spécifique
+      // filière" ; cumulables. "Action structurante", "Action
+      // supplémentaire" et les lignes non classées ne ressortent que si
+      // aucune coche n'est active.
+      function actionTypeOf(fact) {
+        const value = normalizeSearchText(fact.actionSocle);
+        if (value.indexOf('action socle') === 0) return 'socle';
+        if (value === 'action filiere' || value.indexOf('action specifique filiere') === 0) return 'filiere';
+        return 'autre';
+      }
+      function passesActionTypeFilter(fact, actionTypes) {
+        if (!actionTypes) return true;
+        return actionTypes.split('|').indexOf(actionTypeOf(fact)) !== -1;
       }
 
-      // Année de campagne d'une ligne "Action socle <année>" (ex. 2026),
-      // null si la valeur ne correspond pas à ce format. Sert uniquement au
-      // Top 3 / Bottom 3 de la vue synthèse, restreint à l'année la plus
-      // récente trouvée dans les données plutôt qu'à une année figée en dur.
-      function extractActionSocleYear(value) {
-        const match = normalizeSearchText(value).match(/^action socle\D*(\d{4})/);
-        return match ? Number(match[1]) : null;
-      }
       function roundRate(numerator, denominator) {
         return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
       }
@@ -1345,7 +1311,7 @@
         const scopedFacts = bootstrap.facts.filter((fact) => {
           if (scopeFiliere && fact.filiere !== scopeFiliere) return false;
           if (scopeFiliere && scopeTerritoire && fact.territoire !== scopeTerritoire) return false;
-          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return false;
           return true;
         });
 
@@ -1438,7 +1404,7 @@
           (!territoire || fact.territoire === territoire) &&
           (!volet || fact.volet === volet) &&
           (!thematique || fact.thematique === thematique) &&
-          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
+          passesActionTypeFilter(fact, options.actionTypes)
         );
 
         const poleOrder = [];
@@ -1512,23 +1478,16 @@
       // constants pour une même action ; s'ils varient d'un pôle à l'autre
       // (incohérence de saisie), les valeurs distinctes sont toutes
       // affichées plutôt que d'en choisir une arbitrairement.
-      // filiere optionnel : vide = toutes filières confondues (utilisé pour
-      // le top/bottom 3 en vue globale, cf. renderRanking). Le tableau
-      // "Détail des données" de la vue synthèse continue lui de n'appeler
-      // cette fonction que lorsqu'une filière précise est choisie.
+      // Le tableau "Détail des données" de la vue synthèse n'appelle cette
+      // fonction que lorsqu'une filière précise est choisie.
       function computeActionDetail(bootstrap, options) {
         const filiere = options.filiere || '';
         const territoire = options.territoire || '';
 
-        // factFilter (ex. Top/Bottom 3 : année socle la plus récente
-        // uniquement) est un prédicat additionnel indépendant de trackedOnly
-        // (coche générique "actions actuellement suivies") : les deux
-        // servent des besoins différents et ne s'appellent jamais ensemble.
         const scopedFacts = bootstrap.facts.filter((fact) => {
           if (filiere && fact.filiere !== filiere) return false;
           if (territoire && fact.territoire !== territoire) return false;
-          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
-          if (options.factFilter && !options.factFilter(fact)) return false;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return false;
           return true;
         });
 
@@ -1688,22 +1647,29 @@
       elements.detailThematique.addEventListener('change', renderMatrix);
       elements.detailPoleSearch.addEventListener('input', renderMatrix);
 
-      // Coche "actions actuellement suivies", partagée par les 3 vues (un
-      // seul état dans state.trackedOnly) : cocher/décocher dans une vue
-      // met à jour les deux autres et recalcule tout, plutôt que 3 réglages
-      // indépendants qu'on pourrait oublier de resynchroniser.
-      const trackedOnlyCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly, elements.posteTrackedOnly];
-      function setTrackedOnly(checked) {
-        state.trackedOnly = checked;
-        trackedOnlyCheckboxes.forEach((checkbox) => { checkbox.checked = checked; });
+      // Coches "Actions socle" / "Actions spécifiques filière", partagées
+      // par toutes les vues (un seul état dans state.actionTypes) :
+      // cocher/décocher dans une vue met à jour les autres et recalcule
+      // tout, plutôt que des réglages indépendants qu'on pourrait oublier
+      // de resynchroniser.
+      const socleCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly, elements.posteTrackedOnly];
+      const filiereSpecificCheckboxes = ['synthese', 'detail', 'control', 'poste']
+        .map((view) => document.getElementById(`${view}-filiere-specific`));
+      function setActionTypes(socle, filiere) {
+        state.actionTypes = [socle ? 'socle' : '', filiere ? 'filiere' : ''].filter(Boolean).join('|');
+        socleCheckboxes.forEach((checkbox) => { checkbox.checked = socle; });
+        filiereSpecificCheckboxes.forEach((checkbox) => { checkbox.checked = filiere; });
         if (!state.bootstrap) return;
         renderSynthese();
         renderMatrix();
         renderControl();
         renderPoste();
       }
-      trackedOnlyCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', (event) => setTrackedOnly(event.target.checked));
+      socleCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => setActionTypes(event.target.checked, filiereSpecificCheckboxes[0].checked));
+      });
+      filiereSpecificCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => setActionTypes(socleCheckboxes[0].checked, event.target.checked));
       });
 
       // ---------------------------------------------------------------
@@ -1716,11 +1682,11 @@
       function resolveSyntheseOptions() {
         const filiere = elements.syntheseFiliere.value;
         const territoireValue = elements.syntheseTerritoire.value;
-        const trackedOnly = state.trackedOnly;
+        const actionTypes = state.actionTypes;
         if (territoireValue === TERRITOIRE_DETAIL_VALUE) {
-          return {filiere, territoire: '', niveau: 'territoire', trackedOnly};
+          return {filiere, territoire: '', niveau: 'territoire', actionTypes};
         }
-        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value, trackedOnly};
+        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value, actionTypes};
       }
 
       function updateChartTitle(options) {
@@ -1755,13 +1721,13 @@
       function resolveComparisonOptions(options) {
         if (!options.filiere) return null;
         if (!options.territoire) {
-          return {filiere: '', territoire: '', niveau: 'filiere', trackedOnly: options.trackedOnly};
+          return {filiere: '', territoire: '', niveau: 'filiere', actionTypes: options.actionTypes};
         }
         return {
           filiere: options.filiere,
           territoire: '',
           niveau: options.niveau === 'territoire' ? 'filiere' : options.niveau,
-          trackedOnly: options.trackedOnly
+          actionTypes: options.actionTypes
         };
       }
 
@@ -1800,7 +1766,7 @@
         const scopedFacts = bootstrap.facts.filter((fact) =>
           (!filiere || fact.filiere === filiere) &&
           (!territoire || fact.territoire === territoire) &&
-          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
+          passesActionTypeFilter(fact, options.actionTypes)
         );
 
         const actions = new Set();
@@ -1860,74 +1826,6 @@
         );
       }
 
-      // Top/bottom 3 des actions du périmètre affiché, sur l'indicateur
-      // "Terminées / concernées" (celui vérifié directement dans le
-      // classeur national, cf. Méthodologie) — ignore les actions sans
-      // aucun pôle concerné, dont le taux ne voudrait rien dire.
-      function renderRankingList(listEl, rows, emptyMessage) {
-        listEl.replaceChildren();
-        if (!rows.length) {
-          const li = document.createElement('li');
-          li.className = 'ranking-empty';
-          li.textContent = emptyMessage;
-          listEl.appendChild(li);
-          return;
-        }
-        rows.forEach((row) => {
-          const li = document.createElement('li');
-          li.className = 'ranking-item';
-          const label = document.createElement('span');
-          label.className = 'ranking-item-label';
-          label.textContent = row.action;
-          const value = document.createElement('span');
-          value.className = 'ranking-item-value';
-          value.textContent = formatRate(row.tauxTerminees);
-          const track = document.createElement('div');
-          track.className = 'ranking-bar-track';
-          const fill = document.createElement('div');
-          fill.className = 'ranking-bar-fill';
-          fill.style.width = `${row.tauxTerminees}%`;
-          track.appendChild(fill);
-          li.append(label, value, track);
-          listEl.appendChild(li);
-        });
-      }
-
-      // Calculée une fois (les faits ne changent pas en cours de session) :
-      // année de campagne "Action socle" la plus récente trouvée dans les
-      // données, plutôt qu'une année figée en dur à retoucher chaque année.
-      // null si la colonne est absente ou ne contient aucune valeur
-      // reconnaissable — dans ce cas le Top/Bottom 3 n'est pas restreint,
-      // pour ne pas se vider silencieusement d'un classeur plus ancien.
-      function computeLatestActionSocleYear(bootstrap) {
-        let latest = null;
-        bootstrap.facts.forEach((fact) => {
-          const year = extractActionSocleYear(fact.actionSocle);
-          if (year !== null && (latest === null || year > latest)) latest = year;
-        });
-        return latest;
-      }
-
-      function renderRanking(options) {
-        if (state.latestActionSocleYear === undefined) {
-          state.latestActionSocleYear = computeLatestActionSocleYear(state.bootstrap);
-        }
-        const latestYear = state.latestActionSocleYear;
-        const detail = computeActionDetail(state.bootstrap, {
-          filiere: options.filiere,
-          territoire: options.territoire,
-          factFilter: latestYear === null ? null : (fact) => extractActionSocleYear(fact.actionSocle) === latestYear
-        });
-        const scopeBits = [options.filiere, options.territoire].filter(Boolean);
-        const yearSuffix = latestYear === null ? '' : ` — action socle ${latestYear}`;
-        elements.rankingTitle.textContent = `Top 3 / Bottom 3 — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}${yearSuffix}`;
-        const ranked = detail.rows.filter((row) => row.concernes > 0);
-        const byRateDesc = [...ranked].sort((left, right) => right.tauxTerminees - left.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
-        const byRateAsc = [...ranked].sort((left, right) => left.tauxTerminees - right.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
-        renderRankingList(elements.rankingTop, byRateDesc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
-        renderRankingList(elements.rankingBottom, byRateAsc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
-      }
-
       // Dès qu'une filière précise est choisie, le tableau de détail
       // affiche toujours une ligne par action (granularité pôle par action,
       // cf. Méthodologie), indépendamment du regroupement choisi pour le
@@ -1943,10 +1841,9 @@
         renderChart(snapshot);
         renderComparisonChart(options);
         renderIdentityCard(options);
-        renderRanking(options);
 
         if (options.filiere) {
-          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, trackedOnly: options.trackedOnly});
+          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, actionTypes: options.actionTypes});
           state.actionDetail = detail;
           renderActionTable(detail);
         } else {
@@ -1980,6 +1877,59 @@
         const groups = snapshot.groups;
         const plottable = groups.filter((item) => item[indicateurKey] !== null);
         const skipped = groups.filter((item) => item[indicateurKey] === null);
+
+        note.textContent = skipped.length
+          ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
+          : '';
+
+        // Zone de survol/focus d'une barre : tooltip, et navigation vers la
+        // Vue Détail si le graphique est cliquable. Commune aux deux
+        // orientations.
+        const appendHitArea = (item, value, geometry) => {
+          const hit = svgEl('rect', Object.assign({
+            class: 'bar-hit',
+            tabindex: '0',
+            role: 'img',
+            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)} (${effectifsFor(indicateurKey, item)})`
+          }, geometry));
+          const show = (event) => showTooltip(event, item, indicateur, indicateurKey, value);
+          hit.addEventListener('pointerenter', show);
+          hit.addEventListener('pointermove', show);
+          hit.addEventListener('focus', show);
+          hit.addEventListener('pointerleave', hideTooltip);
+          hit.addEventListener('blur', hideTooltip);
+          if (clickable) {
+            hit.style.cursor = 'pointer';
+            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
+            hit.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                navigateFromSyntheseToDetail(item.label);
+              }
+            });
+          }
+          svg.appendChild(hit);
+        };
+
+        const appendCategoryLabel = (item, attributes, maxChars) => {
+          const categoryLabel = svgEl('text', Object.assign({class: 'category-text'}, attributes));
+          categoryLabel.textContent = truncateLabel(item.label, maxChars);
+          if (categoryLabel.textContent !== item.label) {
+            const titleEl = svgEl('title', {});
+            titleEl.textContent = item.label;
+            categoryLabel.appendChild(titleEl);
+          }
+          svg.appendChild(categoryLabel);
+        };
+
+        // Au-delà de HORIZONTAL_BAR_THRESHOLD groupes, les étiquettes
+        // pivotées sous des barres verticales deviennent illisibles (ex.
+        // regroupement par action) : on bascule en barres horizontales,
+        // une ligne par groupe, étiquettes lisibles à plat.
+        if (plottable.length > HORIZONTAL_BAR_THRESHOLD) {
+          renderHorizontalBars();
+          return;
+        }
 
         const barWidth = 24;
         const groupGap = 14;
@@ -2037,47 +1987,54 @@
           });
           svg.appendChild(path);
 
-          const hit = svgEl('rect', {
-            class: 'bar-hit',
-            x: barX, y: marginTop, width: barWidth, height: plotHeight,
-            tabindex: '0',
-            role: 'img',
-            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)} (${effectifsFor(indicateurKey, item)})`
-          });
-          const show = (event) => showTooltip(event, item, indicateur, indicateurKey, value);
-          hit.addEventListener('pointerenter', show);
-          hit.addEventListener('pointermove', show);
-          hit.addEventListener('focus', show);
-          hit.addEventListener('pointerleave', hideTooltip);
-          hit.addEventListener('blur', hideTooltip);
-          if (clickable) {
-            hit.style.cursor = 'pointer';
-            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
-            hit.addEventListener('keydown', (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                navigateFromSyntheseToDetail(item.label);
-              }
-            });
-          }
-          svg.appendChild(hit);
-
-          const categoryLabel = svgEl('text', {
-            class: 'category-text', x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
+          appendHitArea(item, value, {x: barX, y: marginTop, width: barWidth, height: plotHeight});
+          appendCategoryLabel(item, {
+            x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
             transform: `rotate(-40 ${barX + barWidth / 2} ${baselineY + 16})`
-          });
-          categoryLabel.textContent = truncateLabel(item.label, 28);
-          if (categoryLabel.textContent !== item.label) {
-            const titleEl = svgEl('title', {});
-            titleEl.textContent = item.label;
-            categoryLabel.appendChild(titleEl);
-          }
-          svg.appendChild(categoryLabel);
+          }, 28);
         });
 
-        note.textContent = skipped.length
-          ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
-          : '';
+        function renderHorizontalBars() {
+          const rowHeight = 24;
+          const barThickness = 14;
+          const maxChars = 40;
+          const marginTop = 22;
+          const marginRight = 16;
+          const marginBottom = 8;
+          const longest = Math.max(...plottable.map((item) => truncateLabel(item.label, maxChars).length), 4);
+          const marginLeft = Math.min(16 + longest * 6.2, 280);
+          const plotWidth = 360;
+          const width = marginLeft + plotWidth + marginRight;
+          const height = marginTop + plottable.length * rowHeight + marginBottom;
+          const baselineX = marginLeft;
+
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          svg.setAttribute('width', width);
+          svg.setAttribute('height', height);
+          svg.textContent = '';
+
+          [0, 25, 50, 75, 100].forEach((tick) => {
+            const x = baselineX + (tick / 100) * plotWidth;
+            svg.appendChild(svgEl('line', {
+              class: 'axis-line', x1: x, x2: x, y1: marginTop - 4, y2: height - marginBottom
+            }));
+            const label = svgEl('text', {class: 'axis-text', x: x, y: marginTop - 8, 'text-anchor': 'middle'});
+            label.textContent = `${tick} %`;
+            svg.appendChild(label);
+          });
+
+          plottable.forEach((item, index) => {
+            const rowY = marginTop + index * rowHeight;
+            const value = item[indicateurKey];
+            const barY = rowY + (rowHeight - barThickness) / 2;
+            svg.appendChild(svgEl('path', {
+              d: buildRoundedRightBarPath(baselineX, barY, (value / 100) * plotWidth, barThickness, 4),
+              fill: resolveColor(indicateur.color)
+            }));
+            appendHitArea(item, value, {x: 0, y: rowY, width: width, height: rowHeight});
+            appendCategoryLabel(item, {x: marginLeft - 8, y: rowY + rowHeight / 2 + 4, 'text-anchor': 'end'}, maxChars);
+          });
+        }
       }
 
       function showTooltip(event, item, indicateur, indicateurKey, value) {
@@ -2341,7 +2298,7 @@
       // BDD NOMS, repérés manuellement — ce tableau généralise ce contrôle
       // à toutes les actions plutôt que de le refaire au cas par cas.
       // ---------------------------------------------------------------
-      function computeControlRows(bootstrap, trackedOnly) {
+      function computeControlRows(bootstrap, actionTypes) {
         const universeByFiliere = new Map();
         bootstrap.poles.forEach((pole) => {
           if (!pole.filiere || !pole.poleCode) return;
@@ -2352,7 +2309,7 @@
         const byKey = new Map();
         bootstrap.facts.forEach((fact) => {
           if (!fact.filiere || !fact.action) return;
-          if (trackedOnly && !isCurrentlyTrackedAction(fact)) return;
+          if (!passesActionTypeFilter(fact, actionTypes)) return;
           const key = `${fact.filiere}\u0001${fact.action}`;
           if (!byKey.has(key)) byKey.set(key, {filiere: fact.filiere, action: fact.action, respondedCodes: new Set()});
           byKey.get(key).respondedCodes.add(normalizePoleCode(fact.poleCode));
@@ -2417,13 +2374,13 @@
 
       function renderControl() {
         if (!state.bootstrap) return;
-        // Recalculé seulement quand la coche "actions actuellement suivies"
-        // change réellement d'état (elle change quelles lignes comptent
+        // Recalculé seulement quand les coches de type d'action
+        // changent réellement d'état (elles changent quelles lignes comptent
         // comme "renseignées") — pas à chaque frappe dans la recherche ou
         // changement de tri/filière, qui ne filtrent que l'affichage.
-        if (!state.controlRows || state.controlRowsTrackedOnly !== state.trackedOnly) {
-          state.controlRows = computeControlRows(state.bootstrap, state.trackedOnly);
-          state.controlRowsTrackedOnly = state.trackedOnly;
+        if (!state.controlRows || state.controlRowsActionTypes !== state.actionTypes) {
+          state.controlRows = computeControlRows(state.bootstrap, state.actionTypes);
+          state.controlRowsActionTypes = state.actionTypes;
         }
         const rows = sortControlRows(filterControlRows(state.controlRows));
         state.controlVisibleRows = rows;
@@ -2572,7 +2529,7 @@
           volet: elements.detailVolet.value,
           thematique: elements.detailThematique.value,
           poleSearch: elements.detailPoleSearch.value,
-          trackedOnly: state.trackedOnly
+          actionTypes: state.actionTypes
         });
         state.matrix = matrix;
 
@@ -2708,7 +2665,7 @@
         bootstrap.facts.forEach((fact) => {
           if (filiere && fact.filiere !== filiere) return;
           if (territoire && fact.territoire !== territoire) return;
-          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return;
           const poste = fact.thematique || UNKNOWN_LABEL;
           const action = fact.action || UNKNOWN_LABEL;
           if (!byPoste.has(poste)) byPoste.set(poste, new Map());
@@ -2891,7 +2848,7 @@
         const options = {
           filiere: elements.posteFiliere.value,
           territoire: elements.posteTerritoire.value,
-          trackedOnly: state.trackedOnly
+          actionTypes: state.actionTypes
         };
         renderToolLinks(elements.posteToolLinks, options.filiere);
         const groups = computePosteCards(state.bootstrap, options);
@@ -2900,7 +2857,7 @@
         const total = aggregateReductionByPole(state.bootstrap.facts.filter((fact) =>
           (!options.filiere || fact.filiere === options.filiere) &&
           (!options.filiere || !options.territoire || fact.territoire === options.territoire) &&
-          (!options.trackedOnly || isCurrentlyTrackedAction(fact)) &&
+          passesActionTypeFilter(fact, options.actionTypes) &&
           isConcerne(fact.avancement)));
         elements.posteCo2Summary.replaceChildren();
         if (total.poleCount) {

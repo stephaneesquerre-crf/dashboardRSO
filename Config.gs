@@ -17,6 +17,10 @@ const CONFIG = Object.freeze({
   // de chip intelligente. Plage ouverte vers le bas pour absorber les
   // ajouts de lignes. Lu via le service avancé Sheets (cf. ToolLinksService.gs).
   TOOL_LINKS_SHEET_NAME: 'Liens outils',
+  // Référentiel des actions (catalogue) : fait foi pour le poste
+  // d'émissions de chaque action, les fichiers des pôles n'étant pas
+  // toujours cohérents entre eux (cf. ActionReferenceService.gs).
+  ACTIONS_REFERENCE_SHEET_NAME: 'BDD - Actions supplémentaires',
   TOOL_LINKS_RANGE: 'B2:D',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
