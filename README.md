@@ -284,6 +284,21 @@ Outre-mer).
 Colonne « À date / cible (%) » : les deux valeurs dans une même cellule
 (ex. `-0,16 / -0,23`), pour garder 4 colonnes par tuile.
 
+**Trajectoire de décarbonation** (à gauche des tuiles, 02/10/2026) : une
+étape par année socle (colonne « Action socles » : `Action socle 2024`,
+`2025`…). Pour chaque année, réduction cible et à date = moyenne par pôle
+de la somme des actions de cette campagne (`aggregateReductionByPole`, avec
+les mêmes options pôles pilotes / terminés seulement que les tuiles), puis
+cumul année après année — même principe d'empilement que le calcul de
+Simon. Départ à 0 au début de la première année socle, un point en fin de
+chaque année. Repères (constantes `TRAJECTOIRE_REFERENCE` dans
+`Index.html`, à ajuster si besoin) : droite −5 %/an depuis 2023 et
+objectif 2029 de −37,8 % (SBTi), repris du support de Simon. Sous le
+graphique, le détail de chaque année socle : actions avec à date / cible.
+Limite : la moyenne de chaque année porte sur les pôles ayant des valeurs
+pour cette campagne, qui ne sont pas forcément les mêmes d'une année à
+l'autre.
+
 **Pôles pilotes** (menu « Pôles pilotes (kgCO2) ») : « Exclus » par défaut,
 ou « Recalculés comme les autres pôles » : pour chaque action d'un pôle
 pilote, cible = réduction du catalogue (colonne « Réduction… » de

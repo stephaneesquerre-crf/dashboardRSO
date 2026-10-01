@@ -56,6 +56,13 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       territories.forEach((t) => assert.ok(posteOptions.includes(t), `Détail par poste ${filiere} : ${t}`));
     }
 
+    // Trajectoire (Détail par poste) : une étape par année socle des données.
+    await page.click('#tab-poste');
+    await page.selectOption('#poste-filiere', '');
+    const years = await page.$$eval('#trajectoire-years .trajectoire-year h3', (titles) => titles.map((t) => t.textContent.split(' ')[1]));
+    assert.deepStrictEqual(years, ['2024', '2025']);
+    assert.match(await page.textContent('#trajectoire-note'), /Fin 2025/);
+
     // Barres de la synthèse triées par valeur décroissante.
     await page.click('#tab-synthese');
     await page.selectOption('#synthese-filiere', '');

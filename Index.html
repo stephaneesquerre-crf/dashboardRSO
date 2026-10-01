@@ -41,6 +41,9 @@
            sombre ; jamais seule, toujours accompagnée du % en texte. */
         --status-good:    #0ca30c;
         --status-serious: #ec835a;
+        /* Trajectoire : même teinte, deux paliers (cible clair, à date foncé). */
+        --traj-cible:     #86b6ef;
+        --traj-adate:     #1c5cab;
         /* Courbes de la vue Évolution : palette catégorielle de référence du
            skill dataviz (8 teintes, ordre validé CVD pour des lignes),
            ordre fixe, jamais recyclé. */
@@ -60,6 +63,8 @@
           --series-2:       #009da7;
           --series-3:       #7830b6;
           --status-critical:#e66767;
+          --traj-cible:     #184f95;
+          --traj-adate:     #5598e7;
           --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
           --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
         }
@@ -76,6 +81,8 @@
         --series-2:       #009da7;
         --series-3:       #7830b6;
         --status-critical:#e66767;
+        --traj-cible:     #184f95;
+        --traj-adate:     #5598e7;
         --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
         --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
       }
@@ -381,9 +388,38 @@
          Vue par poste d'émissions (cartes par action, cf. support
          « Trajectoire décarbonation 2024/2026 » de Simon)
          --------------------------------------------------------------- */
+      /* Trajectoire à gauche, tuiles des postes à droite (2 par ligne). */
+      .poste-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1200px) {
+        .poste-layout { grid-template-columns: 1fr; }
+      }
+      .trajectoire-years {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .trajectoire-year {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .trajectoire-year h3 {
+        margin: 0 0 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .trajectoire-year h3 small {
+        font-weight: 400;
+        color: var(--text-secondary);
+      }
       .poste-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 20px;
         align-items: start;
       }
@@ -993,7 +1029,7 @@
     </section>
 
     <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
-      <p class="view-intro">Une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <p class="view-intro">À gauche, la trajectoire de décarbonation cumulée par année socle (cible et à date) avec le détail des actions de chaque année ; à droite, une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1035,14 +1071,27 @@
         <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Pôles pilotes du bilan carbone 2023 (réductions saisies en kgCO2) : « Exclus » par défaut ; « Recalculés comme les autres pôles » applique à leurs actions la réduction du catalogue (BDD - Actions supplémentaires) × leur avancement — même calcul qu'un pôle non pilote, mais sans l'ajustement au profil d'émissions du pôle, faute de sa répartition par poste.</p>
       </section>
 
-      <section class="panel">
-        <div class="panel-header">
-          <h2 id="poste-title">Avancement par poste d'émissions</h2>
-        </div>
-        <p class="co2-summary" id="poste-co2-summary"></p>
-        <div class="poste-grid" id="poste-grid"></div>
-        <p class="matrix-empty" id="poste-empty" hidden>Aucune action ne correspond à ces filtres.</p>
-      </section>
+      <div class="poste-layout">
+        <section class="panel chart-panel" id="chart-panel-trajectoire">
+          <div class="panel-header">
+            <h2 id="trajectoire-title">Trajectoire de décarbonation</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-trajectoire">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="trajectoire-legend"></div>
+          <svg class="line-chart trajectoire-chart" id="trajectoire-chart" role="img" tabindex="0" aria-label="Trajectoire de décarbonation cumulée par année socle"></svg>
+          <p class="chart-note" id="trajectoire-note"></p>
+          <div class="trajectoire-years" id="trajectoire-years"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="poste-title">Avancement par poste d'émissions</h2>
+          </div>
+          <p class="co2-summary" id="poste-co2-summary"></p>
+          <div class="poste-grid" id="poste-grid"></div>
+          <p class="matrix-empty" id="poste-empty" hidden>Aucune action ne correspond à ces filtres.</p>
+        </section>
+      </div>
     </section>
 
     <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution">
@@ -1268,6 +1317,11 @@
         posteTrackedOnly: document.getElementById('poste-tracked-only'),
         posteTitle: document.getElementById('poste-title'),
         posteGrid: document.getElementById('poste-grid'),
+        trajectoireTitle: document.getElementById('trajectoire-title'),
+        trajectoireLegend: document.getElementById('trajectoire-legend'),
+        trajectoireChart: document.getElementById('trajectoire-chart'),
+        trajectoireNote: document.getElementById('trajectoire-note'),
+        trajectoireYears: document.getElementById('trajectoire-years'),
         evolutionCampagne: document.getElementById('evolution-campagne'),
         evolutionFiliere: document.getElementById('evolution-filiere'),
         evolutionEmpty: document.getElementById('evolution-empty'),
@@ -1298,7 +1352,10 @@
         elements.themeToggle.textContent = theme === 'dark' ? '☀️ Mode clair' : '🌙 Mode sombre';
         try { window.localStorage.setItem('pnrso.theme', theme); } catch (error) { /* stockage indisponible : pas bloquant */ }
         if (state.syntheseSnapshot) renderChart(state.syntheseSnapshot);
-        if (state.bootstrap) renderEvolution();
+        if (state.bootstrap) {
+          renderEvolution();
+          renderPoste();
+        }
       }
       elements.themeToggle.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -3096,6 +3153,230 @@
         return table;
       }
 
+      // ---------------------------------------------------------------
+      // Trajectoire de décarbonation (vue Détail par poste) : une étape par
+      // année socle ("Action socle 2024", "… 2025"…). Pour chaque année,
+      // réduction cible et réduction à date = moyenne par pôle de la somme
+      // des actions de cette campagne (aggregateReductionByPole : mêmes
+      // options pôles pilotes / terminés seulement que les tuiles) ; la
+      // trajectoire cumule ces apports année après année, comme le calcul de
+      // Simon. Les repères -5 %/an et objectif 2029 sont des constantes de
+      // référence (support de Simon), modifiables ici.
+      // ---------------------------------------------------------------
+      const TRAJECTOIRE_REFERENCE = {startYear: 2023, annualRate: -5, objective: {year: 2029, value: -37.8, label: 'Objectif 2029 (SBTi)'}};
+
+      function actionSocleYear(fact) {
+        const match = normalizeSearchText(fact.actionSocle).match(/^action socle\D*(\d{4})/);
+        return match ? Number(match[1]) : null;
+      }
+
+      function computeTrajectoire(options) {
+        const byYear = new Map();
+        state.bootstrap.facts.forEach((fact) => {
+          if (options.filiere && fact.filiere !== options.filiere) return;
+          if (options.filiere && options.territoire && fact.territoire !== options.territoire) return;
+          if (!isConcerne(fact.avancement)) return;
+          const year = actionSocleYear(fact);
+          if (year === null) return;
+          if (!byYear.has(year)) byYear.set(year, []);
+          byYear.get(year).push(fact);
+        });
+        let cumulativeTarget = 0;
+        let cumulativeToDate = 0;
+        return [...byYear.keys()].sort((a, b) => a - b).map((year) => {
+          const facts = byYear.get(year);
+          const total = aggregateReductionByPole(facts);
+          const byAction = new Map();
+          facts.forEach((fact) => {
+            if (!byAction.has(fact.action)) byAction.set(fact.action, []);
+            byAction.get(fact.action).push(fact);
+          });
+          const actions = [...byAction.entries()]
+            .map(([action, actionFacts]) => ({action, co2: aggregateReductionByPole(actionFacts)}))
+            .filter((item) => item.co2.poleCount)
+            .sort((left, right) => (left.co2.cible || 0) - (right.co2.cible || 0) || left.action.localeCompare(right.action, 'fr'));
+          cumulativeTarget += total.cible || 0;
+          cumulativeToDate += total.aDate || 0;
+          return {year, total, actions, cumulativeTarget, cumulativeToDate};
+        });
+      }
+
+      function renderTrajectoire(options) {
+        const steps = computeTrajectoire(options);
+        const svg = elements.trajectoireChart;
+        svg.textContent = '';
+        elements.trajectoireLegend.replaceChildren();
+        elements.trajectoireYears.replaceChildren();
+        const scopeBits = [options.filiere || 'Toutes les filières', options.filiere ? options.territoire : ''].filter(Boolean);
+        elements.trajectoireTitle.textContent = `Trajectoire de décarbonation · ${scopeBits.join(' · ')}`;
+
+        const width = 560;
+        const height = 340;
+        const margin = {top: 16, right: 64, bottom: 28, left: 46};
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        if (!steps.length) {
+          const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
+          empty.textContent = 'Aucune action socle avec réduction carbone dans ce périmètre.';
+          svg.appendChild(empty);
+          elements.trajectoireNote.textContent = '';
+          return;
+        }
+
+        const reference = TRAJECTOIRE_REFERENCE;
+        const firstYear = Math.min(reference.startYear, steps[0].year);
+        const lastYear = Math.max(reference.objective.year, steps[steps.length - 1].year);
+        // Abscisse = frontières d'années (début de firstYear -> fin de lastYear).
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const xOfBoundary = (yearStart) => margin.left + ((yearStart - firstYear) / (lastYear - firstYear + 1)) * plotWidth;
+        const referenceAt = (yearStart) => (yearStart - reference.startYear) * reference.annualRate;
+        const lowest = Math.min(referenceAt(lastYear + 1), reference.objective.value, ...steps.map((s) => Math.min(s.cumulativeTarget, s.cumulativeToDate)));
+        const tickStep = lowest > -20 ? 5 : 10;
+        const minValue = Math.floor(lowest / tickStep) * tickStep;
+        const yOf = (value) => margin.top + (value / minValue) * plotHeight;
+
+        for (let tick = 0; tick >= minValue; tick -= tickStep) {
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: margin.left, x2: width - margin.right, y1: yOf(tick), y2: yOf(tick)}));
+          const label = svgEl('text', {class: 'axis-text', x: margin.left - 6, y: yOf(tick) + 3, 'text-anchor': 'end'});
+          label.textContent = `${tick} %`;
+          svg.appendChild(label);
+        }
+        for (let year = firstYear; year <= lastYear; year += 1) {
+          const label = svgEl('text', {class: 'axis-text', x: (xOfBoundary(year) + xOfBoundary(year + 1)) / 2, y: height - 8, 'text-anchor': 'middle'});
+          label.textContent = String(year);
+          svg.appendChild(label);
+        }
+
+        // Repère -5 %/an (trait fin pointillé, gris) et objectif 2029.
+        const muted = resolveColor('var(--text-muted)');
+        svg.appendChild(svgEl('line', {
+          x1: xOfBoundary(reference.startYear), y1: yOf(0), x2: xOfBoundary(lastYear + 1), y2: yOf(referenceAt(lastYear + 1)),
+          stroke: muted, 'stroke-width': 1.5, 'stroke-dasharray': '6 4'
+        }));
+        const refLabel = svgEl('text', {class: 'axis-text', x: xOfBoundary(lastYear + 1) + 4, y: yOf(referenceAt(lastYear + 1)) + 3});
+        refLabel.textContent = `${reference.annualRate} %/an`;
+        svg.appendChild(refLabel);
+        const objX = xOfBoundary(reference.objective.year + 1);
+        svg.appendChild(svgEl('circle', {cx: objX, cy: yOf(reference.objective.value), r: 5, fill: 'none', stroke: muted, 'stroke-width': 2}));
+        const objLabel = svgEl('text', {class: 'axis-text', x: objX + 8, y: yOf(reference.objective.value) - 6});
+        objLabel.textContent = `${reference.objective.value.toLocaleString('fr-FR')} %`;
+        svg.appendChild(objLabel);
+
+        // Trajectoires : départ à 0 au début de la première année socle,
+        // puis un point en fin de chaque année socle.
+        const startX = xOfBoundary(steps[0].year);
+        const series = [
+          {key: 'cumulativeTarget', label: 'Trajectoire cible', color: resolveColor('var(--traj-cible)'), dash: null, labelBelow: true},
+          {key: 'cumulativeToDate', label: 'À date', color: resolveColor('var(--traj-adate)'), dash: '7 4', labelBelow: false}
+        ];
+        series.forEach((serie) => {
+          const points = [[startX, yOf(0)]].concat(steps.map((step) => [xOfBoundary(step.year + 1), yOf(step[serie.key])]));
+          const path = svgEl('path', {d: points.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' '), fill: 'none', stroke: serie.color, 'stroke-width': serie.dash ? 2.5 : 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'});
+          if (serie.dash) path.setAttribute('stroke-dasharray', serie.dash);
+          svg.appendChild(path);
+          steps.forEach((step) => {
+            const x = xOfBoundary(step.year + 1);
+            const y = yOf(step[serie.key]);
+            svg.appendChild(svgEl('circle', {cx: x, cy: y, r: 5, fill: serie.color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
+            // Cible : étiquette sous le point, décalée à gauche (la courbe
+            // « à date », au-dessus, part vers la droite) ; à date : au-dessus.
+            const valueLabel = serie.labelBelow
+              ? svgEl('text', {class: 'category-text', x: x - 6, y: y + 17, 'text-anchor': 'end'})
+              : svgEl('text', {class: 'category-text', x: x + 7, y: y - 8});
+            valueLabel.textContent = formatReduction(step[serie.key]);
+            svg.appendChild(valueLabel);
+          });
+          const item = document.createElement('span');
+          const key = document.createElement('span');
+          key.className = 'line-key';
+          key.style.background = serie.color;
+          item.append(key, document.createTextNode(serie.label));
+          elements.trajectoireLegend.append(item);
+        });
+        const refItem = document.createElement('span');
+        const refKey = document.createElement('span');
+        refKey.className = 'line-key';
+        refKey.style.background = muted;
+        refItem.append(refKey, document.createTextNode(`Repères : ${reference.annualRate} %/an depuis ${reference.startYear}, ${reference.objective.label}`));
+        elements.trajectoireLegend.append(refItem);
+
+        // Survol : bilan de l'année socle la plus proche.
+        const overlay = svgEl('rect', {x: margin.left, y: margin.top, width: plotWidth, height: plotHeight, fill: 'transparent'});
+        svg.appendChild(overlay);
+        const showStep = (step, clientX, clientY) => {
+          const tooltip = elements.tooltip;
+          tooltip.replaceChildren();
+          const title = document.createElement('div');
+          title.className = 'tooltip-label';
+          title.textContent = `Fin ${step.year} — socle ${step.year} : ${formatReduction(step.total.aDate)} à date, ${formatReduction(step.total.cible)} cible`;
+          const target = document.createElement('div');
+          target.className = 'tooltip-value';
+          target.textContent = `Cumul cible ${formatReduction(step.cumulativeTarget)} · à date ${formatReduction(step.cumulativeToDate)}`;
+          tooltip.append(target, title);
+          tooltip.style.left = `${clientX}px`;
+          tooltip.style.top = `${clientY}px`;
+          tooltip.classList.add('is-visible');
+        };
+        let active = steps.length - 1;
+        overlay.addEventListener('pointermove', (event) => {
+          const box = svg.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * width;
+          active = steps.reduce((best, step, index) => (Math.abs(xOfBoundary(step.year + 1) - x) < Math.abs(xOfBoundary(steps[best].year + 1) - x) ? index : best), 0);
+          showStep(steps[active], event.clientX, event.clientY);
+        });
+        overlay.addEventListener('pointerleave', hideTooltip);
+        svg.onkeydown = (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          active = Math.max(0, Math.min(steps.length - 1, active + (event.key === 'ArrowRight' ? 1 : -1)));
+          const box = svg.getBoundingClientRect();
+          showStep(steps[active], box.left + (xOfBoundary(steps[active].year + 1) / width) * box.width, box.top + box.height * 0.3);
+        };
+        svg.onblur = hideTooltip;
+
+        const last = steps[steps.length - 1];
+        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socle ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; mêmes options que les tuiles (pôles pilotes, terminés seulement).`;
+
+        // Contenu de chaque année socle : actions avec à date / cible.
+        steps.forEach((step) => {
+          const block = document.createElement('div');
+          block.className = 'trajectoire-year';
+          const heading = document.createElement('h3');
+          heading.textContent = `Socle ${step.year} `;
+          const meta = document.createElement('small');
+          meta.textContent = `· ${describeReduction(step.total)}`;
+          heading.append(meta);
+          const table = document.createElement('table');
+          table.className = 'poste-table';
+          const head = document.createElement('thead');
+          const headRow = document.createElement('tr');
+          [['Action', ''], ['⬇ À date / cible (%)', 'num']].forEach(([label, className]) => {
+            const th = document.createElement('th');
+            th.scope = 'col';
+            th.textContent = label;
+            if (className) th.className = className;
+            headRow.append(th);
+          });
+          head.append(headRow);
+          const body = document.createElement('tbody');
+          const plain = (value) => (value === null ? '—' : value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+          step.actions.forEach((item) => {
+            const row = document.createElement('tr');
+            const name = document.createElement('td');
+            name.textContent = item.action;
+            const value = document.createElement('td');
+            value.className = 'num';
+            value.textContent = `${plain(item.co2.aDate)} / ${plain(item.co2.cible)}`;
+            value.title = `Moyenne sur ${formatCount(item.co2.poleCount)} pôle(s)`;
+            row.append(name, value);
+            body.append(row);
+          });
+          table.append(head, body);
+          block.append(heading, table);
+          elements.trajectoireYears.append(block);
+        });
+      }
+
       function renderPoste() {
         if (!state.bootstrap) return;
         const options = {
@@ -3104,6 +3385,7 @@
           actionTypes: state.actionTypes
         };
         renderToolLinks(elements.posteToolLinks, options.filiere);
+        renderTrajectoire(options);
         const groups = computePosteCards(state.bootstrap, options);
         // Toutes actions du périmètre confondues (mêmes filtres que les
         // cartes) : somme par pôle, puis moyenne entre pôles.
