@@ -94,3 +94,23 @@ test('lancerTests() (Tests.gs) passe sur les classeurs simulés', () => {
   const summary = app.lancerTests();
   assert.strictEqual(summary.echecs, 0, app.__logs.join('\n'));
 });
+
+test('actualisation automatique : réécrit l\'historique seulement si les archives changent', () => {
+  const archives = buildArchives();
+  archives['Archives 09/26'] = [
+    ['', '', '', '', 'TOTAL', 'SANITAIRE'],
+    ['', '', 'TX DE TERMINES PARMIS LES CONCERNES', '', '', 'SANITAIRE'],
+    ['', '', '', '', 'TOTAL', '%', '# terminés', '# réponses concernés'],
+    ['', 'Actions socles 2024', 'Repas végétariens', '', 0.5, 0.6, 6, 10],
+    ['', '', '', '', '', '', '', '']
+  ];
+  const app = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: archives});
+  assert.strictEqual(app.actualiserHistoriqueSiModifie(), true, 'premier passage : import');
+  assert.strictEqual(app.actualiserHistoriqueSiModifie(), false, 'archives inchangées : rien');
+  const sheet = app.__spreadsheets[ARCHIVES_ID].getSheetByName('Archives 09/26');
+  sheet.values[3][6] = 7;
+  assert.strictEqual(app.actualiserHistoriqueSiModifie(), true, 'valeur corrigée : réimport');
+  const history = app.getHistoryForDashboard_();
+  assert.ok(history.refreshedAt, 'date d\'actualisation transmise');
+  assert.ok(history.rows.some((row) => row[2] === 'Repas végétariens' && row[3] === 'SAN' && row[4] === 'terminees' && row[5] === 7));
+});

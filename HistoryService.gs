@@ -44,7 +44,11 @@ function getHistoryForDashboard_() {
     const rows = values
       .filter((row) => cleanValue_(row[0]) && keptSource[cleanValue_(row[0])] === cleanValue_(row[1]) && typeof row[7] === 'number')
       .map((row) => [cleanValue_(row[0]), cleanValue_(row[2]), cleanValue_(row[3]), cleanValue_(row[5]), cleanValue_(row[6]), row[7]]);
-    return {rows: rows};
+    // Date de la dernière actualisation (cf. refreshHistory_), affichée dans
+    // la vue Évolution ; absente si l'historique n'a été produit que par
+    // une ancienne version de l'import.
+    const refreshedAt = PropertiesService.getScriptProperties().getProperty(HISTORY_REFRESHED_AT_PROPERTY_) || '';
+    return {rows: rows, refreshedAt: refreshedAt};
   } catch (error) {
     addDiagnosticWarning_(`Historique : lecture impossible (${error.message}) — vérifier l'accès au classeur des archives.`);
     return {rows: []};

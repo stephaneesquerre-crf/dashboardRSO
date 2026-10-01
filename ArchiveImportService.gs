@@ -34,16 +34,59 @@ const ARCHIVE_FILIERE_ALIASES_ = {
   'prot enf': 'PROT ENFANCE'
 };
 
-// À lancer depuis l'éditeur, par exemple chaque mois après avoir créé le
-// nouvel onglet d'archive : (ré)importe tous les onglets dont le nom
-// commence par CONFIG.ARCHIVES_SHEET_PREFIX.
+// ---------------------------------------------------------------------
+// Actualisation AUTOMATIQUE (02/10/2026) : actualiserHistoriqueSiModifie
+// est lancée par un déclencheur horaire (à créer UNE fois dans l'éditeur :
+// Déclencheurs → Ajouter un déclencheur → actualiserHistoriqueSiModifie →
+// Déclenché par le temps → Toutes les heures). Elle relit les onglets
+// « Archives… », calcule leur empreinte (SHA-256 du contenu) et ne réécrit
+// HISTORIQUE TDB VA que si cette empreinte a changé depuis la dernière
+// actualisation (ajout d'un mois, correction d'une valeur, suppression d'un
+// onglet…). L'onglet HISTORIQUE lui-même n'entre pas dans l'empreinte :
+// son écriture ne relance donc pas l'import. Choix d'une empreinte plutôt
+// que de la date de modification du fichier : la date n'est accessible
+// que via DriveApp, ce qui ajouterait une autorisation Google Drive à
+// tous les utilisateurs du dashboard.
+// ---------------------------------------------------------------------
+const HISTORY_SIGNATURE_PROPERTY_ = 'ARCHIVES_SIGNATURE';
+const HISTORY_REFRESHED_AT_PROPERTY_ = 'HISTORY_REFRESHED_AT';
+
+function actualiserHistoriqueSiModifie() {
+  return refreshHistory_(false);
+}
+
+// Actualisation forcée, à lancer depuis l'éditeur si besoin (ex. après un
+// changement des règles d'import dans ce fichier).
 function importArchivesTableauDeBord() {
+  return refreshHistory_(true);
+}
+
+function refreshHistory_(force) {
   const config = getConfig_();
   const source = openSpreadsheet_(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
   const names = source.getSheets()
     .map((sheet) => sheet.getName())
-    .filter((name) => name.indexOf(config.ARCHIVES_SHEET_PREFIX) === 0);
-  importArchiveSheets_(source, names);
+    .filter((name) => name.indexOf(config.ARCHIVES_SHEET_PREFIX) === 0)
+    .sort();
+  const valuesByName = {};
+  names.forEach((name) => { valuesByName[name] = source.getSheetByName(name).getDataRange().getValues(); });
+  const signature = computeSignature_(JSON.stringify(names.map((name) => [name, valuesByName[name]])));
+
+  const properties = PropertiesService.getScriptProperties();
+  if (!force && properties.getProperty(HISTORY_SIGNATURE_PROPERTY_) === signature) {
+    Logger.log('Archives inchangées depuis la dernière actualisation : rien à faire.');
+    return false;
+  }
+  importArchiveSheets_(source, names, valuesByName, true);
+  properties.setProperty(HISTORY_SIGNATURE_PROPERTY_, signature);
+  properties.setProperty(HISTORY_REFRESHED_AT_PROPERTY_, new Date().toISOString());
+  return true;
+}
+
+function computeSignature_(text) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8)
+    .map((byte) => ('0' + (byte & 0xFF).toString(16)).slice(-2))
+    .join('');
 }
 
 // Variante pour un seul onglet, à appeler depuis une petite fonction de
@@ -54,7 +97,10 @@ function importArchiveTableauDeBord(sheetName) {
   importArchiveSheets_(source, [sheetName]);
 }
 
-function importArchiveSheets_(source, sheetNames) {
+// valuesByName (facultatif) : valeurs déjà lues ; replaceAll : l'historique
+// est entièrement remplacé (onglets supprimés compris), sinon seules les
+// lignes des onglets importés le sont.
+function importArchiveSheets_(source, sheetNames, valuesByName, replaceAll) {
   const config = getConfig_();
   const importedAt = new Date();
   const newRows = [];
@@ -66,7 +112,8 @@ function importArchiveSheets_(source, sheetNames) {
       report.push(`${name} : onglet introuvable`);
       return;
     }
-    const parsed = parseArchiveValues_(sheet.getDataRange().getValues(), name);
+    const values = valuesByName && valuesByName[name] ? valuesByName[name] : sheet.getDataRange().getValues();
+    const parsed = parseArchiveValues_(values, name);
     if (parsed.month) {
       sheetsByMonth[parsed.month] = (sheetsByMonth[parsed.month] || []).concat([name]);
     }
@@ -89,7 +136,7 @@ function importArchiveSheets_(source, sheetNames) {
     ? history.getRange(2, 1, history.getLastRow() - 1, HISTORY_HEADERS_.length).getValues()
     : []).map((row) => [historyMonthKey_(row[0])].concat(row.slice(1)));
   const replaced = new Set(sheetNames);
-  const kept = existing.filter((row) => !replaced.has(String(row[1])));
+  const kept = replaceAll ? [] : existing.filter((row) => !replaced.has(String(row[1])));
   const allRows = kept.concat(newRows);
 
   history.clearContents();

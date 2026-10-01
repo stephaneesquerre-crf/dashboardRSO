@@ -97,8 +97,16 @@ function loadAppsScript(spreadsheets, options = {}) {
       getScriptTimeZone: () => 'Europe/Paris'
     },
     Utilities: {
-      formatDate: (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      formatDate: (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+      DigestAlgorithm: {SHA_256: 'sha256'},
+      Charset: {UTF_8: 'utf8'},
+      computeDigest: (algorithm, text) => [...require('crypto').createHash('sha256').update(text, 'utf8').digest()].map((b) => (b > 127 ? b - 256 : b))
     },
+    PropertiesService: (() => {
+      const store = {};
+      const properties = {getProperty: (key) => (key in store ? store[key] : null), setProperty: (key, value) => { store[key] = String(value); return properties; }};
+      return {getScriptProperties: () => properties};
+    })(),
     HtmlService: {}
   };
   if (options.sheetsApi) context.Sheets = options.sheetsApi;

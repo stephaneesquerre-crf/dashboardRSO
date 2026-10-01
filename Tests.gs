@@ -35,7 +35,7 @@ function lancerTests() {
     'ActionReferenceService.gs': ['getActionCatalogue_'],
     'ToolLinksService.gs': ['getToolLinks_'],
     'HistoryService.gs': ['getHistoryForDashboard_', 'historyMonthKey_'],
-    'ArchiveImportService.gs': ['importArchivesTableauDeBord', 'parseArchiveValues_', 'archiveMonthFromName_']
+    'ArchiveImportService.gs': ['importArchivesTableauDeBord', 'actualiserHistoriqueSiModifie', 'parseArchiveValues_', 'archiveMonthFromName_']
   };
   const scope = typeof globalThis !== 'undefined' ? globalThis : this;
   Object.keys(expected).forEach((file) => {

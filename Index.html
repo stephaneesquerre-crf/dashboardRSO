@@ -419,7 +419,7 @@
       }
       .poste-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
         gap: 20px;
         align-items: start;
       }
@@ -429,7 +429,11 @@
       .poste-group {
         padding: 14px;
         border: 1px solid var(--line);
+        border-left: 4px solid var(--series-1);
         border-radius: 12px;
+        background: var(--surface-2);
+        min-width: 0;
+        overflow-x: auto;
       }
       .poste-group h3 {
         margin: 0 0 4px;
@@ -1052,13 +1056,6 @@
             <label for="poste-filiere-specific">Actions spécifiques filière</label>
           </div>
           <div class="filter-field">
-            <label for="poste-pilot-mode">Pôles pilotes (kgCO2)</label>
-            <select id="poste-pilot-mode">
-              <option value="exclus">Exclus</option>
-              <option value="catalogue">Recalculés comme les autres pôles</option>
-            </select>
-          </div>
-          <div class="filter-field">
             <label for="poste-reduction-mode">Réduction « à date »</label>
             <select id="poste-reduction-mode">
               <option value="avancement">Selon l'avancement déclaré</option>
@@ -1068,7 +1065,7 @@
         </div>
         <p class="tool-links" id="poste-tool-links" hidden></p>
         <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. </p>
-        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Pôles pilotes du bilan carbone 2023 (réductions saisies en kgCO2) : « Exclus » par défaut ; « Recalculés comme les autres pôles » applique à leurs actions la réduction du catalogue (BDD - Actions supplémentaires) × leur avancement — même calcul qu'un pôle non pilote, mais sans l'ajustement au profil d'émissions du pôle, faute de sa répartition par poste.</p>
+        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Pôles pilotes du bilan carbone 2023 (réductions saisies en kgCO2) : toujours inclus (décision de Simon, 02/10/2026), avec la réduction du catalogue (BDD - Actions supplémentaires) × leur avancement — même calcul qu'un pôle non pilote, sans l'ajustement au profil d'émissions du pôle, faute de sa répartition par poste.</p>
       </section>
 
       <div class="poste-layout">
@@ -1095,7 +1092,7 @@
     </section>
 
     <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution">
-      <p class="view-intro">Évolution mois par mois des indicateurs du « Tableau de bord VA », à partir de ses archives mensuelles (onglet HISTORIQUE TDB VA du classeur des archives, alimenté par importArchivesTableauDeBord).</p>
+      <p class="view-intro">Évolution mois par mois des indicateurs du « Tableau de bord VA », à partir de ses archives mensuelles (onglet HISTORIQUE TDB VA du classeur des archives, actualisé automatiquement quand les archives changent). <span id="evolution-refreshed"></span></p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1242,8 +1239,10 @@
         // Calcul de la réduction "à date" de la vue Par poste (cf.
         // aggregateReductionByPole) : 'avancement' ou 'termines'.
         reductionMode: 'avancement',
-        // Pôles pilotes (valeurs en kg) : 'exclus' ou 'catalogue'.
-        pilotMode: 'exclus'
+        // Pôles pilotes (valeurs en kg) : toujours recalculés avec le
+        // catalogue ('catalogue'), décision de Simon du 02/10/2026 ; la
+        // valeur 'exclus' reste gérée par aggregateReductionByPole.
+        pilotMode: 'catalogue'
       };
 
       const elements = {
@@ -1325,6 +1324,7 @@
         evolutionCampagne: document.getElementById('evolution-campagne'),
         evolutionFiliere: document.getElementById('evolution-filiere'),
         evolutionEmpty: document.getElementById('evolution-empty'),
+        evolutionRefreshed: document.getElementById('evolution-refreshed'),
         evolutionCampagnesTitle: document.getElementById('evolution-campagnes-title'),
         evolutionCampagnesLegend: document.getElementById('evolution-campagnes-legend'),
         evolutionCampagnesChart: document.getElementById('evolution-campagnes-chart'),
@@ -1336,7 +1336,6 @@
         evolutionReponseLegend: document.getElementById('evolution-reponse-legend'),
         evolutionReponseChart: document.getElementById('evolution-reponse-chart'),
         posteReductionMode: document.getElementById('poste-reduction-mode'),
-        postePilotMode: document.getElementById('poste-pilot-mode'),
         posteCo2Summary: document.getElementById('poste-co2-summary'),
         syntheseToolLinks: document.getElementById('synthese-tool-links'),
         detailToolLinks: document.getElementById('detail-tool-links'),
@@ -3163,7 +3162,11 @@
       // Simon. Les repères -5 %/an et objectif 2029 sont des constantes de
       // référence (support de Simon), modifiables ici.
       // ---------------------------------------------------------------
-      const TRAJECTOIRE_REFERENCE = {startYear: 2023, annualRate: -5, objective: {year: 2029, value: -37.8, label: 'Objectif 2029 (SBTi)'}};
+      // Origine : 2023 (année du bilan carbone de référence, valeur 0) ; la
+      // fin d'une année socle N est portée sur l'année N (2024 = après les
+      // actions socle 2024). Objectif : -37,8 % en 2030 (SBTi, support de
+      // Simon), affiché comme une ligne horizontale. Modifiable ici.
+      const TRAJECTOIRE_REFERENCE = {originYear: 2023, objective: {year: 2030, value: -37.8, label: 'Objectif 2030 (SBTi)'}};
 
       function actionSocleYear(fact) {
         const match = normalizeSearchText(fact.actionSocle).match(/^action socle\D*(\d{4})/);
@@ -3212,7 +3215,7 @@
 
         const width = 560;
         const height = 340;
-        const margin = {top: 16, right: 64, bottom: 28, left: 46};
+        const margin = {top: 22, right: 24, bottom: 28, left: 46};
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         if (!steps.length) {
           const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
@@ -3223,14 +3226,14 @@
         }
 
         const reference = TRAJECTOIRE_REFERENCE;
-        const firstYear = Math.min(reference.startYear, steps[0].year);
+        const firstYear = reference.originYear;
         const lastYear = Math.max(reference.objective.year, steps[steps.length - 1].year);
-        // Abscisse = frontières d'années (début de firstYear -> fin de lastYear).
+        // Abscisse : une graduation par année, points posés sur les
+        // graduations (origine 2023 à 0, puis 2024, 2025…).
         const plotWidth = width - margin.left - margin.right;
         const plotHeight = height - margin.top - margin.bottom;
-        const xOfBoundary = (yearStart) => margin.left + ((yearStart - firstYear) / (lastYear - firstYear + 1)) * plotWidth;
-        const referenceAt = (yearStart) => (yearStart - reference.startYear) * reference.annualRate;
-        const lowest = Math.min(referenceAt(lastYear + 1), reference.objective.value, ...steps.map((s) => Math.min(s.cumulativeTarget, s.cumulativeToDate)));
+        const xOfYear = (year) => margin.left + ((year - firstYear) / (lastYear - firstYear)) * plotWidth;
+        const lowest = Math.min(reference.objective.value, ...steps.map((s) => Math.min(s.cumulativeTarget, s.cumulativeToDate)));
         const tickStep = lowest > -20 ? 5 : 10;
         const minValue = Math.floor(lowest / tickStep) * tickStep;
         const yOf = (value) => margin.top + (value / minValue) * plotHeight;
@@ -3242,47 +3245,37 @@
           svg.appendChild(label);
         }
         for (let year = firstYear; year <= lastYear; year += 1) {
-          const label = svgEl('text', {class: 'axis-text', x: (xOfBoundary(year) + xOfBoundary(year + 1)) / 2, y: height - 8, 'text-anchor': 'middle'});
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: xOfYear(year), x2: xOfYear(year), y1: yOf(0), y2: yOf(0) + 4}));
+          const label = svgEl('text', {class: 'axis-text', x: xOfYear(year), y: height - 8, 'text-anchor': 'middle'});
           label.textContent = String(year);
           svg.appendChild(label);
         }
 
-        // Repère -5 %/an (trait fin pointillé, gris) et objectif 2029.
-        const muted = resolveColor('var(--text-muted)');
-        svg.appendChild(svgEl('line', {
-          x1: xOfBoundary(reference.startYear), y1: yOf(0), x2: xOfBoundary(lastYear + 1), y2: yOf(referenceAt(lastYear + 1)),
-          stroke: muted, 'stroke-width': 1.5, 'stroke-dasharray': '6 4'
-        }));
-        const refLabel = svgEl('text', {class: 'axis-text', x: xOfBoundary(lastYear + 1) + 4, y: yOf(referenceAt(lastYear + 1)) + 3});
-        refLabel.textContent = `${reference.annualRate} %/an`;
-        svg.appendChild(refLabel);
-        const objX = xOfBoundary(reference.objective.year + 1);
-        svg.appendChild(svgEl('circle', {cx: objX, cy: yOf(reference.objective.value), r: 5, fill: 'none', stroke: muted, 'stroke-width': 2}));
-        const objLabel = svgEl('text', {class: 'axis-text', x: objX + 8, y: yOf(reference.objective.value) - 6});
-        objLabel.textContent = `${reference.objective.value.toLocaleString('fr-FR')} %`;
+        // Objectif : ligne horizontale + point en 2030, étiquetés.
+        const objectiveColor = resolveColor('var(--status-critical)');
+        const objY = yOf(reference.objective.value);
+        const objX = xOfYear(reference.objective.year);
+        svg.appendChild(svgEl('line', {x1: margin.left, x2: objX, y1: objY, y2: objY, stroke: objectiveColor, 'stroke-width': 1.5, 'stroke-dasharray': '2 4', 'stroke-linecap': 'round'}));
+        svg.appendChild(svgEl('circle', {cx: objX, cy: objY, r: 6, fill: objectiveColor, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
+        const objLabel = svgEl('text', {class: 'category-text', x: objX - 10, y: objY - 10, 'text-anchor': 'end'});
+        objLabel.textContent = `${reference.objective.label} : ${reference.objective.value.toLocaleString('fr-FR')} %`;
         svg.appendChild(objLabel);
 
-        // Trajectoires : départ à 0 au début de la première année socle,
-        // puis un point en fin de chaque année socle.
-        const startX = xOfBoundary(steps[0].year);
         const series = [
           {key: 'cumulativeTarget', label: 'Trajectoire cible', color: resolveColor('var(--traj-cible)'), dash: null, labelBelow: true},
           {key: 'cumulativeToDate', label: 'À date', color: resolveColor('var(--traj-adate)'), dash: '7 4', labelBelow: false}
         ];
         series.forEach((serie) => {
-          const points = [[startX, yOf(0)]].concat(steps.map((step) => [xOfBoundary(step.year + 1), yOf(step[serie.key])]));
+          const points = [[xOfYear(firstYear), yOf(0)]].concat(steps.map((step) => [xOfYear(step.year), yOf(step[serie.key])]));
           const path = svgEl('path', {d: points.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' '), fill: 'none', stroke: serie.color, 'stroke-width': serie.dash ? 2.5 : 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'});
           if (serie.dash) path.setAttribute('stroke-dasharray', serie.dash);
           svg.appendChild(path);
           steps.forEach((step) => {
-            const x = xOfBoundary(step.year + 1);
+            const x = xOfYear(step.year);
             const y = yOf(step[serie.key]);
             svg.appendChild(svgEl('circle', {cx: x, cy: y, r: 5, fill: serie.color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
-            // Cible : étiquette sous le point, décalée à gauche (la courbe
-            // « à date », au-dessus, part vers la droite) ; à date : au-dessus.
-            const valueLabel = serie.labelBelow
-              ? svgEl('text', {class: 'category-text', x: x - 6, y: y + 17, 'text-anchor': 'end'})
-              : svgEl('text', {class: 'category-text', x: x + 7, y: y - 8});
+            // Cible : étiquette sous le point ; à date : au-dessus.
+            const valueLabel = svgEl('text', {class: 'category-text', x: x, y: serie.labelBelow ? y + 18 : y - 10, 'text-anchor': 'middle'});
             valueLabel.textContent = formatReduction(step[serie.key]);
             svg.appendChild(valueLabel);
           });
@@ -3293,12 +3286,13 @@
           item.append(key, document.createTextNode(serie.label));
           elements.trajectoireLegend.append(item);
         });
-        const refItem = document.createElement('span');
-        const refKey = document.createElement('span');
-        refKey.className = 'line-key';
-        refKey.style.background = muted;
-        refItem.append(refKey, document.createTextNode(`Repères : ${reference.annualRate} %/an depuis ${reference.startYear}, ${reference.objective.label}`));
-        elements.trajectoireLegend.append(refItem);
+        svg.appendChild(svgEl('circle', {cx: xOfYear(firstYear), cy: yOf(0), r: 4, fill: resolveColor('var(--text-muted)')}));
+        const objItem = document.createElement('span');
+        const objKey = document.createElement('span');
+        objKey.className = 'line-key';
+        objKey.style.background = objectiveColor;
+        objItem.append(objKey, document.createTextNode(reference.objective.label));
+        elements.trajectoireLegend.append(objItem);
 
         // Survol : bilan de l'année socle la plus proche.
         const overlay = svgEl('rect', {x: margin.left, y: margin.top, width: plotWidth, height: plotHeight, fill: 'transparent'});
@@ -3321,7 +3315,7 @@
         overlay.addEventListener('pointermove', (event) => {
           const box = svg.getBoundingClientRect();
           const x = ((event.clientX - box.left) / box.width) * width;
-          active = steps.reduce((best, step, index) => (Math.abs(xOfBoundary(step.year + 1) - x) < Math.abs(xOfBoundary(steps[best].year + 1) - x) ? index : best), 0);
+          active = steps.reduce((best, step, index) => (Math.abs(xOfYear(step.year) - x) < Math.abs(xOfYear(steps[best].year) - x) ? index : best), 0);
           showStep(steps[active], event.clientX, event.clientY);
         });
         overlay.addEventListener('pointerleave', hideTooltip);
@@ -3330,12 +3324,12 @@
           event.preventDefault();
           active = Math.max(0, Math.min(steps.length - 1, active + (event.key === 'ArrowRight' ? 1 : -1)));
           const box = svg.getBoundingClientRect();
-          showStep(steps[active], box.left + (xOfBoundary(steps[active].year + 1) / width) * box.width, box.top + box.height * 0.3);
+          showStep(steps[active], box.left + (xOfYear(steps[active].year) / width) * box.width, box.top + box.height * 0.3);
         };
         svg.onblur = hideTooltip;
 
         const last = steps[steps.length - 1];
-        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socle ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; mêmes options que les tuiles (pôles pilotes, terminés seulement).`;
+        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socle ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; pôles pilotes inclus ; même option « terminés seulement » que les tuiles.`;
 
         // Contenu de chaque année socle : actions avec à date / cible.
         steps.forEach((step) => {
@@ -3436,10 +3430,6 @@
         renderPoste();
       });
       elements.posteTerritoire.addEventListener('change', renderPoste);
-      elements.postePilotMode.addEventListener('change', () => {
-        state.pilotMode = elements.postePilotMode.value;
-        renderPoste();
-      });
       elements.posteReductionMode.addEventListener('change', () => {
         state.reductionMode = elements.posteReductionMode.value;
         renderPoste();
@@ -3521,6 +3511,10 @@
         filieres.forEach((name) => elements.evolutionFiliere.append(new Option(name, name)));
         if ([...elements.evolutionFiliere.options].some((option) => option.value === current)) elements.evolutionFiliere.value = current;
         elements.evolutionEmpty.hidden = rows.length > 0;
+        const refreshedAt = state.bootstrap.history && state.bootstrap.history.refreshedAt;
+        elements.evolutionRefreshed.textContent = refreshedAt
+          ? `Historique actualisé le ${new Date(refreshedAt).toLocaleString('fr-FR', {day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'})}.`
+          : '';
       }
 
       // Le libellé d'une action varie parfois d'une archive à l'autre (ex.

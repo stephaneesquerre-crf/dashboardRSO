@@ -290,17 +290,18 @@ Colonne « À date / cible (%) » : les deux valeurs dans une même cellule
 de la somme des actions de cette campagne (`aggregateReductionByPole`, avec
 les mêmes options pôles pilotes / terminés seulement que les tuiles), puis
 cumul année après année — même principe d'empilement que le calcul de
-Simon. Départ à 0 au début de la première année socle, un point en fin de
-chaque année. Repères (constantes `TRAJECTOIRE_REFERENCE` dans
-`Index.html`, à ajuster si besoin) : droite −5 %/an depuis 2023 et
-objectif 2029 de −37,8 % (SBTi), repris du support de Simon. Sous le
+Simon. Axe des années avec origine 2023 (bilan de référence, 0 %) ; le
+cumul après les actions socle N est porté sur l'année N (2024, 2025…).
+Objectif 2030 de −37,8 % (SBTi, repris du support de Simon) en ligne
+horizontale avec son point, constante `TRAJECTOIRE_REFERENCE` dans
+`Index.html` (la droite −5 %/an a été retirée le 02/10/2026). Sous le
 graphique, le détail de chaque année socle : actions avec à date / cible.
 Limite : la moyenne de chaque année porte sur les pôles ayant des valeurs
 pour cette campagne, qui ne sont pas forcément les mêmes d'une année à
 l'autre.
 
-**Pôles pilotes** (menu « Pôles pilotes (kgCO2) ») : « Exclus » par défaut,
-ou « Recalculés comme les autres pôles » : pour chaque action d'un pôle
+**Pôles pilotes** : **toujours inclus** (décision de Simon, 02/10/2026 ; le
+menu qui permettait de les exclure a été retiré). Pour chaque action d'un pôle
 pilote, cible = réduction du catalogue (colonne « Réduction… » de
 `BDD - Actions supplémentaires`, toujours comptée comme une baisse) et à
 date = cible × avancement du pôle. C'est le calcul d'un pôle non pilote
@@ -340,6 +341,18 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
   lu (certains en contiennent une copie plus bas). Cellules en erreur
   (`#REF!`, `#DIV/0!`) ignorées.
 - Réimporter un onglet remplace ses lignes (pas de doublon).
+- **Actualisation automatique** (02/10/2026) : `actualiserHistoriqueSiModifie`
+  relit les onglets « Archives… », calcule l'empreinte de leur contenu et ne
+  réécrit l'historique que si elle a changé (nouveau mois, valeur corrigée,
+  onglet supprimé). À brancher **une seule fois** sur un déclencheur :
+  éditeur Apps Script → Déclencheurs (icône réveil) → Ajouter un
+  déclencheur → fonction `actualiserHistoriqueSiModifie`, source
+  « Déclenché par le temps », « Minuteur horaire », « Toutes les heures ».
+  Ensuite plus aucune intervention ; `importArchivesTableauDeBord()` reste
+  disponible pour forcer une actualisation. La vue Évolution affiche la
+  date de la dernière actualisation. (Empreinte plutôt que date de
+  modification du fichier : la date n'est lisible que via DriveApp, qui
+  imposerait une autorisation Google Drive à tous les utilisateurs.)
 - Filières : `PETITE ENFANCE` / `PET E` / `PET. ENF.` → `PET E`,
   `SANITAIRE` → `SAN`, `PROTECTION DE L'ENFANCE` / `PROT. ENF.` →
   `PROT ENFANCE`. `PADOM` n'est pas séparé en PA / DOM dans les archives.
