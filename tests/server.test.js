@@ -83,3 +83,14 @@ test('import des archives : nouvelle et ancienne mise en page', () => {
   assert.ok(parsed.rows.some((r) => r[6] === 'nbRepondants' && r[5] === 'SAN' && r[7] === 17));
   assert.strictEqual(app.archiveMonthFromName_('Archives 01/26 2'), '2026-01');
 });
+
+test('lancerTests() (Tests.gs) passe sur les classeurs simulés', () => {
+  // Service avancé Sheets simulé : une ligne de "Liens outils" avec chip.
+  const sheetsApi = {Spreadsheets: {get: () => ({sheets: [{data: [{rowData: [{values: [
+    {formattedValue: 'Outil CRC'}, {formattedValue: 'CRC'},
+    {formattedValue: 'OUTIL DE SUIVI v2 - CRC', chipRuns: [{chip: {richLinkProperties: {uri: 'https://docs.google.com/x'}}}]}
+  ]}]}]}]})}};
+  const app = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: buildArchives()}, {sheetsApi});
+  const summary = app.lancerTests();
+  assert.strictEqual(summary.echecs, 0, app.__logs.join('\n'));
+});

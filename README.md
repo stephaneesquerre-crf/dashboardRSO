@@ -45,6 +45,42 @@ redécouvrir un par un.
   choix fait pour la rapidité, après qu'une version antérieure relisait le
   classeur à chaque interaction.
 
+## Mettre à jour le dashboard (copier-coller dans l'éditeur Apps Script)
+
+Le projet Apps Script ne se relie pas nativement à GitHub (son « versioning »
+ne concerne que les déploiements). Procédure, sans rien installer :
+
+1. Pour chaque fichier modifié du dépôt, ouvrir le fichier **de même nom**
+   dans l'éditeur Apps Script et remplacer **tout** son contenu (un fichier
+   `.gs` = un fichier dans l'éditeur ; ne jamais coller un fichier dans un
+   autre). Créer le fichier s'il n'existe pas encore.
+2. Exécuter **`lancerTests`** (fichier `Tests.gs`) et lire le journal :
+   tout doit être ✅. Un ❌ « Installation : WebApp.gs » signifie par exemple
+   que `doGet` a disparu (cause de l'erreur « Fonction de script
+   introuvable : doGet » au déploiement).
+3. Déployer : Déployer → Gérer les déploiements → modifier → Nouvelle
+   version.
+
+Alternatives étudiées (01/10/2026) : `clasp` demande Node.js sur le poste ;
+l'extension Chrome « Google Apps Script GitHub Assistant » (tierce, push/pull
+depuis l'éditeur) ou un déploiement par GitHub Actions avec `clasp` (Node
+tourne alors chez GitHub, mais il faut générer une fois des identifiants
+`clasp` et les confier à GitHub) restent possibles si la politique de sécurité
+de la Croix-Rouge les autorise.
+
+## Tests
+
+Trois niveaux :
+
+- **`Tests.gs` → `lancerTests()`**, dans l'éditeur Apps Script : fichiers
+  et fonctions présents, fonctions de calcul sur des données fabriquées,
+  contrôles sur les **données réelles** (territoires de chaque filière,
+  avertissements, mois de l'historique).
+- **GitHub Actions** (`.github/workflows/tests.yml`) : à chaque envoi de
+  code sur GitHub, la suite complète ci-dessous tourne sur les serveurs de
+  GitHub (onglet « Actions » du dépôt, pastille verte/rouge par commit).
+- **Suite complète** (`tests/`, ci-dessous), lançable aussi localement.
+
 ## Tests automatiques (`tests/`, non déployés dans Apps Script)
 
 `npm install` puis `npm test` (avec `CHROMIUM_PATH` si le navigateur de
