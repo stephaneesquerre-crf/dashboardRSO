@@ -640,6 +640,15 @@
       }
 
       .status { color: var(--text-secondary); font-size: 0.84rem; }
+      .diagnostics {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        border: 1px solid var(--status-serious);
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: var(--text-primary);
+      }
+      .diagnostics ul { margin: 6px 0 0; padding-left: 18px; }
       .error { color: #b3261e; }
 
       .matrix-scroll {
@@ -758,6 +767,7 @@
       </div>
     </div>
     <p class="subtitle" id="status">Chargement des données…</p>
+    <div class="diagnostics" id="diagnostics" role="status" hidden></div>
 
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
       <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="true" aria-controls="panel-evolution">Évolution des actions socle</button>
@@ -1189,6 +1199,7 @@
 
       const elements = {
         status: document.getElementById('status'),
+        diagnostics: document.getElementById('diagnostics'),
         exportAllCsv: document.getElementById('export-all-csv'),
         themeToggle: document.getElementById('theme-toggle'),
         tabSynthese: document.getElementById('tab-synthese'),
@@ -3643,13 +3654,45 @@
         });
       });
 
+      // Faits reçus en colonnes ({fields, rows}, cf. getDashboardBootstrap)
+      // -> objets ; accepte aussi l'ancien format (tableau d'objets).
+      function expandFacts(facts) {
+        if (Array.isArray(facts)) return facts;
+        return facts.rows.map((row) => {
+          const fact = {};
+          facts.fields.forEach((field, index) => { fact[field] = row[index]; });
+          return fact;
+        });
+      }
+
+      // Avertissements de données renvoyés par le serveur (colonne
+      // introuvable, territoires vides, historique inaccessible…) : affichés
+      // en tête de page plutôt que de laisser croire à un bug d'affichage.
+      function renderDiagnostics(diagnostics) {
+        const warnings = (diagnostics && diagnostics.warnings) || [];
+        elements.diagnostics.replaceChildren();
+        elements.diagnostics.hidden = warnings.length === 0;
+        if (!warnings.length) return;
+        const title = document.createElement('strong');
+        title.textContent = `⚠ ${warnings.length} point(s) à vérifier dans les données`;
+        const list = document.createElement('ul');
+        warnings.forEach((warning) => {
+          const item = document.createElement('li');
+          item.textContent = warning;
+          list.append(item);
+        });
+        elements.diagnostics.append(title, list);
+      }
+
       // ---------------------------------------------------------------
       // Démarrage — un seul aller-retour serveur ; tout le reste (filtres,
       // agrégations, matrice) se recalcule ensuite dans le navigateur.
       // ---------------------------------------------------------------
       google.script.run
         .withSuccessHandler((bootstrap) => {
+          bootstrap.facts = expandFacts(bootstrap.facts);
           state.bootstrap = bootstrap;
+          renderDiagnostics(bootstrap.diagnostics);
           state.pilotPoleCodes = computePilotPoleCodes(bootstrap);
           const generated = new Date(bootstrap.generatedAt);
           elements.status.textContent =

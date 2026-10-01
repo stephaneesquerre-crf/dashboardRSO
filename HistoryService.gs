@@ -13,9 +13,10 @@
 function getHistoryForDashboard_() {
   const config = getConfig_();
   try {
-    const spreadsheet = SpreadsheetApp.openById(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
+    const spreadsheet = openSpreadsheet_(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
     const sheet = spreadsheet.getSheetByName(config.HISTORY_SHEET_NAME);
     if (!sheet || sheet.getLastRow() < 2) {
+      addDiagnosticWarning_(`Historique : onglet ${config.HISTORY_SHEET_NAME} absent ou vide — lancer importArchivesTableauDeBord().`);
       return {rows: []};
     }
     const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, HISTORY_HEADERS_.length).getValues();
@@ -45,7 +46,7 @@ function getHistoryForDashboard_() {
       .map((row) => [cleanValue_(row[0]), cleanValue_(row[2]), cleanValue_(row[3]), cleanValue_(row[5]), cleanValue_(row[6]), row[7]]);
     return {rows: rows};
   } catch (error) {
-    console.warn(`Historique : lecture impossible (${error.message}).`);
+    addDiagnosticWarning_(`Historique : lecture impossible (${error.message}) — vérifier l'accès au classeur des archives.`);
     return {rows: []};
   }
 }

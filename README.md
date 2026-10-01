@@ -12,9 +12,12 @@ redécouvrir un par un.
 
 - **`Config.gs`** — constantes (ID du classeur, noms d'onglets, colonnes de
   la zone SYNTHESE, etc.).
-- **`Utils.gs`** — lecture générique de feuilles (`readSheetRecords_`,
-  `readSheetRecordsInColumnRange_`), normalisation de texte/en-têtes
-  (`normalizeText_`, `findHeader_`).
+- **`Utils.gs`** — lecture générique de feuilles (`readSheetTable_`,
+  `readSheetTableInColumnRange_`) en tableaux, repérage des colonnes **par
+  position** (`findColumnIndex_` : préfixe d'en-tête normalisé ; si
+  plusieurs colonnes correspondent, la mieux remplie), ouverture des
+  classeurs mémorisée (`openSpreadsheet_`), diagnostics renvoyés au
+  navigateur (`addDiagnosticWarning_`), `cleanActionLabel_`.
 - **`PoleReferenceService.gs`** — lit `BDD NOMS` (dimension pôle : filière,
   territoire, régions).
 - **`IndicatorService.gs`** — lit `IMPORT DONNEES` (table de faits pôle ×
@@ -32,7 +35,7 @@ redécouvrir un par un.
   `Tableau de bord VA` dans `HISTORIQUE TDB VA` (voir plus bas).
 - **`HistoryService.gs`** — lit `HISTORIQUE TDB VA` pour la vue Évolution.
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
-  et journalise les connexions/incidents. Pas de couche de droits plus fine
+  (vérifié dans `doGet` et dans `getDashboardBootstrap`). Pas de couche de droits plus fine
   (filière par filière, etc.) : tout utilisateur du domaine voit tout.
 - **`WebApp.gs`** — point d'entrée `doGet()`.
 - **`Index.html`** — toute la logique métier côté client : filtres,
@@ -41,6 +44,39 @@ redécouvrir un par un.
   reste se recalcule dans le navigateur à chaque changement de filtre —
   choix fait pour la rapidité, après qu'une version antérieure relisait le
   classeur à chaque interaction.
+
+## Tests automatiques (`tests/`, non déployés dans Apps Script)
+
+`npm install` puis `npm test` (avec `CHROMIUM_PATH` si le navigateur de
+Playwright n'est pas installé à l'emplacement par défaut). Les tests
+exécutent le **vrai code `.gs`** dans Node, avec des classeurs simulés
+(`tests/harness.js`, `tests/fixtures.js`), puis l'interface `Index.html`
+dans Chromium avec le bootstrap ainsi produit. Ils vérifient notamment :
+territoires présents pour chaque filière (y compris avec une colonne
+« Territoire » en double ou une colonne homonyme vide), zone SYNTHESE
+seule lue, référentiel des actions, mois de l'historique, refus hors
+domaine, import des archives, ordre des onglets, tri des barres. À lancer
+avant chaque copie vers Apps Script.
+
+## Diagnostics
+
+À chaque chargement, le serveur contrôle les données et l'appli affiche
+un encadré « points à vérifier » en tête de page si besoin : colonne
+Territoire introuvable, en-têtes en double dans `BDD NOMS`, filière sans
+aucun territoire, codes pôle d'IMPORT DONNEES absents de `BDD NOMS`,
+référentiel des actions ou historique illisibles, liens outils
+indisponibles. `diagnosticDashboard()` (à lancer depuis l'éditeur) donne
+le même bilan plus le détail des colonnes réellement utilisées et la
+taille du chargement.
+
+**Incident du 01/10/2026 (territoires absents pour toutes les filières)** :
+non reproduit avec des données conformes ; reproduit à l'identique avec
+l'ancien code dès que `BDD NOMS` contient une seconde colonne
+« Territoire » vide (les lignes étaient indexées par nom d'en-tête, la
+dernière colonne homonyme écrasait la bonne) ou une colonne vide dont
+l'en-tête commence par « Territoire » placée avant la bonne. Corrigé par
+la lecture par position et le choix de la colonne la mieux remplie ; la
+cause exacte côté Sheet est à confirmer avec `diagnosticDashboard()`.
 
 ## Sources et jointure
 

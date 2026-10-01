@@ -39,7 +39,7 @@ const ARCHIVE_FILIERE_ALIASES_ = {
 // commence par CONFIG.ARCHIVES_SHEET_PREFIX.
 function importArchivesTableauDeBord() {
   const config = getConfig_();
-  const source = SpreadsheetApp.openById(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
+  const source = openSpreadsheet_(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
   const names = source.getSheets()
     .map((sheet) => sheet.getName())
     .filter((name) => name.indexOf(config.ARCHIVES_SHEET_PREFIX) === 0);
@@ -50,7 +50,7 @@ function importArchivesTableauDeBord() {
 // l'éditeur, ex. : function importSeptembre() { importArchiveTableauDeBord('Archives 09.26'); }
 function importArchiveTableauDeBord(sheetName) {
   const config = getConfig_();
-  const source = SpreadsheetApp.openById(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
+  const source = openSpreadsheet_(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID);
   importArchiveSheets_(source, [sheetName]);
 }
 
@@ -107,7 +107,7 @@ function importArchiveSheets_(source, sheetNames) {
 // pour adapter le repérage. Ex. : function diag0925() { diagnosticArchiveLayout('Archives 09/25'); }
 function diagnosticArchiveLayout(sheetName) {
   const config = getConfig_();
-  const sheet = SpreadsheetApp.openById(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID).getSheetByName(sheetName);
+  const sheet = openSpreadsheet_(config.ARCHIVES_SPREADSHEET_ID || config.SPREADSHEET_ID).getSheetByName(sheetName);
   if (!sheet) {
     Logger.log(`Onglet introuvable : ${sheetName}`);
     return;

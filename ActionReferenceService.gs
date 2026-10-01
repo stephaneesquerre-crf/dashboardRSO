@@ -47,9 +47,9 @@ function resolveFactCatalogueReduction_(fact, actionCatalogue) {
 // "Catégorie…" / "Thématique…".
 function readActionReferenceTable_() {
   const config = getConfig_();
-  const sheet = SpreadsheetApp.openById(config.SPREADSHEET_ID).getSheetByName(config.ACTIONS_REFERENCE_SHEET_NAME);
+  const sheet = openSpreadsheet_(config.SPREADSHEET_ID).getSheetByName(config.ACTIONS_REFERENCE_SHEET_NAME);
   if (!sheet) {
-    console.warn(`Référentiel des actions : onglet introuvable (${config.ACTIONS_REFERENCE_SHEET_NAME}).`);
+    addDiagnosticWarning_(`Référentiel des actions : onglet introuvable (${config.ACTIONS_REFERENCE_SHEET_NAME}) — postes saisis par les pôles conservés, pôles pilotes non recalculables.`);
     return null;
   }
   const values = sheet.getDataRange().getDisplayValues();
@@ -72,7 +72,7 @@ function readActionReferenceTable_() {
       };
     }
   }
-  console.warn('Référentiel des actions : en-têtes "Action…" et "Poste…" introuvables dans les 10 premières lignes.');
+  addDiagnosticWarning_('Référentiel des actions : en-têtes "Action…" et "Poste…" introuvables dans les 10 premières lignes.');
   return null;
 }
 

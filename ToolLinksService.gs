@@ -10,7 +10,7 @@
 function getToolLinks_() {
   const config = getConfig_();
   if (typeof Sheets === 'undefined') {
-    console.warn('Liens outils : service avancé Sheets non activé, liens ignorés.');
+    addDiagnosticWarning_('Liens outils : service avancé Sheets non activé, liens ignorés.');
     return [];
   }
 
@@ -24,7 +24,7 @@ function getToolLinks_() {
       .map((row) => parseToolLinkRow_(row.values || []))
       .filter(Boolean);
   } catch (error) {
-    console.warn(`Liens outils : lecture impossible (${error.message}).`);
+    addDiagnosticWarning_(`Liens outils : lecture impossible (${error.message}).`);
     return [];
   }
 }
