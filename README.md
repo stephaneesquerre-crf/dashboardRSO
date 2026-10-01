@@ -209,6 +209,23 @@ la signale comme « FILIERE INCONNUE » (au 25/09/2026 : 4 liens sans code
 sous le tableau — Petite enfance, PADOM, Protection de l'enfance,
 Outre-mer).
 
+Colonne « À date / cible (%) » : les deux valeurs dans une même cellule
+(ex. `-0,16 / -0,23`), pour garder 4 colonnes par tuile.
+
+**Pôles pilotes** (menu « Pôles pilotes (kgCO2) ») : « Exclus » par défaut,
+ou « Recalculés comme les autres pôles » : pour chaque action d'un pôle
+pilote, cible = réduction du catalogue (colonne « Réduction… » de
+`BDD - Actions supplémentaires`, toujours comptée comme une baisse) et à
+date = cible × avancement du pôle. C'est le calcul d'un pôle non pilote
+**sans** l'ajustement au profil d'émissions (part du poste dans le pôle ÷
+part générique), faute de répartition par poste pour ces pôles.
+`testActionReference()` affiche la colonne Réduction trouvée et des
+exemples de valeurs.
+
+Libellés d'action : le préfixe parasite « Action socle - » (ex. « Action
+socle - Repas végétariens ») est retiré à la lecture (`cleanActionLabel_`
+dans `Utils.gs`), pour toutes les vues.
+
 Pas encore affichés, par rapport au support de Simon : la part du poste dans l'empreinte, et
 les indicateurs spécifiques qui ne sont pas des avancements (ex. taille de
 flotte, part de véhicules électriques).
@@ -256,13 +273,24 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
   pouvoir le lire, sinon la vue Évolution reste vide (sans bloquer le
   reste).
 
-## Vue Évolution
+## Organisation des onglets (01/10/2026)
+
+1. **Évolution des actions socle** (onglet ouvert par défaut)
+2. **Synthèse**
+3. **Détail par poste d'émissions**
+4. **Détail par pôle** (ex « Détail pôle × action »)
+5. **Contrôle et méthodologie** (les deux anciennes vues, dans un même
+   onglet)
+
+## Vue Évolution des actions socle
 
 Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Filtres : filière (ou
-ensemble), indicateur (taux de terminés parmi les concernés ; moyenne
-d'avancement, présente seulement dans les archives 09/25 et 10/25),
-campagne pour le détail. Contenu (choix argumenté le 30/09/2026, voir
-ci-dessous) :
+ensemble) et campagne pour le détail. Indicateur unique : taux de
+terminés parmi les concernés (la moyenne d'avancement, abandonnée dans
+le Tableau de bord VA, n'est plus proposée). Les graphiques « Avancée de
+chaque année socle » et « Taux de réponse par filière » sont côte à côte,
+puis le détail par action et le tableau. Contenu (choix argumenté le
+30/09/2026, voir ci-dessous) :
 
 - **Avancée de chaque année socle** : une courbe par campagne (moyenne
   simple des actions de la campagne ayant une valeur ce mois-là),
@@ -292,6 +320,19 @@ date relue est ramenée au format AAAA-MM (`historyMonthKey_`).
 Les libellés d'action qui changent d'une archive à l'autre sont
 regroupés (libellé sans sa parenthèse). Couleurs : palette catégorielle
 de référence du skill dataviz, 8 séries au plus.
+
+**Valeurs inconnues = point absent, jamais 0** (`historyRows` dans
+`Index.html`, règles établies sur les archives 09/2025 → 09/2026) :
+
+- campagne avant son année (socle 2026 en 11/2025 : 30 zéros écartés) ;
+- filière sans aucun répondant ce mois-là (Protection de l'enfance
+  07 et 08/2026) : toutes ses valeurs du mois, taux de réponse compris ;
+- 0 terminé alors que les concernés = toutes les structures de la
+  filière et que toutes n'ont pas répondu (valeurs par défaut ; ex.
+  Petite enfance 09/2026, après le changement d'outil : écoconduite,
+  vélos, 2e journée végétarienne) ;
+- indicateurs DIP (« Indic. DIP » : véhicules électriques, optimisation
+  de la flotte) : écartés dès l'import (réimporter les archives).
 
 Anomalie relevée dans les archives : Protection de l'enfance à 0
 répondant sur 17 en 07/2026 et 08/2026 (16 en 06 et 09/2026) — valeur de

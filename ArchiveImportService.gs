@@ -187,6 +187,10 @@ function parseArchiveValues_(values, sheetName) {
     if (!campaignCell && !action) break;
     if (campaignCell) campaign = campaignCell;
     if (!action) continue;
+    // Indicateurs DIP ("Indic. DIP" dans la colonne entre l'action et le
+    // TOTAL : voitures électriques, optimisation de la flotte) : mesurés
+    // ailleurs, les 0 du tableau ne sont pas des taux de terminés.
+    if (text(row, totalCol - 1)) continue;
     push(campaign, action, 'TOTAL', 'tauxTerminees', numberAt(row, totalCol));
     filieres.forEach((filiere) => {
       push(campaign, action, filiere.label, 'tauxTerminees', numberAt(row, filiere.col));

@@ -760,15 +760,14 @@
     <p class="subtitle" id="status">Chargement des données…</p>
 
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
-      <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
-      <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
-      <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle</button>
-      <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Par poste d'émissions</button>
-      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="false" aria-controls="panel-evolution">Évolution</button>
-      <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
+      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="true" aria-controls="panel-evolution">Évolution des actions socle</button>
+      <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="false" aria-controls="panel-synthese">Synthèse</button>
+      <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Détail par poste d'émissions</button>
+      <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail par pôle</button>
+      <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle et méthodologie</button>
     </div>
 
-    <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
+    <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese" hidden>
       <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. À côté du graphique, un graphique de comparaison et la fiche d'identité replacent le périmètre dans son contexte plus large.</p>
       <section class="panel">
         <div class="panel-header">
@@ -984,7 +983,7 @@
     </section>
 
     <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
-      <p class="view-intro">Une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date (cible au survol) — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <p class="view-intro">Une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1007,6 +1006,13 @@
             <label for="poste-filiere-specific">Actions spécifiques filière</label>
           </div>
           <div class="filter-field">
+            <label for="poste-pilot-mode">Pôles pilotes (kgCO2)</label>
+            <select id="poste-pilot-mode">
+              <option value="exclus">Exclus</option>
+              <option value="catalogue">Recalculés comme les autres pôles</option>
+            </select>
+          </div>
+          <div class="filter-field">
             <label for="poste-reduction-mode">Réduction « à date »</label>
             <select id="poste-reduction-mode">
               <option value="avancement">Selon l'avancement déclaré</option>
@@ -1016,7 +1022,7 @@
         </div>
         <p class="tool-links" id="poste-tool-links" hidden></p>
         <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. </p>
-        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Les pôles pilotes du bilan carbone 2023, dont les réductions sont saisies en kgCO2, sont exclus tant que leur bilan total n'est pas disponible dans le classeur national.</p>
+        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Pôles pilotes du bilan carbone 2023 (réductions saisies en kgCO2) : « Exclus » par défaut ; « Recalculés comme les autres pôles » applique à leurs actions la réduction du catalogue (BDD - Actions supplémentaires) × leur avancement — même calcul qu'un pôle non pilote, mais sans l'ajustement au profil d'émissions du pôle, faute de sa répartition par poste.</p>
       </section>
 
       <section class="panel">
@@ -1029,7 +1035,7 @@
       </section>
     </section>
 
-    <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution" hidden>
+    <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution">
       <p class="view-intro">Évolution mois par mois des indicateurs du « Tableau de bord VA », à partir de ses archives mensuelles (onglet HISTORIQUE TDB VA du classeur des archives, alimenté par importArchivesTableauDeBord).</p>
       <section class="panel">
         <div class="panel-header">
@@ -1044,30 +1050,36 @@
             <select id="evolution-filiere"></select>
           </div>
           <div class="filter-field">
-            <label for="evolution-indicateur">Indicateur</label>
-            <select id="evolution-indicateur">
-              <option value="tauxTerminees">Taux de terminés parmi les concernés</option>
-              <option value="moyenneAvancement">Moyenne d'avancement (archives 09/25 et 10/25 seulement)</option>
-            </select>
-          </div>
-          <div class="filter-field">
             <label for="evolution-campagne">Détail : campagne</label>
             <select id="evolution-campagne"></select>
           </div>
         </div>
-        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière) ; la moyenne d'avancement n'existe que dans ces deux archives. Un mois sans valeur interrompt la courbe au lieu d'être compté comme 0.</p>
+        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière).</p>
+        <p class="filter-hint">Valeur inconnue = point absent, jamais 0. Sont considérés comme inconnus : une campagne avant son année (ex. socle 2026 en 11/2025) ; une filière sans aucun répondant ce mois-là ; un 0 terminé alors que toutes les structures de la filière sont comptées « concernées » sans que toutes aient répondu (valeurs par défaut, ex. Petite enfance en 09/2026 après le changement d'outil) ; les indicateurs DIP (flotte, véhicules électriques).</p>
         <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
       </section>
 
-      <section class="panel chart-panel" id="chart-panel-evolution-campagnes">
-        <div class="panel-header">
-          <h2 id="evolution-campagnes-title">Avancée de chaque année socle</h2>
-          <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-campagnes">⤢ Plein écran</button>
-        </div>
-        <div class="line-legend" id="evolution-campagnes-legend"></div>
-        <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par année socle"></svg>
-        <p class="chart-note">Moyenne simple des actions de chaque campagne ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
-      </section>
+      <div class="evolution-grid">
+        <section class="panel chart-panel" id="chart-panel-evolution-campagnes">
+          <div class="panel-header">
+            <h2 id="evolution-campagnes-title">Avancée de chaque année socle</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-campagnes">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="evolution-campagnes-legend"></div>
+          <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par année socle"></svg>
+          <p class="chart-note">Moyenne simple des actions de chaque campagne ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
+        </section>
+
+        <section class="panel chart-panel" id="chart-panel-evolution-reponse">
+          <div class="panel-header">
+            <h2 id="evolution-reponse-title">Taux de réponse par filière</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-reponse">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="evolution-reponse-legend"></div>
+          <svg class="line-chart" id="evolution-reponse-chart" role="img" tabindex="0" aria-label="Évolution du taux de réponse par filière"></svg>
+          <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, toutes campagnes confondues. Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
+        </section>
+      </div>
 
       <div class="evolution-grid">
         <section class="panel">
@@ -1092,18 +1104,9 @@
         </section>
       </div>
 
-      <section class="panel chart-panel" id="chart-panel-evolution-reponse">
-        <div class="panel-header">
-          <h2 id="evolution-reponse-title">Taux de réponse par filière</h2>
-          <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-reponse">⤢ Plein écran</button>
-        </div>
-        <div class="line-legend" id="evolution-reponse-legend"></div>
-        <svg class="line-chart" id="evolution-reponse-chart" role="img" tabindex="0" aria-label="Évolution du taux de réponse par filière"></svg>
-        <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, toutes campagnes confondues. Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
-      </section>
     </section>
 
-    <section class="tab-panel" id="panel-doc" role="tabpanel" aria-labelledby="tab-doc" hidden>
+    <section class="tab-panel" id="panel-doc" aria-labelledby="tab-controle" hidden>
       <section class="panel">
         <div class="doc-section">
           <h3>Sources</h3>
@@ -1179,7 +1182,9 @@
         actionTypes: 'socle',
         // Calcul de la réduction "à date" de la vue Par poste (cf.
         // aggregateReductionByPole) : 'avancement' ou 'termines'.
-        reductionMode: 'avancement'
+        reductionMode: 'avancement',
+        // Pôles pilotes (valeurs en kg) : 'exclus' ou 'catalogue'.
+        pilotMode: 'exclus'
       };
 
       const elements = {
@@ -1191,7 +1196,6 @@
         tabControle: document.getElementById('tab-controle'),
         tabPoste: document.getElementById('tab-poste'),
         tabEvolution: document.getElementById('tab-evolution'),
-        tabDoc: document.getElementById('tab-doc'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
         panelControle: document.getElementById('panel-controle'),
@@ -1256,7 +1260,6 @@
         evolutionCampagne: document.getElementById('evolution-campagne'),
         evolutionFiliere: document.getElementById('evolution-filiere'),
         evolutionEmpty: document.getElementById('evolution-empty'),
-        evolutionIndicateur: document.getElementById('evolution-indicateur'),
         evolutionCampagnesTitle: document.getElementById('evolution-campagnes-title'),
         evolutionCampagnesLegend: document.getElementById('evolution-campagnes-legend'),
         evolutionCampagnesChart: document.getElementById('evolution-campagnes-chart'),
@@ -1268,6 +1271,7 @@
         evolutionReponseLegend: document.getElementById('evolution-reponse-legend'),
         evolutionReponseChart: document.getElementById('evolution-reponse-chart'),
         posteReductionMode: document.getElementById('poste-reduction-mode'),
+        postePilotMode: document.getElementById('poste-pilot-mode'),
         posteCo2Summary: document.getElementById('poste-co2-summary'),
         syntheseToolLinks: document.getElementById('synthese-tool-links'),
         detailToolLinks: document.getElementById('detail-tool-links'),
@@ -1366,20 +1370,19 @@
         elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
         elements.tabPoste.setAttribute('aria-selected', String(name === 'poste'));
         elements.tabEvolution.setAttribute('aria-selected', String(name === 'evolution'));
-        elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
         elements.panelControle.hidden = name !== 'controle';
         elements.panelPoste.hidden = name !== 'poste';
         elements.panelEvolution.hidden = name !== 'evolution';
-        elements.panelDoc.hidden = name !== 'doc';
+        // Contrôle et méthodologie partagent un même onglet (01/10/2026).
+        elements.panelDoc.hidden = name !== 'controle';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
       elements.tabControle.addEventListener('click', () => selectTab('controle'));
       elements.tabPoste.addEventListener('click', () => selectTab('poste'));
       elements.tabEvolution.addEventListener('click', () => selectTab('evolution'));
-      elements.tabDoc.addEventListener('click', () => selectTab('doc'));
 
       // ---------------------------------------------------------------
       // Plein écran natif (API Fullscreen) sur n'importe quel graphique :
@@ -2935,14 +2938,26 @@
         const pilots = state.pilotPoleCodes || new Set();
         const byPole = new Map();
         const excludedPilots = new Set();
+        const recalculatedPilots = new Set();
         facts.forEach((fact) => {
           const code = normalizePoleCode(fact.poleCode);
+          let aDate = parseReduction(fact.reductionADate);
+          let cible = parseReduction(fact.reductionCible);
           if (pilots.has(code)) {
-            excludedPilots.add(code);
-            return;
+            if (state.pilotMode !== 'catalogue') {
+              excludedPilots.add(code);
+              return;
+            }
+            // Pôle pilote recalculé : réduction du catalogue (toujours
+            // comptée comme une baisse) × avancement du pôle, sans ajustement
+            // au profil d'émissions (non disponible pour ces pôles).
+            const catalogue = parseReduction(fact.catalogueReduction);
+            if (!catalogue || catalogue.unit !== 'pct') return;
+            recalculatedPilots.add(code);
+            const target = -Math.abs(catalogue.value);
+            cible = {unit: 'pct', value: target};
+            aDate = {unit: 'pct', value: target * parseAvancementFraction(fact.avancement)};
           }
-          const aDate = parseReduction(fact.reductionADate);
-          const cible = parseReduction(fact.reductionCible);
           if (!aDate && !cible) return;
           if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
           const pole = byPole.get(code);
@@ -2958,7 +2973,7 @@
         });
         const poles = [...byPole.values()];
         const mean = (key) => poles.length ? poles.reduce((sum, pole) => sum + pole[key], 0) / poles.length : null;
-        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size};
+        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size, recalculatedPilotCount: recalculatedPilots.size};
       }
 
       function formatReduction(value) {
@@ -3039,9 +3054,12 @@
 
         const co2 = document.createElement('td');
         co2.className = 'num';
-        co2.textContent = card.co2.poleCount ? formatReduction(card.co2.aDate) : '—';
+        // "à date / cible" dans une seule colonne, unité % en en-tête :
+        // la tuile garde 4 colonnes et reste lisible.
+        const plain = (value) => (value === null ? '—' : value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        co2.textContent = card.co2.poleCount ? `${plain(card.co2.aDate)} / ${plain(card.co2.cible)}` : '—';
         if (card.co2.poleCount) {
-          co2.title = `Cible ${formatReduction(card.co2.cible)} — moyenne sur ${formatCount(card.co2.poleCount)} pôle(s)`;
+          co2.title = `À date ${formatReduction(card.co2.aDate)}, cible ${formatReduction(card.co2.cible)} — moyenne sur ${formatCount(card.co2.poleCount)} pôle(s)`;
         }
 
         row.append(name, rate, done, co2);
@@ -3053,7 +3071,7 @@
         table.className = 'poste-table';
         const head = document.createElement('thead');
         const headRow = document.createElement('tr');
-        [['Action', ''], ['📈 Avancement', 'num'], ['À 100 %', 'num'], ['⬇ À date', 'num']].forEach(([label, className]) => {
+        [['Action', ''], ['📈 Avancement', 'num'], ['À 100 %', 'num'], ['⬇ À date / cible (%)', 'num']].forEach(([label, className]) => {
           const th = document.createElement('th');
           th.scope = 'col';
           th.textContent = label;
@@ -3095,6 +3113,8 @@
         }
         if (total.excludedPilotCount) {
           elements.posteCo2Summary.append(`, ${formatCount(total.excludedPilotCount)} pôle(s) pilote(s) exclu(s) (valeurs en kgCO2).`);
+        } else if (total.recalculatedPilotCount) {
+          elements.posteCo2Summary.append(`, dont ${formatCount(total.recalculatedPilotCount)} pôle(s) pilote(s) recalculé(s) avec le catalogue.`);
         } else {
           elements.posteCo2Summary.append('.');
         }
@@ -3123,6 +3143,10 @@
         renderPoste();
       });
       elements.posteTerritoire.addEventListener('change', renderPoste);
+      elements.postePilotMode.addEventListener('change', () => {
+        state.pilotMode = elements.postePilotMode.value;
+        renderPoste();
+      });
       elements.posteReductionMode.addEventListener('change', () => {
         state.reductionMode = elements.posteReductionMode.value;
         renderPoste();
@@ -3137,8 +3161,47 @@
       const HISTORY_TOTAL = 'TOTAL';
       const MONTH_NAMES = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
+      // Historique sans les valeurs qui sont en réalité inconnues (point
+      // absent plutôt que 0, demande du 01/10/2026). Règles, établies sur
+      // les archives 09/2025 → 09/2026 :
+      // 1. campagne avant son année (ex. socle 2026 en 11/2025 : 30 zéros) ;
+      // 2. filière sans aucun répondant ce mois-là (ex. Protection de
+      //    l'enfance 07 et 08/2026) : toutes ses valeurs du mois ;
+      // 3. 0 terminé alors que les concernés = toutes les structures de la
+      //    filière et que toutes n'ont pas répondu : valeurs par défaut des
+      //    non-répondants (ex. Petite enfance 09/2026, changement d'outil).
+      // (Les indicateurs DIP sont écartés dès l'import.)
       function historyRows() {
-        return (state.bootstrap.history && state.bootstrap.history.rows) || [];
+        if (state.historyRowsClean) return state.historyRowsClean;
+        const raw = (state.bootstrap.history && state.bootstrap.history.rows) || [];
+        const counts = new Map();
+        raw.forEach(([month, campaign, action, filiere, indicator, value]) => {
+          if (indicator === 'nbStructures' || indicator === 'nbRepondants') {
+            const key = `${month}|${filiere}`;
+            counts.set(key, Object.assign(counts.get(key) || {}, {[indicator]: value}));
+          }
+        });
+        const pairs = new Map();
+        raw.forEach(([month, campaign, action, filiere, indicator, value]) => {
+          if (!action) return;
+          const key = `${month}|${campaign}|${action}|${filiere}`;
+          pairs.set(key, Object.assign(pairs.get(key) || {}, {[indicator]: value}));
+        });
+        state.historyRowsClean = raw.filter(([month, campaign, action, filiere, indicator]) => {
+          const campaignYear = (String(campaign).match(/(\d{4})/) || [])[1];
+          if (campaignYear && Number(month.slice(0, 4)) < Number(campaignYear)) return false;
+          const filiereCounts = counts.get(`${month}|${filiere}`) || {};
+          if (filiereCounts.nbRepondants === 0) return false;
+          if (action && filiere !== HISTORY_TOTAL) {
+            const pair = pairs.get(`${month}|${campaign}|${action}|${filiere}`) || {};
+            if (pair.terminees === 0 && pair.concernes > 0 && pair.concernes === filiereCounts.nbStructures &&
+                typeof filiereCounts.nbRepondants === 'number' && filiereCounts.nbRepondants < filiereCounts.nbStructures) {
+              return false;
+            }
+          }
+          return true;
+        });
+        return state.historyRowsClean;
       }
       function monthIndex(month) {
         const [year, monthNumber] = month.split('-').map(Number);
@@ -3156,7 +3219,7 @@
 
       function populateEvolutionFilters() {
         const rows = historyRows();
-        const campaigns = distinctSorted(rows.filter((row) => row[1] && (row[4] === 'tauxTerminees' || row[4] === 'moyenneAvancement')).map((row) => row[1]));
+        const campaigns = distinctSorted(rows.filter((row) => row[1] && row[4] === 'tauxTerminees').map((row) => row[1]));
         populateValueSelect(elements.evolutionCampagne, campaigns, 'Choisir une campagne…');
         if (!elements.evolutionCampagne.value && campaigns.length) elements.evolutionCampagne.value = campaigns[0];
         const filieres = distinctSorted(rows.filter((row) => row[4] === 'tauxTerminees' && row[3] !== HISTORY_TOTAL).map((row) => row[3]));
@@ -3284,7 +3347,7 @@
           label.textContent = `${tick} %`;
           svg.appendChild(label);
         });
-        (compact ? [months[0], months[months.length - 1]] : months).forEach((month, position, list) => {
+        (compact ? [...new Set([months[0], months[months.length - 1]])] : months).forEach((month, position, list) => {
           const anchor = compact ? (position === 0 ? 'start' : 'end') : 'middle';
           const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - (compact ? 4 : 10), 'text-anchor': list.length === 1 ? 'middle' : anchor});
           label.textContent = formatMonth(month);
@@ -3497,12 +3560,12 @@
         if (!state.bootstrap) return;
         const campaign = elements.evolutionCampagne.value;
         const filiere = elements.evolutionFiliere.value || HISTORY_TOTAL;
-        const indicator = elements.evolutionIndicateur.value;
-        const indicatorLabel = elements.evolutionIndicateur.selectedOptions[0].textContent.replace(/\s*\(.*\)$/, '');
+        const indicator = 'tauxTerminees';
+        const indicatorLabel = 'Taux de terminés parmi les concernés';
         const filiereLabel = filiere === HISTORY_TOTAL ? 'ensemble' : filiere;
 
         const campaignSeries = computeCampaignSeries(indicator, filiere);
-        elements.evolutionCampagnesTitle.textContent = `Avancée de chaque année socle — ${indicatorLabel} · ${filiereLabel}`;
+        elements.evolutionCampagnesTitle.textContent = `Avancée de chaque année socle — ${filiereLabel}`;
         renderLineChart(elements.evolutionCampagnesChart, elements.evolutionCampagnesLegend, campaignSeries, {directLabels: true, tooltipSuffix: filiereLabel});
 
         const actionSeries = campaign ? computeActionSeries(indicator, filiere, campaign) : [];
@@ -3540,7 +3603,6 @@
         if (!state.evolutionExport) return;
         downloadBlob(new Blob([String.fromCharCode(0xfeff) + buildEvolutionCsv(state.evolutionExport)], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-evolution-${dateStamp()}.csv`);
       });
-      elements.evolutionIndicateur.addEventListener('change', renderEvolution);
       elements.evolutionCampagne.addEventListener('change', renderEvolution);
       elements.evolutionFiliere.addEventListener('change', renderEvolution);
 

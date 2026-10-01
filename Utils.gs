@@ -17,6 +17,14 @@ function normalizeText_(value) {
     .trim();
 }
 
+// Libellé d'action saisi avec un préfixe parasite dans certains fichiers de
+// pôle (ex. "Action socle - Repas végétariens", constaté le 01/10/2026) :
+// le préfixe "Action(s) socle(s) [année] -" est retiré pour que l'action
+// soit regroupée avec "Repas végétariens".
+function cleanActionLabel_(value) {
+  return cleanValue_(value).replace(/^actions?\s+socles?(\s+\d{4})?\s*[-–—:]\s*/i, '').trim();
+}
+
 function findHeader_(headers, expectedPrefix) {
   const header = findOptionalHeader_(headers, expectedPrefix);
   if (!header) {

@@ -5,26 +5,40 @@
 // (constat de Simon, 29/09/2026), ce qui la faisait apparaître dans
 // plusieurs thématiques à la fois.
 //
+// Le même référentiel donne aussi la réduction du catalogue de chaque
+// action (colonne "Réduction…", optionnelle), utilisée pour recalculer les
+// pôles pilotes comme des pôles non pilotes (option de la vue Détail par
+// poste).
+//
 // Clé = nom d'action normalisé (normalizeText_). Ne fait jamais échouer le
 // chargement : onglet ou colonnes introuvables -> référentiel vide, et
 // chaque ligne garde alors le poste saisi par le pôle.
-function getActionThematiqueReference_() {
+function getActionCatalogue_() {
   const table = readActionReferenceTable_();
   if (!table) {
     return {};
   }
   return table.rows.reduce((byAction, row) => {
-    const action = cleanValue_(row[table.actionIndex]);
-    const poste = cleanValue_(row[table.posteIndex]);
-    if (action && poste) {
-      byAction[normalizeText_(action)] = poste;
+    const action = cleanActionLabel_(row[table.actionIndex]);
+    if (!action) {
+      return byAction;
     }
+    byAction[normalizeText_(action)] = {
+      poste: cleanValue_(row[table.posteIndex]),
+      reduction: table.reductionIndex === -1 ? '' : cleanValue_(row[table.reductionIndex])
+    };
     return byAction;
   }, {});
 }
 
-function resolveFactThematique_(fact, actionThematiques) {
-  return actionThematiques[normalizeText_(fact.action)] || fact.thematique;
+function resolveFactThematique_(fact, actionCatalogue) {
+  const entry = actionCatalogue[normalizeText_(fact.action)];
+  return (entry && entry.poste) || fact.thematique;
+}
+
+function resolveFactCatalogueReduction_(fact, actionCatalogue) {
+  const entry = actionCatalogue[normalizeText_(fact.action)];
+  return entry ? entry.reduction : '';
 }
 
 // La ligne d'en-tête n'est pas forcément la première (titres, lignes
@@ -45,7 +59,10 @@ function readActionReferenceTable_() {
     const actionIndex = header.findIndex((cell) => startsWith(cell, ['action']));
     const posteIndex = header.findIndex((cell) => startsWith(cell, ['poste', 'categorie', 'thematique']));
     if (actionIndex !== -1 && posteIndex !== -1) {
+      const reductionIndex = header.findIndex((cell) => startsWith(cell, ['reduction']));
       return {
+        reductionIndex: reductionIndex,
+        reductionHeader: reductionIndex === -1 ? '(colonne Réduction introuvable)' : header[reductionIndex],
         headerRow: rowIndex + 1,
         actionHeader: header[actionIndex],
         posteHeader: header[posteIndex],
@@ -69,7 +86,9 @@ function testActionReference() {
     Logger.log('Référentiel illisible : voir les avertissements ci-dessus.');
     return;
   }
-  const reference = getActionThematiqueReference_();
+  const catalogue = getActionCatalogue_();
+  const reference = {};
+  Object.keys(catalogue).forEach((key) => { if (catalogue[key].poste) reference[key] = catalogue[key].poste; });
   const facts = getFactRecords_();
   const missing = {};
   const changed = {};
@@ -84,7 +103,8 @@ function testActionReference() {
     }
   });
   Logger.log(JSON.stringify({
-    enTete: `ligne ${table.headerRow} — "${table.actionHeader}" / "${table.posteHeader}"`,
+    enTete: `ligne ${table.headerRow} — "${table.actionHeader}" / "${table.posteHeader}" / "${table.reductionHeader}"`,
+    exemplesReduction: Object.keys(catalogue).slice(0, 5).map((key) => `${key} : ${catalogue[key].reduction}`),
     actionsDansLeReferentiel: Object.keys(reference).length,
     actionsAbsentesDuReferentiel: missing,
     postesModifies: changed

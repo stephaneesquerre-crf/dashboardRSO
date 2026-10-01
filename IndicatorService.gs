@@ -21,7 +21,7 @@ function getFactRecords_() {
   return records
     .map((record) => ({
       poleCode: cleanValue_(record[columns.poleCode]),
-      action: cleanValue_(record[columns.action]),
+      action: cleanActionLabel_(record[columns.action]),
       volet: cleanValue_(record[columns.volet]),
       thematique: cleanValue_(record[columns.thematique]),
       avancement: cleanValue_(record[columns.avancement]),
@@ -121,19 +121,23 @@ function getDashboardBootstrap() {
   const poleReference = getPoleReference_();
   const factRecords = getFactRecords_();
   const padomOverrides = derivePadomOverrides_(factRecords);
-  const actionThematiques = getActionThematiqueReference_();
+  const actionCatalogue = getActionCatalogue_();
 
   const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
     action: fact.action,
     volet: fact.volet,
-    thematique: resolveFactThematique_(fact, actionThematiques),
+    thematique: resolveFactThematique_(fact, actionCatalogue),
     avancement: fact.avancement,
     filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
     territoire: resolveFactTerritoire_(fact, poleReference),
     actionSocle: fact.actionSocle,
     reductionADate: fact.reductionADate,
-    reductionCible: fact.reductionCible
+    reductionCible: fact.reductionCible,
+    // Réduction du catalogue pour cette action (valeur affichée brute, ex.
+    // "-2,07%") : sert à recalculer les pôles pilotes quand l'option est
+    // choisie dans la vue Détail par poste.
+    catalogueReduction: resolveFactCatalogueReduction_(fact, actionCatalogue)
   }));
 
   // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
