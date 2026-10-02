@@ -34,14 +34,16 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     await page.waitForFunction(() => typeof state !== 'undefined' && state.bootstrap);
 
     const tabs = await page.$$eval('.tab-button', (buttons) => buttons.map((b) => b.textContent.trim()));
-    assert.deepStrictEqual(tabs, ['Évolution des actions socle', 'Synthèse', "Détail par poste d'émissions", 'Détail par pôle', 'Contrôle et méthodologie']);
+    assert.deepStrictEqual(tabs, ['Évolution des actions socles', 'Synthèse', "Détail par poste d'émissions", 'Détail par pôle', 'Contrôle et méthodologie']);
 
     for (const [filiere, territories] of Object.entries(FILIERES)) {
       await page.click('#tab-synthese');
       await page.selectOption('#synthese-filiere', filiere);
       const syntheseOptions = await page.$$eval('#synthese-territoire option', (options) => options.map((o) => o.value));
       territories.forEach((t) => assert.ok(syntheseOptions.includes(t), `Synthèse ${filiere} : ${t}`));
-      await page.selectOption('#synthese-territoire', '__territoires_detail__');
+      const niveaux = await page.$$eval('#synthese-niveau option', (options) => options.filter((o) => !o.hidden).map((o) => o.value));
+      assert.deepStrictEqual(niveaux, ['territoire', 'thematique', 'volet', 'action'], `Regrouper par ${filiere}`);
+      await page.selectOption('#synthese-niveau', 'territoire');
       const bars = await page.$$eval('#chart .category-text', (labels) => labels.map((l) => l.textContent));
       assert.deepStrictEqual([...bars].sort(), [...territories].sort(), `graphique Synthèse ${filiere}`);
 
@@ -63,9 +65,22 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual(years, ['2024', '2025']);
     assert.match(await page.textContent('#trajectoire-note'), /Fin 2025/);
 
-    // Barres de la synthèse triées par valeur décroissante.
+    // Barres de la synthèse triées par valeur décroissante ; indicateur par
+    // défaut « Terminées / concernées ».
     await page.click('#tab-synthese');
     await page.selectOption('#synthese-filiere', '');
+    assert.strictEqual(await page.$eval('#synthese-indicateur', (select) => select.value), 'tauxTerminees');
+    assert.strictEqual(await page.$eval('#synthese-niveau', (select) => select.value), 'filiere');
+
+    // Évolution : regroupement par campagne / thématique, courbes par filière.
+    await page.click('#tab-evolution');
+    for (const groupe of ['campagne', 'thematique']) {
+      await page.selectOption('#evolution-groupe', groupe);
+      const groups = await page.$$eval('#evolution-multiples .evolution-group h3', (titles) => titles.map((t) => t.textContent));
+      assert.ok(groups.length > 0, `Évolution groupée par ${groupe}`);
+    }
+    const filiereLegend = await page.$$eval('#evolution-filieres-legend span', (items) => items.map((i) => i.textContent).filter(Boolean));
+    assert.ok(filiereLegend.includes('Ensemble'), filiereLegend.join(', '));
     const values = await page.evaluate(() => {
       const key = elements.syntheseIndicateur.value;
       return state.syntheseSnapshot.groups.filter((g) => g[key] !== null).map((g) => g[key]);

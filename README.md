@@ -177,7 +177,11 @@ sans ambiguïté.
 ## Mise en page de la vue Synthèse
 
 Barres toujours triées de la plus grande à la plus petite valeur (le
-tableau garde son ordre). Graphique principal, graphique de comparaison et
+tableau garde son ordre). Indicateur par défaut : « Terminées /
+concernées ». « Regrouper par » ne propose que les regroupements utiles au
+périmètre : Filière (toutes filières), Territoire (une filière entière, ex-
+option « Tous les territoires (détail) » du filtre Territoire),
+Thématique, Campagne (ex-« Volet »), Action. Graphique principal, graphique de comparaison et
 fiche d'identité sur une même ligne (sous 1200px de large, le graphique principal passe seul sur sa
 ligne). Au-delà de 10 groupes (`HORIZONTAL_BAR_THRESHOLD`), les graphiques
 passent en barres horizontales pour que les libellés restent lisibles
@@ -375,33 +379,37 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 
 ## Organisation des onglets (01/10/2026)
 
-1. **Évolution des actions socle** (onglet ouvert par défaut)
+1. **Évolution des actions socles** (onglet ouvert par défaut)
 2. **Synthèse**
 3. **Détail par poste d'émissions**
 4. **Détail par pôle** (ex « Détail pôle × action »)
 5. **Contrôle et méthodologie** (les deux anciennes vues, dans un même
    onglet)
 
-## Vue Évolution des actions socle
+## Vue Évolution des actions socles
 
-Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Filtres : filière (ou
-ensemble) et campagne pour le détail. Indicateur unique : taux de
-terminés parmi les concernés (la moyenne d'avancement, abandonnée dans
-le Tableau de bord VA, n'est plus proposée). Les graphiques « Avancée de
-chaque année socle » et « Taux de réponse par filière » sont côte à côte,
-puis le détail par action et le tableau. Contenu (choix argumenté le
-30/09/2026, voir ci-dessous) :
+Lit `HISTORIQUE TDB VA` (`HistoryService.gs`). Indicateur unique : taux de
+terminés parmi les concernés. Filtres : filière (ou ensemble) et
+**Regrouper par** campagne ou thématique (02/10/2026, remplace le choix
+d'une campagne). Contenu :
 
-- **Avancée de chaque année socle** : une courbe par campagne (moyenne
-  simple des actions de la campagne ayant une valeur ce mois-là),
-  étiquetée en bout de courbe ;
-- **Détail par action** : petits multiples, un graphique par action de la
-  campagne choisie, même échelle 0-100 % et mêmes mois pour tous ;
-- **Évolution par action** : première et dernière valeur, évolution
-  totale et sur le dernier mois (en points), rythme moyen par mois ;
-- **Taux de réponse par filière** (répondants ÷ structures) : la filière
-  choisie est mise en avant, les autres en gris ;
-- export CSV de la vue (séries au format long + tableau).
+- **Avancée par campagne / par thématique** : une courbe par groupe
+  (moyenne simple des actions du groupe ayant une valeur ce mois-là). La
+  thématique d'une action vient des faits du dashboard (référentiel des
+  actions), les archives ne la contenant pas ;
+- **Avancée par filière** (toutes campagnes) : une courbe par filière plus
+  l'ensemble ; la filière choisie est mise en avant, les autres en gris ;
+- **Détail par action** : petits multiples de toutes les actions, groupés
+  par campagne ou par thématique, même échelle et mêmes mois pour tous ;
+- export CSV de la vue (séries au format long).
+
+Retirés le 02/10/2026 : le graphique « Taux de réponse par filière » et le
+tableau « Évolution par action ».
+
+Limite des moyennes : quand une nouvelle campagne ajoute des actions encore
+peu avancées à une thématique, la courbe de cette thématique peut baisser
+sans recul réel (effet de composition) ; le détail par action permet de le
+vérifier.
 
 Pourquoi des courbes et pas un radar : l'axe du temps est la dimension
 principale ; un radar la replie en cercle, rend l'ordre des axes

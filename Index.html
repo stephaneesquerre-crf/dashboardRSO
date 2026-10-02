@@ -517,6 +517,12 @@
         vertical-align: middle;
         border-radius: 1px;
       }
+      .evolution-group + .evolution-group { margin-top: 18px; }
+      .evolution-group h3 {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
       .evolution-multiples {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -810,7 +816,7 @@
     <div class="diagnostics" id="diagnostics" role="status" hidden></div>
 
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
-      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="true" aria-controls="panel-evolution">Évolution des actions socle</button>
+      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="true" aria-controls="panel-evolution">Évolution des actions socles</button>
       <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="false" aria-controls="panel-synthese">Synthèse</button>
       <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Détail par poste d'émissions</button>
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail par pôle</button>
@@ -818,7 +824,7 @@
     </div>
 
     <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese" hidden>
-      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. À côté du graphique, un graphique de comparaison et la fiche d'identité replacent le périmètre dans son contexte plus large.</p>
+      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, campagnes ou actions. À côté du graphique, un graphique de comparaison et la fiche d'identité replacent le périmètre dans son contexte plus large.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -836,8 +842,9 @@
             <label for="synthese-niveau">Regrouper par</label>
             <select id="synthese-niveau">
               <option value="filiere">Filière</option>
+              <option value="territoire">Territoire</option>
               <option value="thematique">Thématique</option>
-              <option value="volet">Volet (année de lancement)</option>
+              <option value="volet">Campagne</option>
               <option value="action">Action</option>
             </select>
           </div>
@@ -851,7 +858,7 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="synthese-tracked-only" checked>
-            <label for="synthese-tracked-only">Actions socle</label>
+            <label for="synthese-tracked-only">Actions socles</label>
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="synthese-filiere-specific">
@@ -859,8 +866,8 @@
           </div>
         </div>
         <p class="tool-links" id="synthese-tool-links" hidden></p>
-        <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
-        <p class="filter-hint">« Actions socle » garde les lignes « Action socle » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
+        <p class="filter-hint">« Regrouper par » s'adapte au périmètre : « Filière » compare les filières entre elles (toutes filières) ; « Territoire » compare les territoires de la filière choisie (toute la filière).</p>
+        <p class="filter-hint">« Actions socles » garde les lignes « Action socle(s) » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <div class="synthese-chart-grid">
@@ -935,8 +942,8 @@
             <select id="detail-territoire" disabled><option value="">Choisir d'abord une filière…</option></select>
           </div>
           <div class="filter-field">
-            <label for="detail-volet">Volet</label>
-            <select id="detail-volet" disabled><option value="">Tous les volets</option></select>
+            <label for="detail-volet">Campagne</label>
+            <select id="detail-volet" disabled><option value="">Toutes les campagnes</option></select>
           </div>
           <div class="filter-field">
             <label for="detail-thematique">Thématique</label>
@@ -948,7 +955,7 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="detail-tracked-only" checked>
-            <label for="detail-tracked-only">Actions socle</label>
+            <label for="detail-tracked-only">Actions socles</label>
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="detail-filiere-specific">
@@ -1003,7 +1010,7 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="control-tracked-only" checked>
-            <label for="control-tracked-only">Actions socle</label>
+            <label for="control-tracked-only">Actions socles</label>
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="control-filiere-specific">
@@ -1011,7 +1018,7 @@
           </div>
         </div>
         <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
-        <p class="filter-hint">« Actions socle » garde les lignes « Action socle » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
+        <p class="filter-hint">« Actions socles » garde les lignes « Action socle(s) » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <section class="panel">
@@ -1033,7 +1040,7 @@
     </section>
 
     <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
-      <p class="view-intro">À gauche, la trajectoire de décarbonation cumulée par année socle (cible et à date) avec le détail des actions de chaque année ; à droite, une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <p class="view-intro">À gauche, la trajectoire de décarbonation cumulée par année socles (cible et à date) avec le détail des actions de chaque année ; à droite, une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1049,14 +1056,14 @@
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="poste-tracked-only" checked>
-            <label for="poste-tracked-only">Actions socle</label>
+            <label for="poste-tracked-only">Actions socles</label>
           </div>
           <div class="filter-field control-toggle-field">
             <input type="checkbox" id="poste-filiere-specific">
             <label for="poste-filiere-specific">Actions spécifiques filière</label>
           </div>
           <div class="filter-field">
-            <label for="poste-reduction-mode">Réduction « à date »</label>
+            <label for="poste-reduction-mode">Indicateur</label>
             <select id="poste-reduction-mode">
               <option value="avancement">Selon l'avancement déclaré</option>
               <option value="termines">Pôles ayant terminé seulement</option>
@@ -1075,7 +1082,7 @@
             <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-trajectoire">⤢ Plein écran</button>
           </div>
           <div class="line-legend" id="trajectoire-legend"></div>
-          <svg class="line-chart trajectoire-chart" id="trajectoire-chart" role="img" tabindex="0" aria-label="Trajectoire de décarbonation cumulée par année socle"></svg>
+          <svg class="line-chart trajectoire-chart" id="trajectoire-chart" role="img" tabindex="0" aria-label="Trajectoire de décarbonation cumulée par année socles"></svg>
           <p class="chart-note" id="trajectoire-note"></p>
           <div class="trajectoire-years" id="trajectoire-years"></div>
         </section>
@@ -1106,60 +1113,47 @@
             <select id="evolution-filiere"></select>
           </div>
           <div class="filter-field">
-            <label for="evolution-campagne">Détail : campagne</label>
-            <select id="evolution-campagne"></select>
+            <label for="evolution-groupe">Regrouper par</label>
+            <select id="evolution-groupe">
+              <option value="campagne">Campagne</option>
+              <option value="thematique">Thématique</option>
+            </select>
           </div>
         </div>
         <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière).</p>
-        <p class="filter-hint">Valeur inconnue = point absent, jamais 0. Sont considérés comme inconnus : une campagne avant son année (ex. socle 2026 en 11/2025) ; une filière sans aucun répondant ce mois-là ; un 0 terminé alors que toutes les structures de la filière sont comptées « concernées » sans que toutes aient répondu (valeurs par défaut, ex. Petite enfance en 09/2026 après le changement d'outil) ; les indicateurs DIP (flotte, véhicules électriques).</p>
+        <p class="filter-hint">Valeur inconnue = point absent, jamais 0. Sont considérés comme inconnus : une campagne avant son année (ex. socles 2026 en 11/2025) ; une filière sans aucun répondant ce mois-là ; un 0 terminé alors que toutes les structures de la filière sont comptées « concernées » sans que toutes aient répondu (valeurs par défaut, ex. Petite enfance en 09/2026 après le changement d'outil) ; les indicateurs DIP (flotte, véhicules électriques).</p>
         <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
       </section>
 
       <div class="evolution-grid">
         <section class="panel chart-panel" id="chart-panel-evolution-campagnes">
           <div class="panel-header">
-            <h2 id="evolution-campagnes-title">Avancée de chaque année socle</h2>
+            <h2 id="evolution-campagnes-title">Avancée par campagne</h2>
             <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-campagnes">⤢ Plein écran</button>
           </div>
           <div class="line-legend" id="evolution-campagnes-legend"></div>
-          <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par année socle"></svg>
-          <p class="chart-note">Moyenne simple des actions de chaque campagne ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
+          <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par regroupement"></svg>
+          <p class="chart-note">Moyenne simple des actions du groupe ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
         </section>
 
-        <section class="panel chart-panel" id="chart-panel-evolution-reponse">
+        <section class="panel chart-panel" id="chart-panel-evolution-filieres">
           <div class="panel-header">
-            <h2 id="evolution-reponse-title">Taux de réponse par filière</h2>
-            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-reponse">⤢ Plein écran</button>
+            <h2 id="evolution-filieres-title">Avancée par filière</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-filieres">⤢ Plein écran</button>
           </div>
-          <div class="line-legend" id="evolution-reponse-legend"></div>
-          <svg class="line-chart" id="evolution-reponse-chart" role="img" tabindex="0" aria-label="Évolution du taux de réponse par filière"></svg>
-          <p class="chart-note">Structures ayant répondu ÷ nombre total de structures, toutes campagnes confondues. Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
+          <div class="line-legend" id="evolution-filieres-legend"></div>
+          <svg class="line-chart" id="evolution-filieres-chart" role="img" tabindex="0" aria-label="Évolution moyenne par filière"></svg>
+          <p class="chart-note">Moyenne simple de toutes les actions socles de la filière ayant une valeur ce mois-là (valeurs par filière disponibles depuis 11/2025). Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
         </section>
       </div>
 
-      <div class="evolution-grid">
-        <section class="panel">
-          <div class="panel-header">
-            <h2 id="evolution-multiples-title">Détail par action</h2>
-          </div>
-          <div class="evolution-multiples" id="evolution-multiples"></div>
-          <p class="chart-note">Un petit graphique par action, même échelle 0-100 % pour tous : on compare les pentes d'un coup d'œil. Survol : valeurs du mois.</p>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <h2 id="evolution-table-title">Évolution par action</h2>
-          </div>
-          <div style="overflow-x:auto">
-            <table id="evolution-table">
-              <thead><tr><th scope="col">Action</th><th scope="col">Début</th><th scope="col">Dernier mois</th><th scope="col">Évolution</th><th scope="col">Sur le dernier mois</th><th scope="col">Rythme moyen</th></tr></thead>
-              <tbody id="evolution-table-body"></tbody>
-            </table>
-          </div>
-          <p class="chart-note">Évolutions en points de pourcentage. Rythme moyen = évolution ÷ nombre de mois écoulés entre la première et la dernière valeur.</p>
-        </section>
-      </div>
-
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="evolution-multiples-title">Détail par action</h2>
+        </div>
+        <div id="evolution-multiples"></div>
+        <p class="chart-note">Un petit graphique par action, même échelle 0-100 % et mêmes mois pour tous : on compare les pentes d'un coup d'œil. Survol : valeurs du mois.</p>
+      </section>
     </section>
 
     <section class="tab-panel" id="panel-doc" aria-labelledby="tab-controle" hidden>
@@ -1202,7 +1196,7 @@
         filiere: 'Filière',
         territoire: 'Territoire',
         thematique: 'Thématique',
-        volet: 'Volet',
+        volet: 'Campagne',
         action: 'Action'
       };
 
@@ -1215,10 +1209,6 @@
       const UNKNOWN_LABEL = 'Non renseigné(e)';
       const EXCLUDED_AVANCEMENT = 'abandonnee';
       const DONE_AVANCEMENT = '100%';
-      // Valeur spéciale du filtre Territoire (jamais un vrai nom de
-      // territoire) : bascule le graphique en comparaison des territoires
-      // entre eux, plutôt que d'être un niveau de regroupement séparé.
-      const TERRITOIRE_DETAIL_VALUE = '__territoires_detail__';
       // Nombre de groupes au-delà duquel les graphiques de la synthèse
       // passent en barres horizontales (cf. renderChart).
       const HORIZONTAL_BAR_THRESHOLD = 10;
@@ -1321,7 +1311,10 @@
         trajectoireChart: document.getElementById('trajectoire-chart'),
         trajectoireNote: document.getElementById('trajectoire-note'),
         trajectoireYears: document.getElementById('trajectoire-years'),
-        evolutionCampagne: document.getElementById('evolution-campagne'),
+        evolutionGroupe: document.getElementById('evolution-groupe'),
+        evolutionFilieresTitle: document.getElementById('evolution-filieres-title'),
+        evolutionFilieresLegend: document.getElementById('evolution-filieres-legend'),
+        evolutionFilieresChart: document.getElementById('evolution-filieres-chart'),
         evolutionFiliere: document.getElementById('evolution-filiere'),
         evolutionEmpty: document.getElementById('evolution-empty'),
         evolutionRefreshed: document.getElementById('evolution-refreshed'),
@@ -1331,10 +1324,6 @@
         evolutionMultiplesTitle: document.getElementById('evolution-multiples-title'),
         evolutionMultiples: document.getElementById('evolution-multiples'),
         exportEvolutionCsv: document.getElementById('export-evolution-csv'),
-        evolutionTableTitle: document.getElementById('evolution-table-title'),
-        evolutionTableBody: document.getElementById('evolution-table-body'),
-        evolutionReponseLegend: document.getElementById('evolution-reponse-legend'),
-        evolutionReponseChart: document.getElementById('evolution-reponse-chart'),
         posteReductionMode: document.getElementById('poste-reduction-mode'),
         posteCo2Summary: document.getElementById('poste-co2-summary'),
         syntheseToolLinks: document.getElementById('synthese-tool-links'),
@@ -1789,13 +1778,10 @@
         if ([...select.options].some((option) => option.value === current)) select.value = current;
       }
 
-      function populateTerritoireSelect(select, filiereName, placeholder, includeAllTerritoiresOption) {
+      function populateTerritoireSelect(select, filiereName, placeholder) {
         const current = select.value;
         select.replaceChildren();
         select.append(new Option(placeholder, ''));
-        if (includeAllTerritoiresOption && filiereName) {
-          select.append(new Option('Tous les territoires (détail)', TERRITOIRE_DETAIL_VALUE));
-        }
         territoiresForFiliere(filiereName).forEach((name) => select.append(new Option(territoireDisplayLabel(filiereName, name), name)));
         select.disabled = !filiereName;
         if ([...select.options].some((option) => option.value === current)) select.value = current;
@@ -1811,15 +1797,8 @@
       }
 
       elements.syntheseFiliere.addEventListener('change', () => {
-        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière', true);
+        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière');
         updateNiveauAvailability();
-        // En vue "toutes filières" (comparaison des filières entre elles),
-        // le taux de réponse est l'indicateur le plus utile par défaut —
-        // demandé après un aller-retour où "Terminées / concernées" restait
-        // sélectionné par défaut même en revenant à cette vue.
-        if (!elements.syntheseFiliere.value) {
-          elements.syntheseIndicateur.value = 'tauxReponse';
-        }
         renderSynthese();
       });
       elements.syntheseTerritoire.addEventListener('change', () => {
@@ -1829,22 +1808,30 @@
       elements.syntheseNiveau.addEventListener('change', renderSynthese);
       elements.syntheseIndicateur.addEventListener('change', renderSynthese);
 
-      // Le regroupement « Filière » n'a de sens que pour comparer les
-      // filières entre elles (portée globale) : une fois une filière
-      // précise choisie, il ne produirait qu'une seule barre — source de
-      // confusion signalée par un utilisateur. La comparaison des
-      // territoires d'une filière se fait maintenant via le filtre
-      // Territoire (« Tous les territoires (détail) »), pas ici : le
-      // regroupement ne s'applique pas non plus tant que cette option est
-      // active.
+      // « Regrouper par » ne propose que les regroupements utiles au
+      // périmètre (demande du 02/10/2026) : « Filière » seulement pour
+      // toutes les filières (une filière choisie ne donnerait qu'une barre),
+      // « Territoire » seulement pour toute une filière (ex-option
+      // « Tous les territoires (détail) » du filtre Territoire). Quand le
+      // regroupement courant disparaît : territoire si possible, sinon
+      // thématique.
       function updateNiveauAvailability() {
-        const filiereOption = elements.syntheseNiveau.querySelector('option[value="filiere"]');
         const hasFiliere = Boolean(elements.syntheseFiliere.value);
-        filiereOption.disabled = hasFiliere;
-        if (hasFiliere && elements.syntheseNiveau.value === 'filiere') {
-          elements.syntheseNiveau.value = 'thematique';
+        const hasTerritoire = Boolean(elements.syntheseTerritoire.value);
+        const allowed = {
+          filiere: !hasFiliere,
+          territoire: hasFiliere && !hasTerritoire,
+          thematique: true,
+          volet: true,
+          action: true
+        };
+        [...elements.syntheseNiveau.options].forEach((option) => {
+          option.hidden = !allowed[option.value];
+          option.disabled = !allowed[option.value];
+        });
+        if (!allowed[elements.syntheseNiveau.value]) {
+          elements.syntheseNiveau.value = allowed.territoire ? 'territoire' : (allowed.filiere ? 'filiere' : 'thematique');
         }
-        elements.syntheseNiveau.disabled = elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE;
       }
 
       // Extrait de l'écouteur de detail-filiere pour être réutilisable
@@ -1854,7 +1841,7 @@
       function refreshDetailFiltersForFiliere(filiereName) {
         populateTerritoireSelect(elements.detailTerritoire, filiereName, 'Tous les territoires');
         const facts = state.bootstrap.facts.filter((fact) => fact.filiere === filiereName);
-        populateValueSelect(elements.detailVolet, distinctSorted(facts.map((fact) => fact.volet)), 'Tous les volets');
+        populateValueSelect(elements.detailVolet, distinctSorted(facts.map((fact) => fact.volet)), 'Toutes les campagnes');
         populateValueSelect(elements.detailThematique, distinctSorted(facts.map((fact) => fact.thematique)), 'Toutes les thématiques');
       }
 
@@ -1922,17 +1909,14 @@
       // Vue synthèse
       // ---------------------------------------------------------------
       // Traduit les filtres visibles (filière / territoire / regroupement)
-      // en options pour computeSnapshot. La valeur spéciale du filtre
-      // Territoire devient un regroupement par territoire, comme le faisait
-      // auparavant l'option "Territoire (détail)" du menu "Regrouper par".
+      // en options pour computeSnapshot.
       function resolveSyntheseOptions() {
-        const filiere = elements.syntheseFiliere.value;
-        const territoireValue = elements.syntheseTerritoire.value;
-        const actionTypes = state.actionTypes;
-        if (territoireValue === TERRITOIRE_DETAIL_VALUE) {
-          return {filiere, territoire: '', niveau: 'territoire', actionTypes};
-        }
-        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value, actionTypes};
+        return {
+          filiere: elements.syntheseFiliere.value,
+          territoire: elements.syntheseTerritoire.value,
+          niveau: elements.syntheseNiveau.value,
+          actionTypes: state.actionTypes
+        };
       }
 
       function updateChartTitle(options) {
@@ -1940,11 +1924,7 @@
         const niveauLabel = NIVEAU_LABELS[options.niveau] || 'Filière';
         const scopeBits = [];
         if (options.filiere) scopeBits.push(options.filiere);
-        if (options.territoire) {
-          scopeBits.push(options.territoire);
-        } else if (elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE) {
-          scopeBits.push('tous territoires');
-        }
+        if (options.territoire) scopeBits.push(options.territoire);
         const scopeSuffix = scopeBits.length ? ` — ${scopeBits.join(' · ')}` : ' — toutes filières';
         elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}${scopeSuffix}`;
         elements.dataTableCaption.textContent = `${scopeBits.length ? scopeBits.join(' · ') : 'Toutes filières confondues'} — les taux sont exprimés en %.`;
@@ -2366,7 +2346,7 @@
       const ACTION_TABLE_COLUMNS = [
         {key: 'action', label: 'Action', sortable: true},
         {key: 'thematique', label: 'Thématique', sortable: true},
-        {key: 'volet', label: 'Volet', sortable: true},
+        {key: 'volet', label: 'Campagne', sortable: true},
         {key: 'tauxTerminees', label: '% Terminés', sortable: false},
         {key: 'terminees', label: 'Pôles ayant terminé', sortable: false},
         {key: 'concernes', label: 'Pôles concernés', sortable: false}
@@ -2433,7 +2413,7 @@
       }
 
       function buildActionDetailCsv(detail) {
-        const headers = ['Action', 'Thématique', 'Volet', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés'];
+        const headers = ['Action', 'Thématique', 'Campagne', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés'];
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
         const rows = sortActionRows(detail.rows).map((row) =>
           [row.action, row.thematique, row.volet, row.tauxTerminees, row.terminees, row.concernes].map(escapeCsv).join(',')
@@ -2750,7 +2730,7 @@
       const matrixSortState = {column: 'action', direction: 'asc'};
       const MATRIX_INFO_COLUMNS = [
         {key: 'action', label: 'Action'},
-        {key: 'volet', label: 'Volet'},
+        {key: 'volet', label: 'Campagne'},
         {key: 'thematique', label: 'Thématique'}
       ];
 
@@ -2888,7 +2868,7 @@
 
       function buildMatrixCsv(matrix) {
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
-        const headers = ['Action', 'Volet', 'Thématique', ...matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
+        const headers = ['Action', 'Campagne', 'Thématique', ...matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
         const rows = sortMatrixRows(matrix.rows).map((row) => [row.action, row.volet, row.thematique, ...row.cells].map(escapeCsv).join(','));
         return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
       }
@@ -3219,7 +3199,7 @@
         svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
         if (!steps.length) {
           const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
-          empty.textContent = 'Aucune action socle avec réduction carbone dans ce périmètre.';
+          empty.textContent = 'Aucune action socles avec réduction carbone dans ce périmètre.';
           svg.appendChild(empty);
           elements.trajectoireNote.textContent = '';
           return;
@@ -3302,7 +3282,7 @@
           tooltip.replaceChildren();
           const title = document.createElement('div');
           title.className = 'tooltip-label';
-          title.textContent = `Fin ${step.year} — socle ${step.year} : ${formatReduction(step.total.aDate)} à date, ${formatReduction(step.total.cible)} cible`;
+          title.textContent = `Fin ${step.year} — socles ${step.year} : ${formatReduction(step.total.aDate)} à date, ${formatReduction(step.total.cible)} cible`;
           const target = document.createElement('div');
           target.className = 'tooltip-value';
           target.textContent = `Cumul cible ${formatReduction(step.cumulativeTarget)} · à date ${formatReduction(step.cumulativeToDate)}`;
@@ -3329,14 +3309,14 @@
         svg.onblur = hideTooltip;
 
         const last = steps[steps.length - 1];
-        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socle ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; pôles pilotes inclus ; même option « terminés seulement » que les tuiles.`;
+        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socles ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; pôles pilotes inclus ; même option « terminés seulement » que les tuiles.`;
 
         // Contenu de chaque année socle : actions avec à date / cible.
         steps.forEach((step) => {
           const block = document.createElement('div');
           block.className = 'trajectoire-year';
           const heading = document.createElement('h3');
-          heading.textContent = `Socle ${step.year} `;
+          heading.textContent = `Socles ${step.year} `;
           const meta = document.createElement('small');
           meta.textContent = `· ${describeReduction(step.total)}`;
           heading.append(meta);
@@ -3502,9 +3482,6 @@
 
       function populateEvolutionFilters() {
         const rows = historyRows();
-        const campaigns = distinctSorted(rows.filter((row) => row[1] && row[4] === 'tauxTerminees').map((row) => row[1]));
-        populateValueSelect(elements.evolutionCampagne, campaigns, 'Choisir une campagne…');
-        if (!elements.evolutionCampagne.value && campaigns.length) elements.evolutionCampagne.value = campaigns[0];
         const filieres = distinctSorted(rows.filter((row) => row[4] === 'tauxTerminees' && row[3] !== HISTORY_TOTAL).map((row) => row[3]));
         const current = elements.evolutionFiliere.value;
         elements.evolutionFiliere.replaceChildren(new Option('Ensemble (TOTAL)', HISTORY_TOTAL));
@@ -3544,13 +3521,40 @@
         return [...byAction.values()].sort((left, right) => left.label.localeCompare(right.label, 'fr'));
       }
 
-      // Une série par campagne ("année socle") : moyenne simple, mois par
-      // mois, des actions de la campagne ayant une valeur ce mois-là.
-      function computeCampaignSeries(indicator, filiere) {
-        const byCampaign = new Map();
-        computeActionSeries(indicator, filiere, '').forEach((series) => {
-          if (!byCampaign.has(series.campaign)) byCampaign.set(series.campaign, new Map());
-          const perMonth = byCampaign.get(series.campaign);
+      // Libellé court d'une campagne ("Actions socles 2024" -> "Socles 2024").
+      function campaignShortLabel(campaign) {
+        return String(campaign).replace(/^actions?\s+socles?\s*/i, 'Socles ');
+      }
+
+      // Thématique (poste d'émissions) d'une action de l'historique, reprise
+      // des faits du dashboard (donc du référentiel des actions) : les
+      // archives du Tableau de bord VA n'ont pas cette information.
+      function evolutionThematiqueByAction() {
+        if (state.evolutionThematiques) return state.evolutionThematiques;
+        const counts = new Map();
+        state.bootstrap.facts.forEach((fact) => {
+          if (!fact.thematique) return;
+          const key = evolutionActionKey(fact.action);
+          if (!counts.has(key)) counts.set(key, new Map());
+          const perPoste = counts.get(key);
+          perPoste.set(fact.thematique, (perPoste.get(fact.thematique) || 0) + 1);
+        });
+        state.evolutionThematiques = new Map([...counts.entries()].map(([key, perPoste]) =>
+          [key, [...perPoste.entries()].sort((left, right) => right[1] - left[1])[0][0]]));
+        return state.evolutionThematiques;
+      }
+
+      function groupKeyOf(series, groupBy) {
+        if (groupBy === 'thematique') {
+          return evolutionThematiqueByAction().get(evolutionActionKey(series.label)) || UNKNOWN_LABEL;
+        }
+        return campaignShortLabel(series.campaign);
+      }
+
+      // Moyenne simple, mois par mois, de séries d'actions.
+      function averageSeries(label, seriesList) {
+        const perMonth = new Map();
+        seriesList.forEach((series) => {
           series.points.forEach((value, month) => {
             const bucket = perMonth.get(month) || {sum: 0, count: 0};
             bucket.sum += value;
@@ -3558,38 +3562,33 @@
             perMonth.set(month, bucket);
           });
         });
-        return [...byCampaign.entries()]
-          .sort((left, right) => left[0].localeCompare(right[0], 'fr'))
-          .map(([campaign, perMonth]) => {
-            const points = new Map();
-            perMonth.forEach((bucket, month) => points.set(month, bucket.sum / bucket.count));
-            return {label: campaign.replace(/^actions? socles?\s*/i, 'Socle '), points};
-          });
+        const points = new Map();
+        perMonth.forEach((bucket, month) => points.set(month, bucket.sum / bucket.count));
+        return {label, points};
       }
 
-      // Taux de réponse par filière = nbRepondants ÷ nbStructures (lignes
-      // disponibles dans toutes les mises en page d'archive).
-      function computeResponseSeries() {
-        const byFiliere = new Map();
-        historyRows().forEach(([month, , , filiere, indicator, value]) => {
-          if (indicator !== 'nbStructures' && indicator !== 'nbRepondants') return;
-          if (!byFiliere.has(filiere)) byFiliere.set(filiere, new Map());
-          const perMonth = byFiliere.get(filiere);
-          if (!perMonth.has(month)) perMonth.set(month, {});
-          perMonth.get(month)[indicator] = value;
+      // Une série par campagne ou par thématique (moyenne des actions du
+      // groupe), triées par libellé ; thématiques dans l'ordre des postes.
+      function computeGroupSeries(indicator, filiere, groupBy) {
+        const groups = new Map();
+        computeActionSeries(indicator, filiere, '').forEach((series) => {
+          const key = groupKeyOf(series, groupBy);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(series);
         });
-        return [...byFiliere.entries()]
-          .map(([label, perMonth]) => {
-            const points = new Map();
-            perMonth.forEach((counts, month) => {
-              if (counts.nbStructures > 0 && typeof counts.nbRepondants === 'number') {
-                points.set(month, Math.min(100, (counts.nbRepondants / counts.nbStructures) * 100));
-              }
-            });
-            return {label, points};
-          })
-          .filter((series) => series.points.size > 0)
-          .sort((left, right) => (left.label === HISTORY_TOTAL ? -1 : right.label === HISTORY_TOTAL ? 1 : left.label.localeCompare(right.label, 'fr')));
+        const order = (left, right) => (groupBy === 'thematique'
+          ? posteRank(left) - posteRank(right) || left.localeCompare(right, 'fr')
+          : left.localeCompare(right, 'fr'));
+        return [...groups.keys()].sort(order).map((key) => Object.assign(averageSeries(key, groups.get(key)), {actions: groups.get(key)}));
+      }
+
+      // Une série par filière (moyenne de toutes ses actions socles), plus
+      // l'ensemble (TOTAL) en premier.
+      function computeFiliereSeries(indicator) {
+        const filieres = distinctSorted(historyRows().filter((row) => row[4] === indicator && row[2]).map((row) => row[3]));
+        return [HISTORY_TOTAL].concat(filieres.filter((filiere) => filiere !== HISTORY_TOTAL))
+          .map((filiere) => averageSeries(filiere === HISTORY_TOTAL ? 'Ensemble' : filiere, computeActionSeries(indicator, filiere, '')))
+          .filter((series) => series.points.size > 0);
       }
 
       // Graphique en courbes : axe X = mois réels (un mois manquant laisse un
@@ -3771,99 +3770,78 @@
         return {first, last, firstValue, lastValue, delta, lastDelta, pace: elapsed > 0 ? delta / elapsed : null};
       }
 
-      // Petits multiples : un graphique par action, même axe des mois et même
-      // échelle pour tous (comparaison des pentes), une seule couleur.
-      function renderEvolutionMultiples(seriesList, months) {
+      // Petits multiples : un graphique par action, groupés par campagne ou
+      // par thématique, même axe des mois et même échelle pour tous
+      // (comparaison des pentes), une seule couleur.
+      function renderEvolutionMultiples(groups, months) {
         const container = elements.evolutionMultiples;
         container.replaceChildren();
-        if (!seriesList.length) {
+        if (!groups.length) {
           const empty = document.createElement('p');
           empty.className = 'ranking-empty';
           empty.textContent = 'Aucune valeur pour ce choix.';
           container.append(empty);
           return;
         }
-        seriesList.forEach((series) => {
-          const summary = seriesSummary(series);
-          const cell = document.createElement('div');
-          cell.className = 'evolution-multiple';
-          const title = document.createElement('p');
-          title.className = 'evolution-multiple-title';
-          title.textContent = series.label;
-          const value = document.createElement('p');
-          value.className = 'evolution-multiple-value';
-          value.append(formatRate(Math.round(summary.lastValue * 10) / 10));
-          if (summary.delta !== null) {
-            const delta = document.createElement('span');
-            delta.className = Math.abs(summary.delta) < 0.05 ? '' : (summary.delta > 0 ? 'delta-up' : 'delta-down');
-            delta.textContent = ` ${formatPoints(summary.delta)} depuis ${formatMonth(summary.first)}`;
-            value.append(delta);
-          }
-          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          svg.setAttribute('class', 'line-chart');
-          svg.setAttribute('role', 'img');
-          svg.setAttribute('tabindex', '0');
-          svg.setAttribute('aria-label', `${series.label} : ${formatRate(Math.round(summary.lastValue * 10) / 10)} en ${formatMonth(summary.last)}`);
-          cell.append(title, value, svg);
-          container.append(cell);
-          renderLineChart(svg, null, [series], {compact: true, months, color: 'var(--cat-1)', tooltipSuffix: series.label});
-        });
-      }
-
-      function renderEvolutionTable(seriesList) {
-        const body = elements.evolutionTableBody;
-        body.replaceChildren();
-        seriesList.forEach((series) => {
-          const summary = seriesSummary(series);
-          const row = document.createElement('tr');
-          const cells = [
-            series.label,
-            `${formatRate(Math.round(summary.firstValue * 10) / 10)} (${formatMonth(summary.first)})`,
-            `${formatRate(Math.round(summary.lastValue * 10) / 10)} (${formatMonth(summary.last)})`,
-            formatPoints(summary.delta),
-            formatPoints(summary.lastDelta),
-            summary.pace === null ? '—' : `${formatPoints(summary.pace)} / mois`
-          ];
-          cells.forEach((text, index) => {
-            const cell = document.createElement('td');
-            cell.textContent = text;
-            const signed = index === 3 ? summary.delta : index === 4 ? summary.lastDelta : null;
-            if (signed !== null && Math.abs(signed) >= 0.05) cell.className = signed > 0 ? 'delta-up' : 'delta-down';
-            row.append(cell);
+        groups.forEach((group) => {
+          const section = document.createElement('div');
+          section.className = 'evolution-group';
+          const heading = document.createElement('h3');
+          heading.textContent = `${group.label} (${group.actions.length} action${group.actions.length > 1 ? 's' : ''})`;
+          const grid = document.createElement('div');
+          grid.className = 'evolution-multiples';
+          section.append(heading, grid);
+          container.append(section);
+          group.actions.forEach((series) => {
+            const summary = seriesSummary(series);
+            const cell = document.createElement('div');
+            cell.className = 'evolution-multiple';
+            const title = document.createElement('p');
+            title.className = 'evolution-multiple-title';
+            title.textContent = series.label;
+            const value = document.createElement('p');
+            value.className = 'evolution-multiple-value';
+            value.append(formatRate(Math.round(summary.lastValue * 10) / 10));
+            if (summary.delta !== null) {
+              const delta = document.createElement('span');
+              delta.className = Math.abs(summary.delta) < 0.05 ? '' : (summary.delta > 0 ? 'delta-up' : 'delta-down');
+              delta.textContent = ` ${formatPoints(summary.delta)} depuis ${formatMonth(summary.first)}`;
+              value.append(delta);
+            }
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'line-chart');
+            svg.setAttribute('role', 'img');
+            svg.setAttribute('tabindex', '0');
+            svg.setAttribute('aria-label', `${series.label} : ${formatRate(Math.round(summary.lastValue * 10) / 10)} en ${formatMonth(summary.last)}`);
+            cell.append(title, value, svg);
+            grid.append(cell);
+            renderLineChart(svg, null, [series], {compact: true, months, color: 'var(--cat-1)', tooltipSuffix: series.label});
           });
-          body.append(row);
         });
-        if (!seriesList.length) {
-          const row = document.createElement('tr');
-          const cell = document.createElement('td');
-          cell.colSpan = 6;
-          cell.textContent = 'Aucune valeur pour ce choix.';
-          row.append(cell);
-          body.append(row);
-        }
       }
 
       function renderEvolution() {
         if (!state.bootstrap) return;
-        const campaign = elements.evolutionCampagne.value;
         const filiere = elements.evolutionFiliere.value || HISTORY_TOTAL;
+        const groupBy = elements.evolutionGroupe.value;
         const indicator = 'tauxTerminees';
         const indicatorLabel = 'Taux de terminés parmi les concernés';
         const filiereLabel = filiere === HISTORY_TOTAL ? 'ensemble' : filiere;
+        const groupLabel = groupBy === 'thematique' ? 'thématique' : 'campagne';
 
-        const campaignSeries = computeCampaignSeries(indicator, filiere);
-        elements.evolutionCampagnesTitle.textContent = `Avancée de chaque année socle — ${filiereLabel}`;
-        renderLineChart(elements.evolutionCampagnesChart, elements.evolutionCampagnesLegend, campaignSeries, {directLabels: true, tooltipSuffix: filiereLabel});
+        const groups = computeGroupSeries(indicator, filiere, groupBy);
+        elements.evolutionCampagnesTitle.textContent = `Avancée par ${groupLabel} — ${filiereLabel}`;
+        renderLineChart(elements.evolutionCampagnesChart, elements.evolutionCampagnesLegend, groups, {directLabels: true, tooltipSuffix: filiereLabel});
 
-        const actionSeries = campaign ? computeActionSeries(indicator, filiere, campaign) : [];
+        const filiereSeries = computeFiliereSeries(indicator);
+        elements.evolutionFilieresTitle.textContent = 'Avancée par filière — toutes campagnes';
+        renderLineChart(elements.evolutionFilieresChart, elements.evolutionFilieresLegend, filiereSeries,
+          {emphasis: filiere === HISTORY_TOTAL ? '' : filiere, tooltipSuffix: 'toutes campagnes'});
+
         const months = distinctSorted(computeActionSeries(indicator, filiere, '').flatMap((series) => [...series.points.keys()]));
-        elements.evolutionMultiplesTitle.textContent = `Détail par action — ${campaign || '…'} · ${filiereLabel}`;
-        elements.evolutionTableTitle.textContent = `Évolution par action — ${campaign || '…'} · ${filiereLabel}`;
-        renderEvolutionMultiples(actionSeries, months);
-        renderEvolutionTable(actionSeries);
-
-        renderLineChart(elements.evolutionReponseChart, elements.evolutionReponseLegend, computeResponseSeries(), {emphasis: filiere === HISTORY_TOTAL ? '' : filiere});
-        state.evolutionExport = {indicatorLabel, filiereLabel, campaignSeries, campaign, actionSeries};
+        elements.evolutionMultiplesTitle.textContent = `Détail par action, par ${groupLabel} — ${filiereLabel}`;
+        renderEvolutionMultiples(groups, months);
+        state.evolutionExport = {indicatorLabel, filiereLabel, groupLabel, groups, filiereSeries};
       }
 
       // Export CSV de la vue : une ligne par série × mois (format long, prêt
@@ -3871,18 +3849,13 @@
       function buildEvolutionCsv(data) {
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
         const number = (value) => (value === null || value === undefined ? '' : String(Math.round(value * 10) / 10).replace('.', ','));
-        const lines = [['Bloc', 'Série', 'Filière', 'Indicateur', 'Mois', 'Valeur (%)'].map(escapeCsv).join(';')];
-        const pushSeries = (bloc, series) => [...series.points.keys()].sort().forEach((month) => {
-          lines.push([bloc, series.label, data.filiereLabel, data.indicatorLabel, month, number(series.points.get(month))].map(escapeCsv).join(';'));
+        const lines = [['Bloc', 'Groupe', 'Série', 'Filière', 'Indicateur', 'Mois', 'Valeur (%)'].map(escapeCsv).join(';')];
+        const pushSeries = (bloc, group, series, filiereLabel) => [...series.points.keys()].sort().forEach((month) => {
+          lines.push([bloc, group, series.label, filiereLabel, data.indicatorLabel, month, number(series.points.get(month))].map(escapeCsv).join(';'));
         });
-        data.campaignSeries.forEach((series) => pushSeries('Année socle (moyenne des actions)', series));
-        data.actionSeries.forEach((series) => pushSeries(`Action — ${data.campaign}`, series));
-        lines.push('');
-        lines.push(['Action', 'Début', 'Valeur début (%)', 'Dernier mois', 'Valeur dernier mois (%)', 'Évolution (pts)', 'Sur le dernier mois (pts)', 'Rythme (pts / mois)'].map(escapeCsv).join(';'));
-        data.actionSeries.forEach((series) => {
-          const summary = seriesSummary(series);
-          lines.push([series.label, summary.first, number(summary.firstValue), summary.last, number(summary.lastValue), number(summary.delta), number(summary.lastDelta), number(summary.pace)].map(escapeCsv).join(';'));
-        });
+        data.groups.forEach((group) => pushSeries(`Moyenne par ${data.groupLabel}`, group.label, group, data.filiereLabel));
+        data.filiereSeries.forEach((series) => pushSeries('Moyenne par filière', '', series, series.label));
+        data.groups.forEach((group) => group.actions.forEach((series) => pushSeries('Action', group.label, series, data.filiereLabel)));
         return lines.join('\r\n');
       }
 
@@ -3890,7 +3863,7 @@
         if (!state.evolutionExport) return;
         downloadBlob(new Blob([String.fromCharCode(0xfeff) + buildEvolutionCsv(state.evolutionExport)], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-evolution-${dateStamp()}.csv`);
       });
-      elements.evolutionCampagne.addEventListener('change', renderEvolution);
+      elements.evolutionGroupe.addEventListener('change', renderEvolution);
       elements.evolutionFiliere.addEventListener('change', renderEvolution);
 
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
@@ -3978,9 +3951,6 @@
           populateFiliereSelect(elements.controlFiliere, true);
           populateFiliereSelect(elements.posteFiliere, true);
           updateNiveauAvailability();
-          // Page chargée sur la vue "toutes filières" par défaut : même
-          // règle que dans l'écouteur de synthese-filiere ci-dessus.
-          elements.syntheseIndicateur.value = 'tauxReponse';
           renderSynthese();
           renderMatrix();
           renderControl();
