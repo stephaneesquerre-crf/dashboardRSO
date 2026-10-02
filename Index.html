@@ -36,6 +36,19 @@
         --series-2:       #0d9296; /* vert Croix-Rouge — moyenne d'avancement */
         --series-3:       #803ac0; /* violet Croix-Rouge — taux de réponse */
         --status-critical:#d03b3b; /* réservé : "Abandonnée" dans la matrice détail */
+        /* Jauge de la vue Par poste (paliers repris du support de Simon) :
+           palette de statut du skill dataviz, identique en clair et en
+           sombre ; jamais seule, toujours accompagnée du % en texte. */
+        --status-good:    #0ca30c;
+        --status-serious: #ec835a;
+        /* Trajectoire : même teinte, deux paliers (cible clair, à date foncé). */
+        --traj-cible:     #86b6ef;
+        --traj-adate:     #1c5cab;
+        /* Courbes de la vue Évolution : palette catégorielle de référence du
+           skill dataviz (8 teintes, ordre validé CVD pour des lignes),
+           ordre fixe, jamais recyclé. */
+        --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a; --cat-4: #eda100;
+        --cat-5: #e87ba4; --cat-6: #008300; --cat-7: #4a3aa7; --cat-8: #e34948;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .viz-root {
@@ -50,6 +63,10 @@
           --series-2:       #009da7;
           --series-3:       #7830b6;
           --status-critical:#e66767;
+          --traj-cible:     #184f95;
+          --traj-adate:     #5598e7;
+          --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
+          --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
         }
       }
       :root[data-theme="dark"] .viz-root {
@@ -64,6 +81,10 @@
         --series-2:       #009da7;
         --series-3:       #7830b6;
         --status-critical:#e66767;
+        --traj-cible:     #184f95;
+        --traj-adate:     #5598e7;
+        --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
+        --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
       }
 
       * { box-sizing: border-box; }
@@ -285,31 +306,29 @@
       }
 
       /* ---------------------------------------------------------------
-         Vue synthèse : graphique principal + colonne latérale (comparaison,
-         fiche d'identité, top/bottom 3), et plein écran natif sur les
-         graphiques.
+         Vue synthèse : graphique principal, graphique de comparaison et
+         fiche d'identité sur une même ligne (demande du 29/09/2026 ; le
+         Top/Bottom 3 a été retiré), et plein écran natif sur les
+         graphiques. .chart-sidebar est "transparent" (display: contents)
+         pour que ses deux panneaux soient des colonnes de la grille ; en
+         dessous de 1200px, le graphique principal passe seul sur sa ligne.
          --------------------------------------------------------------- */
       .synthese-chart-grid {
         display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(220px, 0.8fr);
         gap: 20px;
         align-items: start;
       }
 
-      @media (max-width: 900px) {
+      .chart-sidebar { display: contents; }
+
+      @media (max-width: 1200px) {
+        .synthese-chart-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .synthese-chart-grid > #chart-panel-main { grid-column: 1 / -1; }
+      }
+
+      @media (max-width: 700px) {
         .synthese-chart-grid { grid-template-columns: 1fr; }
-      }
-
-      .chart-sidebar {
-        display: grid;
-        gap: 20px;
-        position: sticky;
-        top: 12px;
-        align-self: start;
-      }
-
-      @media (max-width: 900px) {
-        .chart-sidebar { position: static; }
       }
 
       .panel.compact { padding: 16px; }
@@ -365,60 +384,177 @@
         color: var(--text-muted);
       }
 
-      .ranking-block + .ranking-block { margin-top: 16px; }
-
-      .ranking-block h3 {
-        margin: 0 0 8px;
-        font-size: 0.78rem;
+      /* ---------------------------------------------------------------
+         Vue par poste d'émissions (cartes par action, cf. support
+         « Trajectoire décarbonation 2024/2026 » de Simon)
+         --------------------------------------------------------------- */
+      /* Trajectoire à gauche, tuiles des postes à droite (2 par ligne). */
+      .poste-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1200px) {
+        .poste-layout { grid-template-columns: 1fr; }
+      }
+      .trajectoire-years {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .trajectoire-year {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+      .trajectoire-year h3 {
+        margin: 0 0 6px;
+        font-size: 0.85rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+      }
+      .trajectoire-year h3 small {
+        font-weight: 400;
         color: var(--text-secondary);
       }
-
-      .ranking-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
+      .poste-grid {
         display: grid;
-        gap: 8px;
+        grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+        gap: 20px;
+        align-items: start;
       }
-
-      .ranking-item {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
-        gap: 4px 10px;
-        font-size: 0.82rem;
+      @media (max-width: 520px) {
+        .poste-grid { grid-template-columns: 1fr; }
       }
-
-      .ranking-item-label {
-        grid-column: 1 / -1;
-        white-space: normal;
+      .poste-group {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--series-1);
+        border-radius: 12px;
+        background: var(--surface-2);
+        min-width: 0;
+        overflow-x: auto;
       }
-
-      .ranking-item-value {
+      .poste-group h3 {
+        margin: 0 0 4px;
+        font-size: 0.95rem;
         font-weight: 600;
       }
-
-      .ranking-bar-track {
-        grid-column: 1 / -1;
-        height: 6px;
-        border-radius: 3px;
-        background: var(--surface-2);
-        overflow: hidden;
+      .poste-group-meta {
+        margin: 0 0 10px;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
       }
-
-      .ranking-bar-fill {
-        height: 100%;
-        border-radius: 3px;
-        background: var(--series-1);
-      }
-
-      .ranking-empty {
-        color: var(--text-muted);
+      table.poste-table {
+        width: 100%;
+        border-collapse: collapse;
         font-size: 0.8rem;
       }
+      table.poste-table th {
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        padding: 0 6px 4px;
+        border-bottom: 1px solid var(--line);
+      }
+      table.poste-table td {
+        padding: 5px 6px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: middle;
+      }
+      table.poste-table tr:last-child td { border-bottom: none; }
+      table.poste-table .num { text-align: right; white-space: nowrap; }
+      .poste-rate {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .co2-summary {
+        margin: 0 0 18px;
+        font-size: 0.86rem;
+        color: var(--text-secondary);
+      }
+      .co2-summary strong { color: var(--text-primary); }
+      .tool-links {
+        margin: -8px 0 16px;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+      }
+      .tool-links a { color: var(--series-1); font-weight: 600; }
+      /* ---------------------------------------------------------------
+         Vue Évolution
+         --------------------------------------------------------------- */
+      .evolution-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 1100px) {
+        .evolution-grid { grid-template-columns: 1fr; }
+      }
+      svg.line-chart { display: block; width: 100%; max-width: 900px; height: auto; }
+      svg.line-chart:focus { outline: 2px solid var(--series-1); outline-offset: 2px; }
+      .line-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        margin: 0 0 10px;
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+      }
+      .line-key {
+        display: inline-block;
+        width: 16px;
+        height: 2px;
+        margin-right: 6px;
+        vertical-align: middle;
+        border-radius: 1px;
+      }
+      .evolution-group + .evolution-group { margin-top: 18px; }
+      .evolution-group h3 {
+        margin: 0 0 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      .evolution-multiples {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .evolution-multiple-title {
+        margin: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        min-height: 2.4em;
+      }
+      .evolution-multiple-value {
+        margin: 2px 0 4px;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+      .evolution-multiple-value span { font-size: 0.75rem; }
+      #tooltip .tooltip-row { display: flex; align-items: center; gap: 6px; }
+      #tooltip .tooltip-row .line-key { margin-right: 0; }
+      .delta-up { color: var(--status-good); font-weight: 600; }
+      .delta-down { color: var(--status-critical); font-weight: 600; }
+      .gauge { display: inline-flex; gap: 2px; }
+      .gauge span {
+        width: 12px;
+        height: 10px;
+        border-radius: 2px;
+        background: var(--line);
+      }
+      .gauge[data-level="1"] span.on { background: var(--status-critical); }
+      .gauge[data-level="2"] span.on { background: var(--status-serious); }
+      .gauge[data-level="3"] span.on,
+      .gauge[data-level="4"] span.on { background: var(--status-good); }
 
       /* ---------------------------------------------------------------
          Vue contrôle
@@ -550,6 +686,15 @@
       }
 
       .status { color: var(--text-secondary); font-size: 0.84rem; }
+      .diagnostics {
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        border: 1px solid var(--status-serious);
+        border-radius: 8px;
+        font-size: 0.82rem;
+        color: var(--text-primary);
+      }
+      .diagnostics ul { margin: 6px 0 0; padding-left: 18px; }
       .error { color: #b3261e; }
 
       .matrix-scroll {
@@ -668,16 +813,18 @@
       </div>
     </div>
     <p class="subtitle" id="status">Chargement des données…</p>
+    <div class="diagnostics" id="diagnostics" role="status" hidden></div>
 
     <div class="tabs" role="tablist" aria-label="Vues du dashboard">
-      <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="true" aria-controls="panel-synthese">Vue synthèse</button>
-      <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail pôle × action</button>
-      <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle</button>
-      <button type="button" class="tab-button" id="tab-doc" role="tab" aria-selected="false" aria-controls="panel-doc">Méthodologie</button>
+      <button type="button" class="tab-button" id="tab-evolution" role="tab" aria-selected="true" aria-controls="panel-evolution">Évolution des actions socles</button>
+      <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="false" aria-controls="panel-synthese">Synthèse</button>
+      <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Détail par poste d'émissions</button>
+      <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail par pôle</button>
+      <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle et méthodologie</button>
     </div>
 
-    <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese">
-      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, volets ou actions. La colonne de droite replace le graphique dans son contexte plus large (comparaison, fiche d'identité, top/bottom 3 des actions).</p>
+    <section class="tab-panel" id="panel-synthese" role="tabpanel" aria-labelledby="tab-synthese" hidden>
+      <p class="view-intro">Compare un indicateur (terminées/concernées, moyenne d'avancement, taux de réponse) entre filières, territoires, thématiques, campagnes ou actions. À côté du graphique, un graphique de comparaison et la fiche d'identité replacent le périmètre dans son contexte plus large.</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -695,8 +842,9 @@
             <label for="synthese-niveau">Regrouper par</label>
             <select id="synthese-niveau">
               <option value="filiere">Filière</option>
+              <option value="territoire">Territoire</option>
               <option value="thematique">Thématique</option>
-              <option value="volet">Volet (année de lancement)</option>
+              <option value="volet">Campagne</option>
               <option value="action">Action</option>
             </select>
           </div>
@@ -709,12 +857,17 @@
             </select>
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="synthese-tracked-only">
-            <label for="synthese-tracked-only">Actions actuellement suivies uniquement</label>
+            <input type="checkbox" id="synthese-tracked-only" checked>
+            <label for="synthese-tracked-only">Actions socles</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="synthese-filiere-specific">
+            <label for="synthese-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
-        <p class="filter-hint">« Filière » compare les filières entre elles et n'est proposé que pour « Toutes les filières ». Une fois une filière choisie, sélectionnez « Tous les territoires (détail) » dans le filtre Territoire pour comparer ses territoires.</p>
-        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="tool-links" id="synthese-tool-links" hidden></p>
+        <p class="filter-hint">« Regrouper par » s'adapte au périmètre : « Filière » compare les filières entre elles (toutes filières) ; « Territoire » compare les territoires de la filière choisie (toute la filière).</p>
+        <p class="filter-hint">« Actions socles » garde les lignes « Action socle(s) » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <div class="synthese-chart-grid">
@@ -753,19 +906,6 @@
             <dl class="identity-stats" id="identity-stats"></dl>
           </section>
 
-          <section class="panel compact">
-            <div class="panel-header">
-              <h2 id="ranking-title">Top 3 / Bottom 3 des actions</h2>
-            </div>
-            <div class="ranking-block">
-              <h3>Top 3 — Terminées / concernées</h3>
-              <ol class="ranking-list" id="ranking-top"></ol>
-            </div>
-            <div class="ranking-block">
-              <h3>Bottom 3 — Terminées / concernées</h3>
-              <ol class="ranking-list" id="ranking-bottom"></ol>
-            </div>
-          </section>
         </div>
       </div>
 
@@ -802,8 +942,8 @@
             <select id="detail-territoire" disabled><option value="">Choisir d'abord une filière…</option></select>
           </div>
           <div class="filter-field">
-            <label for="detail-volet">Volet</label>
-            <select id="detail-volet" disabled><option value="">Tous les volets</option></select>
+            <label for="detail-volet">Campagne</label>
+            <select id="detail-volet" disabled><option value="">Toutes les campagnes</option></select>
           </div>
           <div class="filter-field">
             <label for="detail-thematique">Thématique</label>
@@ -814,10 +954,15 @@
             <input type="search" id="detail-pole-search" placeholder="Nom ou code du pôle…">
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="detail-tracked-only">
-            <label for="detail-tracked-only">Actions actuellement suivies uniquement</label>
+            <input type="checkbox" id="detail-tracked-only" checked>
+            <label for="detail-tracked-only">Actions socles</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="detail-filiere-specific">
+            <label for="detail-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
+        <p class="tool-links" id="detail-tool-links" hidden></p>
       </section>
 
       <section class="panel">
@@ -864,12 +1009,16 @@
             <label for="control-problems-only">Couverture incomplète uniquement</label>
           </div>
           <div class="filter-field control-toggle-field">
-            <input type="checkbox" id="control-tracked-only">
-            <label for="control-tracked-only">Actions actuellement suivies uniquement</label>
+            <input type="checkbox" id="control-tracked-only" checked>
+            <label for="control-tracked-only">Actions socles</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="control-filiere-specific">
+            <label for="control-filiere-specific">Actions spécifiques filière</label>
           </div>
         </div>
         <p class="filter-hint">Pour chaque couple filière × action, compare l'univers de pôles attendu (BDD NOMS) aux pôles ayant au moins une ligne pour cette action dans IMPORT DONNEES (quel que soit l'avancement renseigné). Un pôle sans aucune ligne pour l'action n'est pas la même chose qu'un pôle à 0 % : c'est une action non renseignée du tout, pas une action en retard.</p>
-        <p class="filter-hint">« Actions actuellement suivies » ne garde que les lignes marquées « Action socle » (toutes années) dans IMPORT DONNEES ; les catégories « Action filière »/« Action spécifique filière » restent à trancher avec Simon, donc exclues pour l'instant comme les autres.</p>
+        <p class="filter-hint">« Actions socles » garde les lignes « Action socle(s) » (toutes années) de la colonne « Action socles » d'IMPORT DONNEES ; « Actions spécifiques filière » garde les lignes « Action filière » et « Action spécifique filière ». Les deux peuvent être cochées ensemble ; aucune cochée = toutes les lignes, y compris les autres catégories et les lignes non classées.</p>
       </section>
 
       <section class="panel">
@@ -890,7 +1039,124 @@
       </section>
     </section>
 
-    <section class="tab-panel" id="panel-doc" role="tabpanel" aria-labelledby="tab-doc" hidden>
+    <section class="tab-panel" id="panel-poste" role="tabpanel" aria-labelledby="tab-poste" hidden>
+      <p class="view-intro">À gauche, la trajectoire de décarbonation cumulée par année socles (cible et à date) avec le détail des actions de chaque année ; à droite, une tuile par poste d'émissions (postes les plus lourds d'abord), une ligne par action triée par avancement : moyenne d'avancement des pôles concernés avec sa jauge en 4 paliers, pôles ayant terminé l'action et réduction carbone à date / cible — sur le modèle des fiches « Trajectoire décarbonation » par poste.</p>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="poste-filiere">Filière</label>
+            <select id="poste-filiere"></select>
+          </div>
+          <div class="filter-field">
+            <label for="poste-territoire">Territoire</label>
+            <select id="poste-territoire" disabled><option value="">Toute la filière</option></select>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="poste-tracked-only" checked>
+            <label for="poste-tracked-only">Actions socles</label>
+          </div>
+          <div class="filter-field control-toggle-field">
+            <input type="checkbox" id="poste-filiere-specific">
+            <label for="poste-filiere-specific">Actions spécifiques filière</label>
+          </div>
+          <div class="filter-field">
+            <label for="poste-reduction-mode">Indicateur</label>
+            <select id="poste-reduction-mode">
+              <option value="avancement">Selon l'avancement déclaré</option>
+              <option value="termines">Pôles ayant terminé seulement</option>
+            </select>
+          </div>
+        </div>
+        <p class="tool-links" id="poste-tool-links" hidden></p>
+        <p class="filter-hint">Moyenne d'avancement : moyenne des % d'avancement des couples pôle × action concernés (tout sauf « Abandonnée »), même calcul que dans la vue synthèse. Jauge : 1 case dès &gt; 0 %, 2 à partir de 25 %, 3 à partir de 50 %, 4 à partir de 75 %. </p>
+        <p class="filter-hint">⬇ Réduction carbone : en points de % du bilan carbone de chaque pôle (colonnes « Réduction carbone à date / cible »), moyenne simple entre pôles. « Pôles ayant terminé seulement » compte la réduction cible d'une action pour un pôle à 100 % et 0 sinon — même logique que le calcul de trajectoire de Simon (taux de terminés parmi les concernés). Pôles pilotes du bilan carbone 2023 (réductions saisies en kgCO2) : toujours inclus (décision de Simon, 02/10/2026), avec la réduction du catalogue (BDD - Actions supplémentaires) × leur avancement — même calcul qu'un pôle non pilote, sans l'ajustement au profil d'émissions du pôle, faute de sa répartition par poste.</p>
+      </section>
+
+      <div class="poste-layout">
+        <section class="panel chart-panel" id="chart-panel-trajectoire">
+          <div class="panel-header">
+            <h2 id="trajectoire-title">Trajectoire de décarbonation</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-trajectoire">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="trajectoire-legend"></div>
+          <svg class="line-chart trajectoire-chart" id="trajectoire-chart" role="img" tabindex="0" aria-label="Trajectoire de décarbonation cumulée par année socles"></svg>
+          <p class="chart-note" id="trajectoire-note"></p>
+          <div class="trajectoire-years" id="trajectoire-years"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="poste-title">Avancement par poste d'émissions</h2>
+          </div>
+          <p class="co2-summary" id="poste-co2-summary"></p>
+          <div class="poste-grid" id="poste-grid"></div>
+          <p class="matrix-empty" id="poste-empty" hidden>Aucune action ne correspond à ces filtres.</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-evolution" role="tabpanel" aria-labelledby="tab-evolution">
+      <p class="view-intro">Évolution mois par mois des indicateurs du « Tableau de bord VA », à partir de ses archives mensuelles (onglet HISTORIQUE TDB VA du classeur des archives, actualisé automatiquement quand les archives changent). <span id="evolution-refreshed"></span></p>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+          <div class="actions">
+            <button type="button" id="export-evolution-csv">Exporter la vue (CSV)</button>
+          </div>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="evolution-filiere">Filière</label>
+            <select id="evolution-filiere"></select>
+          </div>
+          <div class="filter-field">
+            <label for="evolution-groupe">Regrouper par</label>
+            <select id="evolution-groupe">
+              <option value="campagne">Campagne</option>
+              <option value="thematique">Thématique</option>
+            </select>
+          </div>
+        </div>
+        <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière).</p>
+        <p class="filter-hint">Valeur inconnue = point absent, jamais 0. Sont considérés comme inconnus : une campagne avant son année (ex. socles 2026 en 11/2025) ; une filière sans aucun répondant ce mois-là ; un 0 terminé alors que toutes les structures de la filière sont comptées « concernées » sans que toutes aient répondu (valeurs par défaut, ex. Petite enfance en 09/2026 après le changement d'outil) ; les indicateurs DIP (flotte, véhicules électriques).</p>
+        <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
+      </section>
+
+      <div class="evolution-grid">
+        <section class="panel chart-panel" id="chart-panel-evolution-campagnes">
+          <div class="panel-header">
+            <h2 id="evolution-campagnes-title">Avancée par campagne</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-campagnes">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="evolution-campagnes-legend"></div>
+          <svg class="line-chart" id="evolution-campagnes-chart" role="img" tabindex="0" aria-label="Évolution moyenne par regroupement"></svg>
+          <p class="chart-note">Moyenne simple des actions du groupe ayant une valeur ce mois-là. Survol ou flèches ← → : valeurs du mois.</p>
+        </section>
+
+        <section class="panel chart-panel" id="chart-panel-evolution-filieres">
+          <div class="panel-header">
+            <h2 id="evolution-filieres-title">Avancée par filière</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-evolution-filieres">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="evolution-filieres-legend"></div>
+          <svg class="line-chart" id="evolution-filieres-chart" role="img" tabindex="0" aria-label="Évolution moyenne par filière"></svg>
+          <p class="chart-note">Moyenne simple de toutes les actions socles de la filière ayant une valeur ce mois-là (valeurs par filière disponibles depuis 11/2025). Quand une filière est choisie, elle est mise en avant et les autres passent en gris.</p>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="evolution-multiples-title">Détail par action</h2>
+        </div>
+        <div id="evolution-multiples"></div>
+        <p class="chart-note">Un petit graphique par action, même échelle 0-100 % et mêmes mois pour tous : on compare les pentes d'un coup d'œil. Survol : valeurs du mois.</p>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="panel-doc" aria-labelledby="tab-controle" hidden>
       <section class="panel">
         <div class="doc-section">
           <h3>Sources</h3>
@@ -930,7 +1196,7 @@
         filiere: 'Filière',
         territoire: 'Territoire',
         thematique: 'Thématique',
-        volet: 'Volet',
+        volet: 'Campagne',
         action: 'Action'
       };
 
@@ -943,10 +1209,9 @@
       const UNKNOWN_LABEL = 'Non renseigné(e)';
       const EXCLUDED_AVANCEMENT = 'abandonnee';
       const DONE_AVANCEMENT = '100%';
-      // Valeur spéciale du filtre Territoire (jamais un vrai nom de
-      // territoire) : bascule le graphique en comparaison des territoires
-      // entre eux, plutôt que d'être un niveau de regroupement séparé.
-      const TERRITOIRE_DETAIL_VALUE = '__territoires_detail__';
+      // Nombre de groupes au-delà duquel les graphiques de la synthèse
+      // passent en barres horizontales (cf. renderChart).
+      const HORIZONTAL_BAR_THRESHOLD = 10;
 
       const state = {
         bootstrap: null,
@@ -955,24 +1220,36 @@
         matrix: null,
         controlRows: null,
         controlVisibleRows: null,
-        // Coche "actions actuellement suivies" (cf. isCurrentlyTrackedAction) :
-        // un seul état partagé par les 3 vues (Synthèse, Détail, Contrôle),
-        // décoché par défaut pour ne rien masquer tant qu'on ne l'a pas
-        // demandé explicitement.
-        trackedOnly: false
+        // Coches "Actions socle" / "Actions spécifiques filière" (cf.
+        // passesActionTypeFilter) : un seul état partagé par toutes les
+        // vues, sous forme de clé ('socle', 'filiere', 'socle|filiere' ou ''
+        // = aucun filtre). "Actions socle" cochée par défaut (demande de
+        // Simon, 29/09/2026).
+        actionTypes: 'socle',
+        // Calcul de la réduction "à date" de la vue Par poste (cf.
+        // aggregateReductionByPole) : 'avancement' ou 'termines'.
+        reductionMode: 'avancement',
+        // Pôles pilotes (valeurs en kg) : toujours recalculés avec le
+        // catalogue ('catalogue'), décision de Simon du 02/10/2026 ; la
+        // valeur 'exclus' reste gérée par aggregateReductionByPole.
+        pilotMode: 'catalogue'
       };
 
       const elements = {
         status: document.getElementById('status'),
+        diagnostics: document.getElementById('diagnostics'),
         exportAllCsv: document.getElementById('export-all-csv'),
         themeToggle: document.getElementById('theme-toggle'),
         tabSynthese: document.getElementById('tab-synthese'),
         tabDetail: document.getElementById('tab-detail'),
         tabControle: document.getElementById('tab-controle'),
-        tabDoc: document.getElementById('tab-doc'),
+        tabPoste: document.getElementById('tab-poste'),
+        tabEvolution: document.getElementById('tab-evolution'),
         panelSynthese: document.getElementById('panel-synthese'),
         panelDetail: document.getElementById('panel-detail'),
         panelControle: document.getElementById('panel-controle'),
+        panelPoste: document.getElementById('panel-poste'),
+        panelEvolution: document.getElementById('panel-evolution'),
         panelDoc: document.getElementById('panel-doc'),
 
         syntheseFiliere: document.getElementById('synthese-filiere'),
@@ -998,9 +1275,6 @@
         comparisonChartNote: document.getElementById('comparison-chart-note'),
         identityCardTitle: document.getElementById('identity-card-title'),
         identityStats: document.getElementById('identity-stats'),
-        rankingTitle: document.getElementById('ranking-title'),
-        rankingTop: document.getElementById('ranking-top'),
-        rankingBottom: document.getElementById('ranking-bottom'),
 
         detailFiliere: document.getElementById('detail-filiere'),
         detailTerritoire: document.getElementById('detail-territoire'),
@@ -1025,7 +1299,37 @@
         controlTableHead: document.getElementById('control-table-head'),
         controlTableBody: document.getElementById('control-table-body'),
         controlEmpty: document.getElementById('control-empty'),
-        exportControlCsv: document.getElementById('export-control-csv')
+        exportControlCsv: document.getElementById('export-control-csv'),
+
+        posteFiliere: document.getElementById('poste-filiere'),
+        posteTerritoire: document.getElementById('poste-territoire'),
+        posteTrackedOnly: document.getElementById('poste-tracked-only'),
+        posteTitle: document.getElementById('poste-title'),
+        posteGrid: document.getElementById('poste-grid'),
+        trajectoireTitle: document.getElementById('trajectoire-title'),
+        trajectoireLegend: document.getElementById('trajectoire-legend'),
+        trajectoireChart: document.getElementById('trajectoire-chart'),
+        trajectoireNote: document.getElementById('trajectoire-note'),
+        trajectoireYears: document.getElementById('trajectoire-years'),
+        evolutionGroupe: document.getElementById('evolution-groupe'),
+        evolutionFilieresTitle: document.getElementById('evolution-filieres-title'),
+        evolutionFilieresLegend: document.getElementById('evolution-filieres-legend'),
+        evolutionFilieresChart: document.getElementById('evolution-filieres-chart'),
+        evolutionFiliere: document.getElementById('evolution-filiere'),
+        evolutionEmpty: document.getElementById('evolution-empty'),
+        evolutionRefreshed: document.getElementById('evolution-refreshed'),
+        evolutionCampagnesTitle: document.getElementById('evolution-campagnes-title'),
+        evolutionCampagnesLegend: document.getElementById('evolution-campagnes-legend'),
+        evolutionCampagnesChart: document.getElementById('evolution-campagnes-chart'),
+        evolutionMultiplesTitle: document.getElementById('evolution-multiples-title'),
+        evolutionMultiples: document.getElementById('evolution-multiples'),
+        exportEvolutionCsv: document.getElementById('export-evolution-csv'),
+        posteReductionMode: document.getElementById('poste-reduction-mode'),
+        posteCo2Summary: document.getElementById('poste-co2-summary'),
+        syntheseToolLinks: document.getElementById('synthese-tool-links'),
+        detailToolLinks: document.getElementById('detail-tool-links'),
+        posteToolLinks: document.getElementById('poste-tool-links'),
+        posteEmpty: document.getElementById('poste-empty')
       };
 
       // ---------------------------------------------------------------
@@ -1036,6 +1340,10 @@
         elements.themeToggle.textContent = theme === 'dark' ? '☀️ Mode clair' : '🌙 Mode sombre';
         try { window.localStorage.setItem('pnrso.theme', theme); } catch (error) { /* stockage indisponible : pas bloquant */ }
         if (state.syntheseSnapshot) renderChart(state.syntheseSnapshot);
+        if (state.bootstrap) {
+          renderEvolution();
+          renderPoste();
+        }
       }
       elements.themeToggle.addEventListener('click', () => {
         const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -1081,6 +1389,24 @@
         ].join(' ');
       }
 
+      // Équivalent horizontal : barre ancrée à gauche (ligne de base),
+      // extrémité droite arrondie.
+      function buildRoundedRightBarPath(x, y, width, height, radius) {
+        const r = Math.max(0, Math.min(radius, height / 2, width));
+        if (width <= 0) return '';
+        const right = x + width;
+        const bottom = y + height;
+        return [
+          `M ${x} ${y}`,
+          `L ${right - r} ${y}`,
+          `Q ${right} ${y} ${right} ${y + r}`,
+          `L ${right} ${bottom - r}`,
+          `Q ${right} ${bottom} ${right - r} ${bottom}`,
+          `L ${x} ${bottom}`,
+          'Z'
+        ].join(' ');
+      }
+
       function svgEl(tag, attributes) {
         const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
         Object.keys(attributes || {}).forEach((name) => el.setAttribute(name, attributes[name]));
@@ -1098,16 +1424,21 @@
         elements.tabSynthese.setAttribute('aria-selected', String(name === 'synthese'));
         elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
         elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
-        elements.tabDoc.setAttribute('aria-selected', String(name === 'doc'));
+        elements.tabPoste.setAttribute('aria-selected', String(name === 'poste'));
+        elements.tabEvolution.setAttribute('aria-selected', String(name === 'evolution'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
         elements.panelControle.hidden = name !== 'controle';
-        elements.panelDoc.hidden = name !== 'doc';
+        elements.panelPoste.hidden = name !== 'poste';
+        elements.panelEvolution.hidden = name !== 'evolution';
+        // Contrôle et méthodologie partagent un même onglet (01/10/2026).
+        elements.panelDoc.hidden = name !== 'controle';
       }
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
       elements.tabControle.addEventListener('click', () => selectTab('controle'));
-      elements.tabDoc.addEventListener('click', () => selectTab('doc'));
+      elements.tabPoste.addEventListener('click', () => selectTab('poste'));
+      elements.tabEvolution.addEventListener('click', () => selectTab('evolution'));
 
       // ---------------------------------------------------------------
       // Plein écran natif (API Fullscreen) sur n'importe quel graphique :
@@ -1177,25 +1508,26 @@
       }
 
       // Colonne "Action socles" d'IMPORT DONNEES (cf. diagnostic du
-      // 2026-xx) : 9 valeurs réelles observées — "(vide)"/"#N/A" (lignes
+      // 24/09/2026) : 9 valeurs réelles observées — "(vide)"/"#N/A" (lignes
       // anciennes non classées), "Action socle 2024/2025/2026", "Action
       // structurante", "Action supplémentaire", "Action filière" et
-      // "Action spécifique filière". La coche "actions actuellement
-      // suivies" ne garde QUE les actions socle, toutes années confondues
-      // — décision explicite : les catégories filière restent à trancher
-      // avec Simon, donc exclues pour l'instant comme les autres non-socle.
-      function isCurrentlyTrackedAction(fact) {
-        return normalizeSearchText(fact.actionSocle).indexOf('action socle') === 0;
+      // "Action spécifique filière". Décision avec Simon (29/09/2026) :
+      // coche "Actions socle" = toutes les années socle ; coche "Actions
+      // spécifiques filière" = "Action filière" + "Action spécifique
+      // filière" ; cumulables. "Action structurante", "Action
+      // supplémentaire" et les lignes non classées ne ressortent que si
+      // aucune coche n'est active.
+      function actionTypeOf(fact) {
+        const value = normalizeSearchText(fact.actionSocle);
+        if (value.indexOf('action socle') === 0) return 'socle';
+        if (value === 'action filiere' || value.indexOf('action specifique filiere') === 0) return 'filiere';
+        return 'autre';
+      }
+      function passesActionTypeFilter(fact, actionTypes) {
+        if (!actionTypes) return true;
+        return actionTypes.split('|').indexOf(actionTypeOf(fact)) !== -1;
       }
 
-      // Année de campagne d'une ligne "Action socle <année>" (ex. 2026),
-      // null si la valeur ne correspond pas à ce format. Sert uniquement au
-      // Top 3 / Bottom 3 de la vue synthèse, restreint à l'année la plus
-      // récente trouvée dans les données plutôt qu'à une année figée en dur.
-      function extractActionSocleYear(value) {
-        const match = normalizeSearchText(value).match(/^action socle\D*(\d{4})/);
-        return match ? Number(match[1]) : null;
-      }
       function roundRate(numerator, denominator) {
         return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
       }
@@ -1214,7 +1546,7 @@
         const scopedFacts = bootstrap.facts.filter((fact) => {
           if (scopeFiliere && fact.filiere !== scopeFiliere) return false;
           if (scopeFiliere && scopeTerritoire && fact.territoire !== scopeTerritoire) return false;
-          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return false;
           return true;
         });
 
@@ -1307,7 +1639,7 @@
           (!territoire || fact.territoire === territoire) &&
           (!volet || fact.volet === volet) &&
           (!thematique || fact.thematique === thematique) &&
-          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
+          passesActionTypeFilter(fact, options.actionTypes)
         );
 
         const poleOrder = [];
@@ -1381,23 +1713,16 @@
       // constants pour une même action ; s'ils varient d'un pôle à l'autre
       // (incohérence de saisie), les valeurs distinctes sont toutes
       // affichées plutôt que d'en choisir une arbitrairement.
-      // filiere optionnel : vide = toutes filières confondues (utilisé pour
-      // le top/bottom 3 en vue globale, cf. renderRanking). Le tableau
-      // "Détail des données" de la vue synthèse continue lui de n'appeler
-      // cette fonction que lorsqu'une filière précise est choisie.
+      // Le tableau "Détail des données" de la vue synthèse n'appelle cette
+      // fonction que lorsqu'une filière précise est choisie.
       function computeActionDetail(bootstrap, options) {
         const filiere = options.filiere || '';
         const territoire = options.territoire || '';
 
-        // factFilter (ex. Top/Bottom 3 : année socle la plus récente
-        // uniquement) est un prédicat additionnel indépendant de trackedOnly
-        // (coche générique "actions actuellement suivies") : les deux
-        // servent des besoins différents et ne s'appellent jamais ensemble.
         const scopedFacts = bootstrap.facts.filter((fact) => {
           if (filiere && fact.filiere !== filiere) return false;
           if (territoire && fact.territoire !== territoire) return false;
-          if (options.trackedOnly && !isCurrentlyTrackedAction(fact)) return false;
-          if (options.factFilter && !options.factFilter(fact)) return false;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return false;
           return true;
         });
 
@@ -1453,13 +1778,10 @@
         if ([...select.options].some((option) => option.value === current)) select.value = current;
       }
 
-      function populateTerritoireSelect(select, filiereName, placeholder, includeAllTerritoiresOption) {
+      function populateTerritoireSelect(select, filiereName, placeholder) {
         const current = select.value;
         select.replaceChildren();
         select.append(new Option(placeholder, ''));
-        if (includeAllTerritoiresOption && filiereName) {
-          select.append(new Option('Tous les territoires (détail)', TERRITOIRE_DETAIL_VALUE));
-        }
         territoiresForFiliere(filiereName).forEach((name) => select.append(new Option(territoireDisplayLabel(filiereName, name), name)));
         select.disabled = !filiereName;
         if ([...select.options].some((option) => option.value === current)) select.value = current;
@@ -1475,15 +1797,8 @@
       }
 
       elements.syntheseFiliere.addEventListener('change', () => {
-        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière', true);
+        populateTerritoireSelect(elements.syntheseTerritoire, elements.syntheseFiliere.value, 'Toute la filière');
         updateNiveauAvailability();
-        // En vue "toutes filières" (comparaison des filières entre elles),
-        // le taux de réponse est l'indicateur le plus utile par défaut —
-        // demandé après un aller-retour où "Terminées / concernées" restait
-        // sélectionné par défaut même en revenant à cette vue.
-        if (!elements.syntheseFiliere.value) {
-          elements.syntheseIndicateur.value = 'tauxReponse';
-        }
         renderSynthese();
       });
       elements.syntheseTerritoire.addEventListener('change', () => {
@@ -1493,22 +1808,30 @@
       elements.syntheseNiveau.addEventListener('change', renderSynthese);
       elements.syntheseIndicateur.addEventListener('change', renderSynthese);
 
-      // Le regroupement « Filière » n'a de sens que pour comparer les
-      // filières entre elles (portée globale) : une fois une filière
-      // précise choisie, il ne produirait qu'une seule barre — source de
-      // confusion signalée par un utilisateur. La comparaison des
-      // territoires d'une filière se fait maintenant via le filtre
-      // Territoire (« Tous les territoires (détail) »), pas ici : le
-      // regroupement ne s'applique pas non plus tant que cette option est
-      // active.
+      // « Regrouper par » ne propose que les regroupements utiles au
+      // périmètre (demande du 02/10/2026) : « Filière » seulement pour
+      // toutes les filières (une filière choisie ne donnerait qu'une barre),
+      // « Territoire » seulement pour toute une filière (ex-option
+      // « Tous les territoires (détail) » du filtre Territoire). Quand le
+      // regroupement courant disparaît : territoire si possible, sinon
+      // thématique.
       function updateNiveauAvailability() {
-        const filiereOption = elements.syntheseNiveau.querySelector('option[value="filiere"]');
         const hasFiliere = Boolean(elements.syntheseFiliere.value);
-        filiereOption.disabled = hasFiliere;
-        if (hasFiliere && elements.syntheseNiveau.value === 'filiere') {
-          elements.syntheseNiveau.value = 'thematique';
+        const hasTerritoire = Boolean(elements.syntheseTerritoire.value);
+        const allowed = {
+          filiere: !hasFiliere,
+          territoire: hasFiliere && !hasTerritoire,
+          thematique: true,
+          volet: true,
+          action: true
+        };
+        [...elements.syntheseNiveau.options].forEach((option) => {
+          option.hidden = !allowed[option.value];
+          option.disabled = !allowed[option.value];
+        });
+        if (!allowed[elements.syntheseNiveau.value]) {
+          elements.syntheseNiveau.value = allowed.territoire ? 'territoire' : (allowed.filiere ? 'filiere' : 'thematique');
         }
-        elements.syntheseNiveau.disabled = elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE;
       }
 
       // Extrait de l'écouteur de detail-filiere pour être réutilisable
@@ -1518,7 +1841,7 @@
       function refreshDetailFiltersForFiliere(filiereName) {
         populateTerritoireSelect(elements.detailTerritoire, filiereName, 'Tous les territoires');
         const facts = state.bootstrap.facts.filter((fact) => fact.filiere === filiereName);
-        populateValueSelect(elements.detailVolet, distinctSorted(facts.map((fact) => fact.volet)), 'Tous les volets');
+        populateValueSelect(elements.detailVolet, distinctSorted(facts.map((fact) => fact.volet)), 'Toutes les campagnes');
         populateValueSelect(elements.detailThematique, distinctSorted(facts.map((fact) => fact.thematique)), 'Toutes les thématiques');
       }
 
@@ -1557,38 +1880,43 @@
       elements.detailThematique.addEventListener('change', renderMatrix);
       elements.detailPoleSearch.addEventListener('input', renderMatrix);
 
-      // Coche "actions actuellement suivies", partagée par les 3 vues (un
-      // seul état dans state.trackedOnly) : cocher/décocher dans une vue
-      // met à jour les deux autres et recalcule tout, plutôt que 3 réglages
-      // indépendants qu'on pourrait oublier de resynchroniser.
-      const trackedOnlyCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly];
-      function setTrackedOnly(checked) {
-        state.trackedOnly = checked;
-        trackedOnlyCheckboxes.forEach((checkbox) => { checkbox.checked = checked; });
+      // Coches "Actions socle" / "Actions spécifiques filière", partagées
+      // par toutes les vues (un seul état dans state.actionTypes) :
+      // cocher/décocher dans une vue met à jour les autres et recalcule
+      // tout, plutôt que des réglages indépendants qu'on pourrait oublier
+      // de resynchroniser.
+      const socleCheckboxes = [elements.syntheseTrackedOnly, elements.detailTrackedOnly, elements.controlTrackedOnly, elements.posteTrackedOnly];
+      const filiereSpecificCheckboxes = ['synthese', 'detail', 'control', 'poste']
+        .map((view) => document.getElementById(`${view}-filiere-specific`));
+      function setActionTypes(socle, filiere) {
+        state.actionTypes = [socle ? 'socle' : '', filiere ? 'filiere' : ''].filter(Boolean).join('|');
+        socleCheckboxes.forEach((checkbox) => { checkbox.checked = socle; });
+        filiereSpecificCheckboxes.forEach((checkbox) => { checkbox.checked = filiere; });
         if (!state.bootstrap) return;
         renderSynthese();
         renderMatrix();
         renderControl();
+        renderPoste();
       }
-      trackedOnlyCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', (event) => setTrackedOnly(event.target.checked));
+      socleCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => setActionTypes(event.target.checked, filiereSpecificCheckboxes[0].checked));
+      });
+      filiereSpecificCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (event) => setActionTypes(socleCheckboxes[0].checked, event.target.checked));
       });
 
       // ---------------------------------------------------------------
       // Vue synthèse
       // ---------------------------------------------------------------
       // Traduit les filtres visibles (filière / territoire / regroupement)
-      // en options pour computeSnapshot. La valeur spéciale du filtre
-      // Territoire devient un regroupement par territoire, comme le faisait
-      // auparavant l'option "Territoire (détail)" du menu "Regrouper par".
+      // en options pour computeSnapshot.
       function resolveSyntheseOptions() {
-        const filiere = elements.syntheseFiliere.value;
-        const territoireValue = elements.syntheseTerritoire.value;
-        const trackedOnly = state.trackedOnly;
-        if (territoireValue === TERRITOIRE_DETAIL_VALUE) {
-          return {filiere, territoire: '', niveau: 'territoire', trackedOnly};
-        }
-        return {filiere, territoire: territoireValue, niveau: elements.syntheseNiveau.value, trackedOnly};
+        return {
+          filiere: elements.syntheseFiliere.value,
+          territoire: elements.syntheseTerritoire.value,
+          niveau: elements.syntheseNiveau.value,
+          actionTypes: state.actionTypes
+        };
       }
 
       function updateChartTitle(options) {
@@ -1596,11 +1924,7 @@
         const niveauLabel = NIVEAU_LABELS[options.niveau] || 'Filière';
         const scopeBits = [];
         if (options.filiere) scopeBits.push(options.filiere);
-        if (options.territoire) {
-          scopeBits.push(options.territoire);
-        } else if (elements.syntheseTerritoire.value === TERRITOIRE_DETAIL_VALUE) {
-          scopeBits.push('tous territoires');
-        }
+        if (options.territoire) scopeBits.push(options.territoire);
         const scopeSuffix = scopeBits.length ? ` — ${scopeBits.join(' · ')}` : ' — toutes filières';
         elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}${scopeSuffix}`;
         elements.dataTableCaption.textContent = `${scopeBits.length ? scopeBits.join(' · ') : 'Toutes filières confondues'} — les taux sont exprimés en %.`;
@@ -1623,13 +1947,13 @@
       function resolveComparisonOptions(options) {
         if (!options.filiere) return null;
         if (!options.territoire) {
-          return {filiere: '', territoire: '', niveau: 'filiere', trackedOnly: options.trackedOnly};
+          return {filiere: '', territoire: '', niveau: 'filiere', actionTypes: options.actionTypes};
         }
         return {
           filiere: options.filiere,
           territoire: '',
           niveau: options.niveau === 'territoire' ? 'filiere' : options.niveau,
-          trackedOnly: options.trackedOnly
+          actionTypes: options.actionTypes
         };
       }
 
@@ -1668,7 +1992,7 @@
         const scopedFacts = bootstrap.facts.filter((fact) =>
           (!filiere || fact.filiere === filiere) &&
           (!territoire || fact.territoire === territoire) &&
-          (!options.trackedOnly || isCurrentlyTrackedAction(fact))
+          passesActionTypeFilter(fact, options.actionTypes)
         );
 
         const actions = new Set();
@@ -1728,74 +2052,6 @@
         );
       }
 
-      // Top/bottom 3 des actions du périmètre affiché, sur l'indicateur
-      // "Terminées / concernées" (celui vérifié directement dans le
-      // classeur national, cf. Méthodologie) — ignore les actions sans
-      // aucun pôle concerné, dont le taux ne voudrait rien dire.
-      function renderRankingList(listEl, rows, emptyMessage) {
-        listEl.replaceChildren();
-        if (!rows.length) {
-          const li = document.createElement('li');
-          li.className = 'ranking-empty';
-          li.textContent = emptyMessage;
-          listEl.appendChild(li);
-          return;
-        }
-        rows.forEach((row) => {
-          const li = document.createElement('li');
-          li.className = 'ranking-item';
-          const label = document.createElement('span');
-          label.className = 'ranking-item-label';
-          label.textContent = row.action;
-          const value = document.createElement('span');
-          value.className = 'ranking-item-value';
-          value.textContent = formatRate(row.tauxTerminees);
-          const track = document.createElement('div');
-          track.className = 'ranking-bar-track';
-          const fill = document.createElement('div');
-          fill.className = 'ranking-bar-fill';
-          fill.style.width = `${row.tauxTerminees}%`;
-          track.appendChild(fill);
-          li.append(label, value, track);
-          listEl.appendChild(li);
-        });
-      }
-
-      // Calculée une fois (les faits ne changent pas en cours de session) :
-      // année de campagne "Action socle" la plus récente trouvée dans les
-      // données, plutôt qu'une année figée en dur à retoucher chaque année.
-      // null si la colonne est absente ou ne contient aucune valeur
-      // reconnaissable — dans ce cas le Top/Bottom 3 n'est pas restreint,
-      // pour ne pas se vider silencieusement d'un classeur plus ancien.
-      function computeLatestActionSocleYear(bootstrap) {
-        let latest = null;
-        bootstrap.facts.forEach((fact) => {
-          const year = extractActionSocleYear(fact.actionSocle);
-          if (year !== null && (latest === null || year > latest)) latest = year;
-        });
-        return latest;
-      }
-
-      function renderRanking(options) {
-        if (state.latestActionSocleYear === undefined) {
-          state.latestActionSocleYear = computeLatestActionSocleYear(state.bootstrap);
-        }
-        const latestYear = state.latestActionSocleYear;
-        const detail = computeActionDetail(state.bootstrap, {
-          filiere: options.filiere,
-          territoire: options.territoire,
-          factFilter: latestYear === null ? null : (fact) => extractActionSocleYear(fact.actionSocle) === latestYear
-        });
-        const scopeBits = [options.filiere, options.territoire].filter(Boolean);
-        const yearSuffix = latestYear === null ? '' : ` — action socle ${latestYear}`;
-        elements.rankingTitle.textContent = `Top 3 / Bottom 3 — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}${yearSuffix}`;
-        const ranked = detail.rows.filter((row) => row.concernes > 0);
-        const byRateDesc = [...ranked].sort((left, right) => right.tauxTerminees - left.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
-        const byRateAsc = [...ranked].sort((left, right) => left.tauxTerminees - right.tauxTerminees || left.action.localeCompare(right.action, 'fr'));
-        renderRankingList(elements.rankingTop, byRateDesc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
-        renderRankingList(elements.rankingBottom, byRateAsc.slice(0, 3), 'Aucune action avec des pôles concernés dans ce périmètre.');
-      }
-
       // Dès qu'une filière précise est choisie, le tableau de détail
       // affiche toujours une ligne par action (granularité pôle par action,
       // cf. Méthodologie), indépendamment du regroupement choisi pour le
@@ -1806,14 +2062,14 @@
         const options = resolveSyntheseOptions();
         const snapshot = computeSnapshot(state.bootstrap, options);
         state.syntheseSnapshot = snapshot;
+        renderToolLinks(elements.syntheseToolLinks, options.filiere);
         updateChartTitle(options);
         renderChart(snapshot);
         renderComparisonChart(options);
         renderIdentityCard(options);
-        renderRanking(options);
 
         if (options.filiere) {
-          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, trackedOnly: options.trackedOnly});
+          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, actionTypes: options.actionTypes});
           state.actionDetail = detail;
           renderActionTable(detail);
         } else {
@@ -1845,8 +2101,65 @@
         const clickable = target ? Boolean(target.clickable) : true;
         const indicateur = INDICATEUR_META[indicateurKey];
         const groups = snapshot.groups;
-        const plottable = groups.filter((item) => item[indicateurKey] !== null);
+        // Barres toujours triées de la plus grande à la plus petite (demande
+        // du 30/09/2026), à égalité par libellé ; le tableau garde son ordre.
+        const plottable = groups
+          .filter((item) => item[indicateurKey] !== null)
+          .sort((left, right) => right[indicateurKey] - left[indicateurKey] || left.label.localeCompare(right.label, 'fr'));
         const skipped = groups.filter((item) => item[indicateurKey] === null);
+
+        note.textContent = skipped.length
+          ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
+          : '';
+
+        // Zone de survol/focus d'une barre : tooltip, et navigation vers la
+        // Vue Détail si le graphique est cliquable. Commune aux deux
+        // orientations.
+        const appendHitArea = (item, value, geometry) => {
+          const hit = svgEl('rect', Object.assign({
+            class: 'bar-hit',
+            tabindex: '0',
+            role: 'img',
+            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)} (${effectifsFor(indicateurKey, item)})`
+          }, geometry));
+          const show = (event) => showTooltip(event, item, indicateur, indicateurKey, value);
+          hit.addEventListener('pointerenter', show);
+          hit.addEventListener('pointermove', show);
+          hit.addEventListener('focus', show);
+          hit.addEventListener('pointerleave', hideTooltip);
+          hit.addEventListener('blur', hideTooltip);
+          if (clickable) {
+            hit.style.cursor = 'pointer';
+            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
+            hit.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                navigateFromSyntheseToDetail(item.label);
+              }
+            });
+          }
+          svg.appendChild(hit);
+        };
+
+        const appendCategoryLabel = (item, attributes, maxChars) => {
+          const categoryLabel = svgEl('text', Object.assign({class: 'category-text'}, attributes));
+          categoryLabel.textContent = truncateLabel(item.label, maxChars);
+          if (categoryLabel.textContent !== item.label) {
+            const titleEl = svgEl('title', {});
+            titleEl.textContent = item.label;
+            categoryLabel.appendChild(titleEl);
+          }
+          svg.appendChild(categoryLabel);
+        };
+
+        // Au-delà de HORIZONTAL_BAR_THRESHOLD groupes, les étiquettes
+        // pivotées sous des barres verticales deviennent illisibles (ex.
+        // regroupement par action) : on bascule en barres horizontales,
+        // une ligne par groupe, étiquettes lisibles à plat.
+        if (plottable.length > HORIZONTAL_BAR_THRESHOLD) {
+          renderHorizontalBars();
+          return;
+        }
 
         const barWidth = 24;
         const groupGap = 14;
@@ -1904,47 +2217,54 @@
           });
           svg.appendChild(path);
 
-          const hit = svgEl('rect', {
-            class: 'bar-hit',
-            x: barX, y: marginTop, width: barWidth, height: plotHeight,
-            tabindex: '0',
-            role: 'img',
-            'aria-label': `${item.label} — ${indicateur.label} : ${formatRate(value)} (${effectifsFor(indicateurKey, item)})`
-          });
-          const show = (event) => showTooltip(event, item, indicateur, indicateurKey, value);
-          hit.addEventListener('pointerenter', show);
-          hit.addEventListener('pointermove', show);
-          hit.addEventListener('focus', show);
-          hit.addEventListener('pointerleave', hideTooltip);
-          hit.addEventListener('blur', hideTooltip);
-          if (clickable) {
-            hit.style.cursor = 'pointer';
-            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
-            hit.addEventListener('keydown', (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                navigateFromSyntheseToDetail(item.label);
-              }
-            });
-          }
-          svg.appendChild(hit);
-
-          const categoryLabel = svgEl('text', {
-            class: 'category-text', x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
+          appendHitArea(item, value, {x: barX, y: marginTop, width: barWidth, height: plotHeight});
+          appendCategoryLabel(item, {
+            x: barX + barWidth / 2, y: baselineY + 16, 'text-anchor': 'end',
             transform: `rotate(-40 ${barX + barWidth / 2} ${baselineY + 16})`
-          });
-          categoryLabel.textContent = truncateLabel(item.label, 28);
-          if (categoryLabel.textContent !== item.label) {
-            const titleEl = svgEl('title', {});
-            titleEl.textContent = item.label;
-            categoryLabel.appendChild(titleEl);
-          }
-          svg.appendChild(categoryLabel);
+          }, 28);
         });
 
-        note.textContent = skipped.length
-          ? `${skipped.map((item) => item.label).join(', ')} : donnée non disponible pour cet indicateur dans ce périmètre (voir tableau).`
-          : '';
+        function renderHorizontalBars() {
+          const rowHeight = 24;
+          const barThickness = 14;
+          const maxChars = 40;
+          const marginTop = 22;
+          const marginRight = 16;
+          const marginBottom = 8;
+          const longest = Math.max(...plottable.map((item) => truncateLabel(item.label, maxChars).length), 4);
+          const marginLeft = Math.min(16 + longest * 6.2, 280);
+          const plotWidth = 360;
+          const width = marginLeft + plotWidth + marginRight;
+          const height = marginTop + plottable.length * rowHeight + marginBottom;
+          const baselineX = marginLeft;
+
+          svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          svg.setAttribute('width', width);
+          svg.setAttribute('height', height);
+          svg.textContent = '';
+
+          [0, 25, 50, 75, 100].forEach((tick) => {
+            const x = baselineX + (tick / 100) * plotWidth;
+            svg.appendChild(svgEl('line', {
+              class: 'axis-line', x1: x, x2: x, y1: marginTop - 4, y2: height - marginBottom
+            }));
+            const label = svgEl('text', {class: 'axis-text', x: x, y: marginTop - 8, 'text-anchor': 'middle'});
+            label.textContent = `${tick} %`;
+            svg.appendChild(label);
+          });
+
+          plottable.forEach((item, index) => {
+            const rowY = marginTop + index * rowHeight;
+            const value = item[indicateurKey];
+            const barY = rowY + (rowHeight - barThickness) / 2;
+            svg.appendChild(svgEl('path', {
+              d: buildRoundedRightBarPath(baselineX, barY, (value / 100) * plotWidth, barThickness, 4),
+              fill: resolveColor(indicateur.color)
+            }));
+            appendHitArea(item, value, {x: 0, y: rowY, width: width, height: rowHeight});
+            appendCategoryLabel(item, {x: marginLeft - 8, y: rowY + rowHeight / 2 + 4, 'text-anchor': 'end'}, maxChars);
+          });
+        }
       }
 
       function showTooltip(event, item, indicateur, indicateurKey, value) {
@@ -2026,7 +2346,7 @@
       const ACTION_TABLE_COLUMNS = [
         {key: 'action', label: 'Action', sortable: true},
         {key: 'thematique', label: 'Thématique', sortable: true},
-        {key: 'volet', label: 'Volet', sortable: true},
+        {key: 'volet', label: 'Campagne', sortable: true},
         {key: 'tauxTerminees', label: '% Terminés', sortable: false},
         {key: 'terminees', label: 'Pôles ayant terminé', sortable: false},
         {key: 'concernes', label: 'Pôles concernés', sortable: false}
@@ -2093,7 +2413,7 @@
       }
 
       function buildActionDetailCsv(detail) {
-        const headers = ['Action', 'Thématique', 'Volet', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés'];
+        const headers = ['Action', 'Thématique', 'Campagne', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés'];
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
         const rows = sortActionRows(detail.rows).map((row) =>
           [row.action, row.thematique, row.volet, row.tauxTerminees, row.terminees, row.concernes].map(escapeCsv).join(',')
@@ -2208,7 +2528,7 @@
       // BDD NOMS, repérés manuellement — ce tableau généralise ce contrôle
       // à toutes les actions plutôt que de le refaire au cas par cas.
       // ---------------------------------------------------------------
-      function computeControlRows(bootstrap, trackedOnly) {
+      function computeControlRows(bootstrap, actionTypes) {
         const universeByFiliere = new Map();
         bootstrap.poles.forEach((pole) => {
           if (!pole.filiere || !pole.poleCode) return;
@@ -2219,7 +2539,7 @@
         const byKey = new Map();
         bootstrap.facts.forEach((fact) => {
           if (!fact.filiere || !fact.action) return;
-          if (trackedOnly && !isCurrentlyTrackedAction(fact)) return;
+          if (!passesActionTypeFilter(fact, actionTypes)) return;
           const key = `${fact.filiere}\u0001${fact.action}`;
           if (!byKey.has(key)) byKey.set(key, {filiere: fact.filiere, action: fact.action, respondedCodes: new Set()});
           byKey.get(key).respondedCodes.add(normalizePoleCode(fact.poleCode));
@@ -2284,13 +2604,13 @@
 
       function renderControl() {
         if (!state.bootstrap) return;
-        // Recalculé seulement quand la coche "actions actuellement suivies"
-        // change réellement d'état (elle change quelles lignes comptent
+        // Recalculé seulement quand les coches de type d'action
+        // changent réellement d'état (elles changent quelles lignes comptent
         // comme "renseignées") — pas à chaque frappe dans la recherche ou
         // changement de tri/filière, qui ne filtrent que l'affichage.
-        if (!state.controlRows || state.controlRowsTrackedOnly !== state.trackedOnly) {
-          state.controlRows = computeControlRows(state.bootstrap, state.trackedOnly);
-          state.controlRowsTrackedOnly = state.trackedOnly;
+        if (!state.controlRows || state.controlRowsActionTypes !== state.actionTypes) {
+          state.controlRows = computeControlRows(state.bootstrap, state.actionTypes);
+          state.controlRowsActionTypes = state.actionTypes;
         }
         const rows = sortControlRows(filterControlRows(state.controlRows));
         state.controlVisibleRows = rows;
@@ -2410,7 +2730,7 @@
       const matrixSortState = {column: 'action', direction: 'asc'};
       const MATRIX_INFO_COLUMNS = [
         {key: 'action', label: 'Action'},
-        {key: 'volet', label: 'Volet'},
+        {key: 'volet', label: 'Campagne'},
         {key: 'thematique', label: 'Thématique'}
       ];
 
@@ -2422,6 +2742,7 @@
 
       function renderMatrix() {
         const filiere = elements.detailFiliere.value;
+        renderToolLinks(elements.detailToolLinks, filiere);
         if (!filiere) {
           state.matrix = null;
           elements.matrixTable.hidden = true;
@@ -2438,7 +2759,7 @@
           volet: elements.detailVolet.value,
           thematique: elements.detailThematique.value,
           poleSearch: elements.detailPoleSearch.value,
-          trackedOnly: state.trackedOnly
+          actionTypes: state.actionTypes
         });
         state.matrix = matrix;
 
@@ -2547,7 +2868,7 @@
 
       function buildMatrixCsv(matrix) {
         const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
-        const headers = ['Action', 'Volet', 'Thématique', ...matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
+        const headers = ['Action', 'Campagne', 'Thématique', ...matrix.poles.map((pole) => pole.label ? `${pole.label} (${pole.poleCode})` : pole.poleCode)];
         const rows = sortMatrixRows(matrix.rows).map((row) => [row.action, row.volet, row.thematique, ...row.cells].map(escapeCsv).join(','));
         return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
       }
@@ -2558,6 +2879,992 @@
         const scopeSuffix = [state.matrix.filiere, state.matrix.territoire].filter(Boolean).join('-').replace(/\s+/g, '_');
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-detail-${scopeSuffix}-${dateStamp()}.csv`);
       });
+
+      // ---------------------------------------------------------------
+      // Vue par poste d'émissions — reprend la mise en forme des fiches
+      // « Trajectoire décarbonation » de Simon (une carte par action,
+      // groupées par poste), avec les indicateurs déjà calculés ailleurs :
+      // moyenne d'avancement et terminées / concernées. Même filtre
+      // filière / territoire que la synthèse, sans le mode « Tous les
+      // territoires (détail) » (pas de comparaison ici).
+      // ---------------------------------------------------------------
+      // Ordre fixe des tuiles de poste, identique pour tout le monde :
+      // postes les plus lourds de l'empreinte d'abord (ordre du support de
+      // Simon : énergie, mobilité, achats, déchets), puis les autres. Un
+      // poste absent de cette liste est placé à la fin, par ordre
+      // alphabétique. Modifiable ici sans toucher au reste.
+      const POSTE_ORDER = ['energie', 'transport', 'mobilite', 'achats de biens', 'achats de services', 'immobilisations', 'dechets', 'hors energie', 'sols et forets'];
+      function posteRank(poste) {
+        const key = normalizeSearchText(poste);
+        const index = POSTE_ORDER.findIndex((prefix) => key.indexOf(prefix) === 0);
+        return index === -1 ? POSTE_ORDER.length : index;
+      }
+
+      function computePosteCards(bootstrap, options) {
+        const filiere = options.filiere || '';
+        const territoire = filiere ? (options.territoire || '') : '';
+        const byPoste = new Map();
+        bootstrap.facts.forEach((fact) => {
+          if (filiere && fact.filiere !== filiere) return;
+          if (territoire && fact.territoire !== territoire) return;
+          if (!passesActionTypeFilter(fact, options.actionTypes)) return;
+          const poste = fact.thematique || UNKNOWN_LABEL;
+          const action = fact.action || UNKNOWN_LABEL;
+          if (!byPoste.has(poste)) byPoste.set(poste, new Map());
+          const actions = byPoste.get(poste);
+          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0, facts: []});
+          const bucket = actions.get(action);
+          if (isConcerne(fact.avancement)) {
+            bucket.concernes += 1;
+            bucket.somme += parseAvancementFraction(fact.avancement);
+            if (isTermine(fact.avancement)) bucket.terminees += 1;
+            bucket.facts.push(fact);
+          }
+        });
+
+        const byName = (left, right) => left.localeCompare(right, 'fr');
+        // Actions triées par avancement décroissant (les données non
+        // disponibles en dernier), puis par nom.
+        const byRate = (left, right) => {
+          const leftRate = left.concernes ? left.somme / left.concernes : -1;
+          const rightRate = right.concernes ? right.somme / right.concernes : -1;
+          return rightRate - leftRate || byName(left.action, right.action);
+        };
+        return [...byPoste.keys()]
+          .sort((left, right) => posteRank(left) - posteRank(right) || byName(left, right))
+          .map((poste) => ({
+          poste,
+          cards: [...byPoste.get(poste).values()]
+            .sort(byRate)
+            .map((bucket) => ({
+              action: bucket.action,
+              concernes: bucket.concernes,
+              terminees: bucket.terminees,
+              // null = aucun pôle concerné (toutes lignes abandonnées) :
+              // affiché comme donnée non disponible, jamais comme 0 %.
+              tauxMoyenAvancement: bucket.concernes ? roundRate(bucket.somme, bucket.concernes) : null,
+              co2: aggregateReductionByPole(bucket.facts)
+            })),
+          co2: aggregateReductionByPole([...byPoste.get(poste).values()].flatMap((bucket) => bucket.facts))
+        }));
+      }
+
+      // ---------------------------------------------------------------
+      // Réduction carbone (cf. README, « Sujet ouvert : CO2 en kg/% ») :
+      // - pôles non pilotes : valeurs en points de % du bilan total du pôle
+      //   (ex. "-0,10%"), additionnables entre actions d'un même pôle ;
+      // - pôles pilotes du bilan carbone 2023 : certaines lignes en kgCO2
+      //   (ex. "-59 700 kgCO2"), convertibles seulement avec le bilan total
+      //   du pôle, pas encore disponible dans le classeur national. Un pôle
+      //   ayant au moins une valeur en kg est donc exclu entièrement
+      //   (sinon ses seules lignes en % donneraient un total tronqué).
+      // ---------------------------------------------------------------
+      function parseReduction(raw) {
+        const compact = String(raw || '').replace(/[\s\u00a0\u202f]/g, '').replace(/−/g, '-');
+        if (!compact) return null;
+        if (/kg/i.test(compact)) return {unit: 'kg'};
+        const match = compact.replace(',', '.').match(/^([+-]?\d+(?:\.\d+)?)%$/);
+        return match ? {unit: 'pct', value: Number(match[1])} : null;
+      }
+
+      function computePilotPoleCodes(bootstrap) {
+        const codes = new Set();
+        bootstrap.facts.forEach((fact) => {
+          [fact.reductionADate, fact.reductionCible].forEach((raw) => {
+            const parsed = parseReduction(raw);
+            if (parsed && parsed.unit === 'kg') codes.add(normalizePoleCode(fact.poleCode));
+          });
+        });
+        return codes;
+      }
+
+      // Somme par pôle des réductions de ses lignes (en points de %), puis
+      // moyenne simple entre pôles. Méthode d'agrégation de Simon non
+      // connue à ce jour (cf. README) : à confirmer avant usage officiel.
+      function aggregateReductionByPole(facts) {
+        const pilots = state.pilotPoleCodes || new Set();
+        const byPole = new Map();
+        const excludedPilots = new Set();
+        const recalculatedPilots = new Set();
+        facts.forEach((fact) => {
+          const code = normalizePoleCode(fact.poleCode);
+          let aDate = parseReduction(fact.reductionADate);
+          let cible = parseReduction(fact.reductionCible);
+          if (pilots.has(code)) {
+            if (state.pilotMode !== 'catalogue') {
+              excludedPilots.add(code);
+              return;
+            }
+            // Pôle pilote recalculé : réduction du catalogue (toujours
+            // comptée comme une baisse) × avancement du pôle, sans ajustement
+            // au profil d'émissions (non disponible pour ces pôles).
+            const catalogue = parseReduction(fact.catalogueReduction);
+            if (!catalogue || catalogue.unit !== 'pct') return;
+            recalculatedPilots.add(code);
+            const target = -Math.abs(catalogue.value);
+            cible = {unit: 'pct', value: target};
+            aDate = {unit: 'pct', value: target * parseAvancementFraction(fact.avancement)};
+          }
+          if (!aDate && !cible) return;
+          if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
+          const pole = byPole.get(code);
+          if (state.reductionMode === 'termines') {
+            // Variante "terminés seulement" : réduction cible si l'action
+            // est à 100 % pour ce pôle, 0 sinon. Repli sur la valeur à date
+            // quand la cible manque (à date = cible × 100 % dans ce cas).
+            if (isTermine(fact.avancement)) pole.aDate += (cible || aDate).value;
+          } else if (aDate) {
+            pole.aDate += aDate.value;
+          }
+          if (cible) pole.cible += cible.value;
+        });
+        const poles = [...byPole.values()];
+        const mean = (key) => poles.length ? poles.reduce((sum, pole) => sum + pole[key], 0) / poles.length : null;
+        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size, recalculatedPilotCount: recalculatedPilots.size};
+      }
+
+      function formatReduction(value) {
+        if (value === null) return '—';
+        return `${value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} %`;
+      }
+
+      function describeReduction(co2) {
+        if (!co2.poleCount) return '';
+        return `⬇ ${formatReduction(co2.aDate)} à date · cible ${formatReduction(co2.cible)}`;
+      }
+
+      // ---------------------------------------------------------------
+      // Liens vers l'outil de suivi de la filière choisie (onglet
+      // "Liens outils", colonne Code filière comparée au nom de filière du
+      // dashboard, sans tenir compte de la casse ni des accents). Plusieurs
+      // liens possibles pour une même filière (ex. CRC Nord / Sud).
+      // ---------------------------------------------------------------
+      function renderToolLinks(container, filiere) {
+        const links = filiere
+          ? (state.bootstrap.toolLinks || []).filter((link) => normalizeSearchText(link.filiereCode) === normalizeSearchText(filiere))
+          : [];
+        container.replaceChildren();
+        container.hidden = links.length === 0;
+        if (!links.length) return;
+        container.append(links.length > 1 ? 'Outils de suivi de la filière : ' : 'Outil de suivi de la filière : ');
+        links.forEach((link, index) => {
+          if (index > 0) container.append(' · ');
+          const anchor = document.createElement('a');
+          anchor.href = link.url;
+          anchor.target = '_blank';
+          anchor.rel = 'noopener noreferrer';
+          anchor.textContent = link.title || link.label;
+          container.append(anchor);
+        });
+      }
+
+      // Paliers de la légende du support de Simon (>0 / >25 / >50 / >75 %),
+      // vérifiés sur ses exemples : 43 % -> 2 cases, 50 % -> 3, 98 % -> 4.
+      function gaugeLevel(rate) {
+        if (rate === null || rate <= 0) return 0;
+        if (rate >= 75) return 4;
+        if (rate >= 50) return 3;
+        if (rate >= 25) return 2;
+        return 1;
+      }
+
+      function buildGauge(rate) {
+        const level = gaugeLevel(rate);
+        const gauge = document.createElement('span');
+        gauge.className = 'gauge';
+        gauge.dataset.level = String(level);
+        gauge.setAttribute('aria-hidden', 'true');
+        for (let index = 1; index <= 4; index += 1) {
+          const cell = document.createElement('span');
+          if (index <= level) cell.className = 'on';
+          gauge.append(cell);
+        }
+        return gauge;
+      }
+
+      // Une ligne par action dans la tuile du poste (plus dense que des
+      // cartes) : avancement + jauge, pôles à 100 %, réduction à date.
+      function buildPosteRow(card) {
+        const row = document.createElement('tr');
+        const name = document.createElement('td');
+        name.textContent = card.action;
+
+        const rate = document.createElement('td');
+        const rateBox = document.createElement('div');
+        rateBox.className = 'poste-rate';
+        rateBox.append(card.tauxMoyenAvancement === null ? '—' : formatRate(card.tauxMoyenAvancement), buildGauge(card.tauxMoyenAvancement));
+        rate.append(rateBox);
+
+        const done = document.createElement('td');
+        done.className = 'num';
+        done.textContent = `${formatCount(card.terminees)} / ${formatCount(card.concernes)}`;
+
+        const co2 = document.createElement('td');
+        co2.className = 'num';
+        // "à date / cible" dans une seule colonne, unité % en en-tête :
+        // la tuile garde 4 colonnes et reste lisible.
+        const plain = (value) => (value === null ? '—' : value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        co2.textContent = card.co2.poleCount ? `${plain(card.co2.aDate)} / ${plain(card.co2.cible)}` : '—';
+        if (card.co2.poleCount) {
+          co2.title = `À date ${formatReduction(card.co2.aDate)}, cible ${formatReduction(card.co2.cible)} — moyenne sur ${formatCount(card.co2.poleCount)} pôle(s)`;
+        }
+
+        row.append(name, rate, done, co2);
+        return row;
+      }
+
+      function buildPosteTable(cards) {
+        const table = document.createElement('table');
+        table.className = 'poste-table';
+        const head = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        [['Action', ''], ['📈 Avancement', 'num'], ['À 100 %', 'num'], ['⬇ À date / cible (%)', 'num']].forEach(([label, className]) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          th.textContent = label;
+          if (className) th.className = className;
+          headRow.append(th);
+        });
+        head.append(headRow);
+        const body = document.createElement('tbody');
+        body.append(...cards.map(buildPosteRow));
+        table.append(head, body);
+        return table;
+      }
+
+      // ---------------------------------------------------------------
+      // Trajectoire de décarbonation (vue Détail par poste) : une étape par
+      // année socle ("Action socle 2024", "… 2025"…). Pour chaque année,
+      // réduction cible et réduction à date = moyenne par pôle de la somme
+      // des actions de cette campagne (aggregateReductionByPole : mêmes
+      // options pôles pilotes / terminés seulement que les tuiles) ; la
+      // trajectoire cumule ces apports année après année, comme le calcul de
+      // Simon. Les repères -5 %/an et objectif 2029 sont des constantes de
+      // référence (support de Simon), modifiables ici.
+      // ---------------------------------------------------------------
+      // Origine : 2023 (année du bilan carbone de référence, valeur 0) ; la
+      // fin d'une année socle N est portée sur l'année N (2024 = après les
+      // actions socle 2024). Objectif : -37,8 % en 2030 (SBTi, support de
+      // Simon), affiché comme une ligne horizontale. Modifiable ici.
+      const TRAJECTOIRE_REFERENCE = {originYear: 2023, objective: {year: 2030, value: -37.8, label: 'Objectif 2030 (SBTi)'}};
+
+      function actionSocleYear(fact) {
+        const match = normalizeSearchText(fact.actionSocle).match(/^action socle\D*(\d{4})/);
+        return match ? Number(match[1]) : null;
+      }
+
+      function computeTrajectoire(options) {
+        const byYear = new Map();
+        state.bootstrap.facts.forEach((fact) => {
+          if (options.filiere && fact.filiere !== options.filiere) return;
+          if (options.filiere && options.territoire && fact.territoire !== options.territoire) return;
+          if (!isConcerne(fact.avancement)) return;
+          const year = actionSocleYear(fact);
+          if (year === null) return;
+          if (!byYear.has(year)) byYear.set(year, []);
+          byYear.get(year).push(fact);
+        });
+        let cumulativeTarget = 0;
+        let cumulativeToDate = 0;
+        return [...byYear.keys()].sort((a, b) => a - b).map((year) => {
+          const facts = byYear.get(year);
+          const total = aggregateReductionByPole(facts);
+          const byAction = new Map();
+          facts.forEach((fact) => {
+            if (!byAction.has(fact.action)) byAction.set(fact.action, []);
+            byAction.get(fact.action).push(fact);
+          });
+          const actions = [...byAction.entries()]
+            .map(([action, actionFacts]) => ({action, co2: aggregateReductionByPole(actionFacts)}))
+            .filter((item) => item.co2.poleCount)
+            .sort((left, right) => (left.co2.cible || 0) - (right.co2.cible || 0) || left.action.localeCompare(right.action, 'fr'));
+          cumulativeTarget += total.cible || 0;
+          cumulativeToDate += total.aDate || 0;
+          return {year, total, actions, cumulativeTarget, cumulativeToDate};
+        });
+      }
+
+      function renderTrajectoire(options) {
+        const steps = computeTrajectoire(options);
+        const svg = elements.trajectoireChart;
+        svg.textContent = '';
+        elements.trajectoireLegend.replaceChildren();
+        elements.trajectoireYears.replaceChildren();
+        const scopeBits = [options.filiere || 'Toutes les filières', options.filiere ? options.territoire : ''].filter(Boolean);
+        elements.trajectoireTitle.textContent = `Trajectoire de décarbonation · ${scopeBits.join(' · ')}`;
+
+        const width = 560;
+        const height = 340;
+        const margin = {top: 22, right: 24, bottom: 28, left: 46};
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        if (!steps.length) {
+          const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
+          empty.textContent = 'Aucune action socles avec réduction carbone dans ce périmètre.';
+          svg.appendChild(empty);
+          elements.trajectoireNote.textContent = '';
+          return;
+        }
+
+        const reference = TRAJECTOIRE_REFERENCE;
+        const firstYear = reference.originYear;
+        const lastYear = Math.max(reference.objective.year, steps[steps.length - 1].year);
+        // Abscisse : une graduation par année, points posés sur les
+        // graduations (origine 2023 à 0, puis 2024, 2025…).
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const xOfYear = (year) => margin.left + ((year - firstYear) / (lastYear - firstYear)) * plotWidth;
+        const lowest = Math.min(reference.objective.value, ...steps.map((s) => Math.min(s.cumulativeTarget, s.cumulativeToDate)));
+        const tickStep = lowest > -20 ? 5 : 10;
+        const minValue = Math.floor(lowest / tickStep) * tickStep;
+        const yOf = (value) => margin.top + (value / minValue) * plotHeight;
+
+        for (let tick = 0; tick >= minValue; tick -= tickStep) {
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: margin.left, x2: width - margin.right, y1: yOf(tick), y2: yOf(tick)}));
+          const label = svgEl('text', {class: 'axis-text', x: margin.left - 6, y: yOf(tick) + 3, 'text-anchor': 'end'});
+          label.textContent = `${tick} %`;
+          svg.appendChild(label);
+        }
+        for (let year = firstYear; year <= lastYear; year += 1) {
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: xOfYear(year), x2: xOfYear(year), y1: yOf(0), y2: yOf(0) + 4}));
+          const label = svgEl('text', {class: 'axis-text', x: xOfYear(year), y: height - 8, 'text-anchor': 'middle'});
+          label.textContent = String(year);
+          svg.appendChild(label);
+        }
+
+        // Objectif : ligne horizontale + point en 2030, étiquetés.
+        const objectiveColor = resolveColor('var(--status-critical)');
+        const objY = yOf(reference.objective.value);
+        const objX = xOfYear(reference.objective.year);
+        svg.appendChild(svgEl('line', {x1: margin.left, x2: objX, y1: objY, y2: objY, stroke: objectiveColor, 'stroke-width': 1.5, 'stroke-dasharray': '2 4', 'stroke-linecap': 'round'}));
+        svg.appendChild(svgEl('circle', {cx: objX, cy: objY, r: 6, fill: objectiveColor, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
+        const objLabel = svgEl('text', {class: 'category-text', x: objX - 10, y: objY - 10, 'text-anchor': 'end'});
+        objLabel.textContent = `${reference.objective.label} : ${reference.objective.value.toLocaleString('fr-FR')} %`;
+        svg.appendChild(objLabel);
+
+        const series = [
+          {key: 'cumulativeTarget', label: 'Trajectoire cible', color: resolveColor('var(--traj-cible)'), dash: null, labelBelow: true},
+          {key: 'cumulativeToDate', label: 'À date', color: resolveColor('var(--traj-adate)'), dash: '7 4', labelBelow: false}
+        ];
+        series.forEach((serie) => {
+          const points = [[xOfYear(firstYear), yOf(0)]].concat(steps.map((step) => [xOfYear(step.year), yOf(step[serie.key])]));
+          const path = svgEl('path', {d: points.map((p, i) => `${i ? 'L' : 'M'} ${p[0]} ${p[1]}`).join(' '), fill: 'none', stroke: serie.color, 'stroke-width': serie.dash ? 2.5 : 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'});
+          if (serie.dash) path.setAttribute('stroke-dasharray', serie.dash);
+          svg.appendChild(path);
+          steps.forEach((step) => {
+            const x = xOfYear(step.year);
+            const y = yOf(step[serie.key]);
+            svg.appendChild(svgEl('circle', {cx: x, cy: y, r: 5, fill: serie.color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': 2}));
+            // Cible : étiquette sous le point ; à date : au-dessus.
+            const valueLabel = svgEl('text', {class: 'category-text', x: x, y: serie.labelBelow ? y + 18 : y - 10, 'text-anchor': 'middle'});
+            valueLabel.textContent = formatReduction(step[serie.key]);
+            svg.appendChild(valueLabel);
+          });
+          const item = document.createElement('span');
+          const key = document.createElement('span');
+          key.className = 'line-key';
+          key.style.background = serie.color;
+          item.append(key, document.createTextNode(serie.label));
+          elements.trajectoireLegend.append(item);
+        });
+        svg.appendChild(svgEl('circle', {cx: xOfYear(firstYear), cy: yOf(0), r: 4, fill: resolveColor('var(--text-muted)')}));
+        const objItem = document.createElement('span');
+        const objKey = document.createElement('span');
+        objKey.className = 'line-key';
+        objKey.style.background = objectiveColor;
+        objItem.append(objKey, document.createTextNode(reference.objective.label));
+        elements.trajectoireLegend.append(objItem);
+
+        // Survol : bilan de l'année socle la plus proche.
+        const overlay = svgEl('rect', {x: margin.left, y: margin.top, width: plotWidth, height: plotHeight, fill: 'transparent'});
+        svg.appendChild(overlay);
+        const showStep = (step, clientX, clientY) => {
+          const tooltip = elements.tooltip;
+          tooltip.replaceChildren();
+          const title = document.createElement('div');
+          title.className = 'tooltip-label';
+          title.textContent = `Fin ${step.year} — socles ${step.year} : ${formatReduction(step.total.aDate)} à date, ${formatReduction(step.total.cible)} cible`;
+          const target = document.createElement('div');
+          target.className = 'tooltip-value';
+          target.textContent = `Cumul cible ${formatReduction(step.cumulativeTarget)} · à date ${formatReduction(step.cumulativeToDate)}`;
+          tooltip.append(target, title);
+          tooltip.style.left = `${clientX}px`;
+          tooltip.style.top = `${clientY}px`;
+          tooltip.classList.add('is-visible');
+        };
+        let active = steps.length - 1;
+        overlay.addEventListener('pointermove', (event) => {
+          const box = svg.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * width;
+          active = steps.reduce((best, step, index) => (Math.abs(xOfYear(step.year) - x) < Math.abs(xOfYear(steps[best].year) - x) ? index : best), 0);
+          showStep(steps[active], event.clientX, event.clientY);
+        });
+        overlay.addEventListener('pointerleave', hideTooltip);
+        svg.onkeydown = (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          active = Math.max(0, Math.min(steps.length - 1, active + (event.key === 'ArrowRight' ? 1 : -1)));
+          const box = svg.getBoundingClientRect();
+          showStep(steps[active], box.left + (xOfYear(steps[active].year) / width) * box.width, box.top + box.height * 0.3);
+        };
+        svg.onblur = hideTooltip;
+
+        const last = steps[steps.length - 1];
+        elements.trajectoireNote.textContent = `Fin ${last.year} : ${formatReduction(last.cumulativeToDate)} à date pour ${formatReduction(last.cumulativeTarget)} visés (cumul des années socles ${steps[0].year}–${last.year}). Points de % du bilan carbone, moyenne par pôle ; pôles pilotes inclus ; même option « terminés seulement » que les tuiles.`;
+
+        // Contenu de chaque année socle : actions avec à date / cible.
+        steps.forEach((step) => {
+          const block = document.createElement('div');
+          block.className = 'trajectoire-year';
+          const heading = document.createElement('h3');
+          heading.textContent = `Socles ${step.year} `;
+          const meta = document.createElement('small');
+          meta.textContent = `· ${describeReduction(step.total)}`;
+          heading.append(meta);
+          const table = document.createElement('table');
+          table.className = 'poste-table';
+          const head = document.createElement('thead');
+          const headRow = document.createElement('tr');
+          [['Action', ''], ['⬇ À date / cible (%)', 'num']].forEach(([label, className]) => {
+            const th = document.createElement('th');
+            th.scope = 'col';
+            th.textContent = label;
+            if (className) th.className = className;
+            headRow.append(th);
+          });
+          head.append(headRow);
+          const body = document.createElement('tbody');
+          const plain = (value) => (value === null ? '—' : value.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+          step.actions.forEach((item) => {
+            const row = document.createElement('tr');
+            const name = document.createElement('td');
+            name.textContent = item.action;
+            const value = document.createElement('td');
+            value.className = 'num';
+            value.textContent = `${plain(item.co2.aDate)} / ${plain(item.co2.cible)}`;
+            value.title = `Moyenne sur ${formatCount(item.co2.poleCount)} pôle(s)`;
+            row.append(name, value);
+            body.append(row);
+          });
+          table.append(head, body);
+          block.append(heading, table);
+          elements.trajectoireYears.append(block);
+        });
+      }
+
+      function renderPoste() {
+        if (!state.bootstrap) return;
+        const options = {
+          filiere: elements.posteFiliere.value,
+          territoire: elements.posteTerritoire.value,
+          actionTypes: state.actionTypes
+        };
+        renderToolLinks(elements.posteToolLinks, options.filiere);
+        renderTrajectoire(options);
+        const groups = computePosteCards(state.bootstrap, options);
+        // Toutes actions du périmètre confondues (mêmes filtres que les
+        // cartes) : somme par pôle, puis moyenne entre pôles.
+        const total = aggregateReductionByPole(state.bootstrap.facts.filter((fact) =>
+          (!options.filiere || fact.filiere === options.filiere) &&
+          (!options.filiere || !options.territoire || fact.territoire === options.territoire) &&
+          passesActionTypeFilter(fact, options.actionTypes) &&
+          isConcerne(fact.avancement)));
+        elements.posteCo2Summary.replaceChildren();
+        if (total.poleCount) {
+          const strong = document.createElement('strong');
+          strong.textContent = describeReduction(total);
+          const modeLabel = state.reductionMode === 'termines' ? ' (pôles ayant terminé seulement)' : '';
+          elements.posteCo2Summary.append(`Réduction du bilan carbone${modeLabel}, moyenne par pôle : `, strong,
+            ` — ${formatCount(total.poleCount)} pôles`);
+        } else {
+          elements.posteCo2Summary.append('Réduction du bilan carbone : aucune valeur en % exploitable dans ce périmètre');
+        }
+        if (total.excludedPilotCount) {
+          elements.posteCo2Summary.append(`, ${formatCount(total.excludedPilotCount)} pôle(s) pilote(s) exclu(s) (valeurs en kgCO2).`);
+        } else if (total.recalculatedPilotCount) {
+          elements.posteCo2Summary.append(`, dont ${formatCount(total.recalculatedPilotCount)} pôle(s) pilote(s) recalculé(s) avec le catalogue.`);
+        } else {
+          elements.posteCo2Summary.append('.');
+        }
+        const scopeBits = [options.filiere || 'Toutes les filières', options.filiere ? options.territoire : ''].filter(Boolean);
+        elements.posteTitle.textContent = `Avancement par poste d'émissions · ${scopeBits.join(' · ')}`;
+
+        elements.posteGrid.replaceChildren(...groups.map((group) => {
+          const section = document.createElement('section');
+          section.className = 'poste-group';
+          const heading = document.createElement('h3');
+          heading.textContent = group.poste;
+          const meta = document.createElement('p');
+          meta.className = 'poste-group-meta';
+          meta.textContent = [
+            `${group.cards.length} action${group.cards.length > 1 ? 's' : ''}`,
+            group.co2.poleCount ? describeReduction(group.co2) : ''
+          ].filter(Boolean).join(' · ');
+          section.append(heading, meta, buildPosteTable(group.cards));
+          return section;
+        }));
+        elements.posteEmpty.hidden = groups.length > 0;
+      }
+
+      elements.posteFiliere.addEventListener('change', () => {
+        populateTerritoireSelect(elements.posteTerritoire, elements.posteFiliere.value, 'Toute la filière');
+        renderPoste();
+      });
+      elements.posteTerritoire.addEventListener('change', renderPoste);
+      elements.posteReductionMode.addEventListener('change', () => {
+        state.reductionMode = elements.posteReductionMode.value;
+        renderPoste();
+      });
+
+      // ---------------------------------------------------------------
+      // Vue Évolution — historique mensuel du Tableau de bord VA
+      // (bootstrap.history.rows : [mois "AAAA-MM", campagne, action,
+      // filière, indicateur, valeur], cf. HistoryService.gs).
+      // ---------------------------------------------------------------
+      const CAT_COLORS = ['var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)', 'var(--cat-5)', 'var(--cat-6)', 'var(--cat-7)', 'var(--cat-8)'];
+      const HISTORY_TOTAL = 'TOTAL';
+      const MONTH_NAMES = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+      // Historique sans les valeurs qui sont en réalité inconnues (point
+      // absent plutôt que 0, demande du 01/10/2026). Règles, établies sur
+      // les archives 09/2025 → 09/2026 :
+      // 1. campagne avant son année (ex. socle 2026 en 11/2025 : 30 zéros) ;
+      // 2. filière sans aucun répondant ce mois-là (ex. Protection de
+      //    l'enfance 07 et 08/2026) : toutes ses valeurs du mois ;
+      // 3. 0 terminé alors que les concernés = toutes les structures de la
+      //    filière et que toutes n'ont pas répondu : valeurs par défaut des
+      //    non-répondants (ex. Petite enfance 09/2026, changement d'outil).
+      // (Les indicateurs DIP sont écartés dès l'import.)
+      function historyRows() {
+        if (state.historyRowsClean) return state.historyRowsClean;
+        const raw = (state.bootstrap.history && state.bootstrap.history.rows) || [];
+        const counts = new Map();
+        raw.forEach(([month, campaign, action, filiere, indicator, value]) => {
+          if (indicator === 'nbStructures' || indicator === 'nbRepondants') {
+            const key = `${month}|${filiere}`;
+            counts.set(key, Object.assign(counts.get(key) || {}, {[indicator]: value}));
+          }
+        });
+        const pairs = new Map();
+        raw.forEach(([month, campaign, action, filiere, indicator, value]) => {
+          if (!action) return;
+          const key = `${month}|${campaign}|${action}|${filiere}`;
+          pairs.set(key, Object.assign(pairs.get(key) || {}, {[indicator]: value}));
+        });
+        state.historyRowsClean = raw.filter(([month, campaign, action, filiere, indicator]) => {
+          const campaignYear = (String(campaign).match(/(\d{4})/) || [])[1];
+          if (campaignYear && Number(month.slice(0, 4)) < Number(campaignYear)) return false;
+          const filiereCounts = counts.get(`${month}|${filiere}`) || {};
+          if (filiereCounts.nbRepondants === 0) return false;
+          if (action && filiere !== HISTORY_TOTAL) {
+            const pair = pairs.get(`${month}|${campaign}|${action}|${filiere}`) || {};
+            if (pair.terminees === 0 && pair.concernes > 0 && pair.concernes === filiereCounts.nbStructures &&
+                typeof filiereCounts.nbRepondants === 'number' && filiereCounts.nbRepondants < filiereCounts.nbStructures) {
+              return false;
+            }
+          }
+          return true;
+        });
+        return state.historyRowsClean;
+      }
+      function monthIndex(month) {
+        const [year, monthNumber] = month.split('-').map(Number);
+        return year * 12 + (monthNumber - 1);
+      }
+      function formatMonth(month) {
+        const [year, monthNumber] = month.split('-');
+        return `${MONTH_NAMES[Number(monthNumber) - 1]} ${year.slice(2)}`;
+      }
+      function formatPoints(value) {
+        if (value === null) return '—';
+        const rounded = Math.round(value * 10) / 10;
+        return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString('fr-FR')} pt${Math.abs(rounded) >= 2 ? 's' : ''}`;
+      }
+
+      function populateEvolutionFilters() {
+        const rows = historyRows();
+        const filieres = distinctSorted(rows.filter((row) => row[4] === 'tauxTerminees' && row[3] !== HISTORY_TOTAL).map((row) => row[3]));
+        const current = elements.evolutionFiliere.value;
+        elements.evolutionFiliere.replaceChildren(new Option('Ensemble (TOTAL)', HISTORY_TOTAL));
+        filieres.forEach((name) => elements.evolutionFiliere.append(new Option(name, name)));
+        if ([...elements.evolutionFiliere.options].some((option) => option.value === current)) elements.evolutionFiliere.value = current;
+        elements.evolutionEmpty.hidden = rows.length > 0;
+        const refreshedAt = state.bootstrap.history && state.bootstrap.history.refreshedAt;
+        elements.evolutionRefreshed.textContent = refreshedAt
+          ? `Historique actualisé le ${new Date(refreshedAt).toLocaleString('fr-FR', {day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'})}.`
+          : '';
+      }
+
+      // Le libellé d'une action varie parfois d'une archive à l'autre (ex.
+      // "Tri des déchets diffus" / "Tri des déchets diffus (piles &
+      // batteries, …)") : les séries sont regroupées sur le libellé
+      // normalisé sans sa parenthèse, et affichées sous le libellé le plus
+      // récent.
+      function evolutionActionKey(action) {
+        return normalizeSearchText(action).split('(')[0].replace(/[*\s]+$/, '').trim();
+      }
+
+      // Une série par action : {campaign, label, points: Map(mois -> %)}.
+      function computeActionSeries(indicator, filiere, campaign) {
+        const byAction = new Map();
+        historyRows().forEach(([month, rowCampaign, action, rowFiliere, rowIndicator, value]) => {
+          if (rowIndicator !== indicator || rowFiliere !== filiere || !action || !rowCampaign) return;
+          if (campaign && rowCampaign !== campaign) return;
+          const key = `${rowCampaign}|${evolutionActionKey(action)}`;
+          if (!byAction.has(key)) byAction.set(key, {campaign: rowCampaign, label: action, labelMonth: month, points: new Map()});
+          const series = byAction.get(key);
+          if (month > series.labelMonth) {
+            series.label = action;
+            series.labelMonth = month;
+          }
+          series.points.set(month, value * 100);
+        });
+        return [...byAction.values()].sort((left, right) => left.label.localeCompare(right.label, 'fr'));
+      }
+
+      // Libellé court d'une campagne ("Actions socles 2024" -> "Socles 2024").
+      function campaignShortLabel(campaign) {
+        return String(campaign).replace(/^actions?\s+socles?\s*/i, 'Socles ');
+      }
+
+      // Thématique (poste d'émissions) d'une action de l'historique, reprise
+      // des faits du dashboard (donc du référentiel des actions) : les
+      // archives du Tableau de bord VA n'ont pas cette information.
+      function evolutionThematiqueByAction() {
+        if (state.evolutionThematiques) return state.evolutionThematiques;
+        const counts = new Map();
+        state.bootstrap.facts.forEach((fact) => {
+          if (!fact.thematique) return;
+          const key = evolutionActionKey(fact.action);
+          if (!counts.has(key)) counts.set(key, new Map());
+          const perPoste = counts.get(key);
+          perPoste.set(fact.thematique, (perPoste.get(fact.thematique) || 0) + 1);
+        });
+        state.evolutionThematiques = new Map([...counts.entries()].map(([key, perPoste]) =>
+          [key, [...perPoste.entries()].sort((left, right) => right[1] - left[1])[0][0]]));
+        return state.evolutionThematiques;
+      }
+
+      function groupKeyOf(series, groupBy) {
+        if (groupBy === 'thematique') {
+          return evolutionThematiqueByAction().get(evolutionActionKey(series.label)) || UNKNOWN_LABEL;
+        }
+        return campaignShortLabel(series.campaign);
+      }
+
+      // Moyenne simple, mois par mois, de séries d'actions.
+      function averageSeries(label, seriesList) {
+        const perMonth = new Map();
+        seriesList.forEach((series) => {
+          series.points.forEach((value, month) => {
+            const bucket = perMonth.get(month) || {sum: 0, count: 0};
+            bucket.sum += value;
+            bucket.count += 1;
+            perMonth.set(month, bucket);
+          });
+        });
+        const points = new Map();
+        perMonth.forEach((bucket, month) => points.set(month, bucket.sum / bucket.count));
+        return {label, points};
+      }
+
+      // Une série par campagne ou par thématique (moyenne des actions du
+      // groupe), triées par libellé ; thématiques dans l'ordre des postes.
+      function computeGroupSeries(indicator, filiere, groupBy) {
+        const groups = new Map();
+        computeActionSeries(indicator, filiere, '').forEach((series) => {
+          const key = groupKeyOf(series, groupBy);
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key).push(series);
+        });
+        const order = (left, right) => (groupBy === 'thematique'
+          ? posteRank(left) - posteRank(right) || left.localeCompare(right, 'fr')
+          : left.localeCompare(right, 'fr'));
+        return [...groups.keys()].sort(order).map((key) => Object.assign(averageSeries(key, groups.get(key)), {actions: groups.get(key)}));
+      }
+
+      // Une série par filière (moyenne de toutes ses actions socles), plus
+      // l'ensemble (TOTAL) en premier.
+      function computeFiliereSeries(indicator) {
+        const filieres = distinctSorted(historyRows().filter((row) => row[4] === indicator && row[2]).map((row) => row[3]));
+        return [HISTORY_TOTAL].concat(filieres.filter((filiere) => filiere !== HISTORY_TOTAL))
+          .map((filiere) => averageSeries(filiere === HISTORY_TOTAL ? 'Ensemble' : filiere, computeActionSeries(indicator, filiere, '')))
+          .filter((series) => series.points.size > 0);
+      }
+
+      // Graphique en courbes : axe X = mois réels (un mois manquant laisse un
+      // écart), axe Y 0-100 %, lignes 2px + points 8px, couleur fixe par
+      // position de série (jamais recyclée : au-delà de 8 séries, les
+      // suivantes ne sont pas tracées et une note le signale). Survol ou
+      // flèches : ligne verticale sur le mois le plus proche + infobulle
+      // listant toutes les séries.
+      // options.compact : petit multiple (pas de légende, graduations
+      // réduites, une seule série) ; options.directLabels : étiquette en bout
+      // de courbe (réservé à 3 séries au plus) ; options.emphasis : libellé de
+      // la série mise en avant, les autres passent en gris.
+      function renderLineChart(svg, legendEl, seriesList, options) {
+        const compact = Boolean(options.compact);
+        const drawn = seriesList.slice(0, CAT_COLORS.length);
+        const months = options.months || distinctSorted(drawn.flatMap((series) => [...series.points.keys()]));
+        svg.textContent = '';
+        if (legendEl) legendEl.replaceChildren();
+        const directLabels = Boolean(options.directLabels) && drawn.length <= 3;
+        const width = compact ? 300 : 760;
+        const height = compact ? 130 : 300;
+        const margin = compact
+          ? {top: 8, right: 10, bottom: 18, left: 40}
+          : {top: 12, right: directLabels ? 90 : 20, bottom: 30, left: 44};
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        if (!months.length) {
+          const empty = svgEl('text', {class: 'category-text', x: width / 2, y: height / 2, 'text-anchor': 'middle'});
+          empty.textContent = 'Aucune valeur pour ce choix.';
+          svg.appendChild(empty);
+          return;
+        }
+        const plotWidth = width - margin.left - margin.right;
+        const plotHeight = height - margin.top - margin.bottom;
+        const firstIndex = monthIndex(months[0]);
+        const span = Math.max(1, monthIndex(months[months.length - 1]) - firstIndex);
+        const xOf = (month) => margin.left + (months.length === 1 ? plotWidth / 2 : ((monthIndex(month) - firstIndex) / span) * plotWidth);
+        const yOf = (value) => margin.top + plotHeight - (value / 100) * plotHeight;
+
+        (compact ? [0, 50, 100] : [0, 25, 50, 75, 100]).forEach((tick) => {
+          svg.appendChild(svgEl('line', {class: 'axis-line', x1: margin.left, x2: width - margin.right, y1: yOf(tick), y2: yOf(tick)}));
+          const label = svgEl('text', {class: 'axis-text', x: margin.left - 6, y: yOf(tick) + 3, 'text-anchor': 'end'});
+          label.textContent = `${tick} %`;
+          svg.appendChild(label);
+        });
+        (compact ? [...new Set([months[0], months[months.length - 1]])] : months).forEach((month, position, list) => {
+          const anchor = compact ? (position === 0 ? 'start' : 'end') : 'middle';
+          const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - (compact ? 4 : 10), 'text-anchor': list.length === 1 ? 'middle' : anchor});
+          label.textContent = formatMonth(month);
+          svg.appendChild(label);
+        });
+
+        const colorOf = (series, index) => {
+          if (options.color) return resolveColor(options.color);
+          if (options.emphasis && series.label !== options.emphasis) return resolveColor('var(--text-muted)');
+          return resolveColor(CAT_COLORS[index]);
+        };
+        const order = drawn.map((series, index) => ({series, index}));
+        // La série mise en avant est dessinée en dernier (au-dessus).
+        if (options.emphasis) order.sort((left, right) => (left.series.label === options.emphasis) - (right.series.label === options.emphasis));
+        order.forEach(({series, index}) => {
+          const color = colorOf(series, index);
+          const muted = options.emphasis && series.label !== options.emphasis;
+          let path = '';
+          let previous = null;
+          months.forEach((month) => {
+            const value = series.points.has(month) ? series.points.get(month) : null;
+            if (value === null) { previous = null; return; }
+            path += `${previous === null ? 'M' : 'L'} ${xOf(month)} ${yOf(value)} `;
+            previous = value;
+          });
+          const line = svgEl('path', {d: path.trim(), fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round'});
+          if (muted) line.setAttribute('stroke-opacity', '0.45');
+          svg.appendChild(line);
+          if (!muted) {
+            series.points.forEach((value, month) => {
+              svg.appendChild(svgEl('circle', {cx: xOf(month), cy: yOf(value), r: compact ? 3 : 4, fill: color, stroke: resolveColor('var(--surface-1)'), 'stroke-width': compact ? 1.5 : 2}));
+            });
+          }
+          if (directLabels) {
+            const lastMonth = [...series.points.keys()].sort().pop();
+            if (lastMonth) {
+              const text = svgEl('text', {class: 'category-text', x: xOf(lastMonth) + 8, y: yOf(series.points.get(lastMonth)) + 4});
+              text.textContent = series.label;
+              svg.appendChild(text);
+            }
+          }
+        });
+
+        if (legendEl) {
+          drawn.forEach((series, index) => {
+            const item = document.createElement('span');
+            const key = document.createElement('span');
+            key.className = 'line-key';
+            key.style.background = colorOf(series, index);
+            item.append(key, document.createTextNode(series.label));
+            legendEl.append(item);
+          });
+          if (seriesList.length > drawn.length) {
+            const more = document.createElement('span');
+            more.textContent = `(+${seriesList.length - drawn.length} série(s) non tracée(s), voir tableau)`;
+            legendEl.append(more);
+          }
+        }
+
+        // Réticule + infobulle.
+        const crosshair = svgEl('line', {class: 'axis-line', x1: 0, x2: 0, y1: margin.top, y2: margin.top + plotHeight, visibility: 'hidden'});
+        crosshair.style.stroke = resolveColor('var(--text-muted)');
+        svg.appendChild(crosshair);
+        const overlay = svgEl('rect', {x: margin.left - 10, y: margin.top, width: plotWidth + 20, height: plotHeight, fill: 'transparent'});
+        svg.appendChild(overlay);
+        let activeIndex = months.length - 1;
+        const showAt = (monthPosition, clientX, clientY) => {
+          activeIndex = monthPosition;
+          const month = months[monthPosition];
+          crosshair.setAttribute('x1', xOf(month));
+          crosshair.setAttribute('x2', xOf(month));
+          crosshair.setAttribute('visibility', 'visible');
+          const tooltip = elements.tooltip;
+          tooltip.replaceChildren();
+          const title = document.createElement('div');
+          title.className = 'tooltip-label';
+          title.textContent = `${formatMonth(month)}${options.tooltipSuffix ? ' — ' + options.tooltipSuffix : ''}`;
+          tooltip.append(title);
+          drawn
+            .map((series, index) => ({series, index, value: series.points.has(month) ? series.points.get(month) : null}))
+            .sort((left, right) => (right.value === null ? -1 : right.value) - (left.value === null ? -1 : left.value))
+            .forEach(({series, index, value}) => {
+              const row = document.createElement('div');
+              row.className = 'tooltip-row';
+              const key = document.createElement('span');
+              key.className = 'line-key';
+              key.style.background = colorOf(series, index);
+              const strong = document.createElement('strong');
+              strong.textContent = value === null ? '—' : formatRate(Math.round(value * 10) / 10);
+              row.append(key, strong, document.createTextNode(` ${series.label}`));
+              tooltip.append(row);
+            });
+          tooltip.style.left = `${clientX}px`;
+          tooltip.style.top = `${clientY}px`;
+          tooltip.classList.add('is-visible');
+        };
+        const nearestMonth = (event) => {
+          const box = svg.getBoundingClientRect();
+          const x = ((event.clientX - box.left) / box.width) * width;
+          let best = 0;
+          months.forEach((month, position) => {
+            if (Math.abs(xOf(month) - x) < Math.abs(xOf(months[best]) - x)) best = position;
+          });
+          return best;
+        };
+        overlay.addEventListener('pointermove', (event) => showAt(nearestMonth(event), event.clientX, event.clientY));
+        overlay.addEventListener('pointerleave', () => {
+          crosshair.setAttribute('visibility', 'hidden');
+          hideTooltip();
+        });
+        svg.onkeydown = (event) => {
+          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+          event.preventDefault();
+          const next = Math.max(0, Math.min(months.length - 1, activeIndex + (event.key === 'ArrowRight' ? 1 : -1)));
+          const box = svg.getBoundingClientRect();
+          showAt(next, box.left + (xOf(months[next]) / width) * box.width, box.top + box.height * 0.2);
+        };
+        svg.onblur = () => {
+          crosshair.setAttribute('visibility', 'hidden');
+          hideTooltip();
+        };
+      }
+
+      function seriesSummary(series) {
+        const months = [...series.points.keys()].sort();
+        const first = months[0];
+        const last = months[months.length - 1];
+        const previous = months.length > 1 ? months[months.length - 2] : null;
+        const firstValue = series.points.get(first);
+        const lastValue = series.points.get(last);
+        const delta = months.length > 1 ? lastValue - firstValue : null;
+        const lastDelta = previous ? lastValue - series.points.get(previous) : null;
+        const elapsed = months.length > 1 ? monthIndex(last) - monthIndex(first) : 0;
+        return {first, last, firstValue, lastValue, delta, lastDelta, pace: elapsed > 0 ? delta / elapsed : null};
+      }
+
+      // Petits multiples : un graphique par action, groupés par campagne ou
+      // par thématique, même axe des mois et même échelle pour tous
+      // (comparaison des pentes), une seule couleur.
+      function renderEvolutionMultiples(groups, months) {
+        const container = elements.evolutionMultiples;
+        container.replaceChildren();
+        if (!groups.length) {
+          const empty = document.createElement('p');
+          empty.className = 'ranking-empty';
+          empty.textContent = 'Aucune valeur pour ce choix.';
+          container.append(empty);
+          return;
+        }
+        groups.forEach((group) => {
+          const section = document.createElement('div');
+          section.className = 'evolution-group';
+          const heading = document.createElement('h3');
+          heading.textContent = `${group.label} (${group.actions.length} action${group.actions.length > 1 ? 's' : ''})`;
+          const grid = document.createElement('div');
+          grid.className = 'evolution-multiples';
+          section.append(heading, grid);
+          container.append(section);
+          group.actions.forEach((series) => {
+            const summary = seriesSummary(series);
+            const cell = document.createElement('div');
+            cell.className = 'evolution-multiple';
+            const title = document.createElement('p');
+            title.className = 'evolution-multiple-title';
+            title.textContent = series.label;
+            const value = document.createElement('p');
+            value.className = 'evolution-multiple-value';
+            value.append(formatRate(Math.round(summary.lastValue * 10) / 10));
+            if (summary.delta !== null) {
+              const delta = document.createElement('span');
+              delta.className = Math.abs(summary.delta) < 0.05 ? '' : (summary.delta > 0 ? 'delta-up' : 'delta-down');
+              delta.textContent = ` ${formatPoints(summary.delta)} depuis ${formatMonth(summary.first)}`;
+              value.append(delta);
+            }
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('class', 'line-chart');
+            svg.setAttribute('role', 'img');
+            svg.setAttribute('tabindex', '0');
+            svg.setAttribute('aria-label', `${series.label} : ${formatRate(Math.round(summary.lastValue * 10) / 10)} en ${formatMonth(summary.last)}`);
+            cell.append(title, value, svg);
+            grid.append(cell);
+            renderLineChart(svg, null, [series], {compact: true, months, color: 'var(--cat-1)', tooltipSuffix: series.label});
+          });
+        });
+      }
+
+      function renderEvolution() {
+        if (!state.bootstrap) return;
+        const filiere = elements.evolutionFiliere.value || HISTORY_TOTAL;
+        const groupBy = elements.evolutionGroupe.value;
+        const indicator = 'tauxTerminees';
+        const indicatorLabel = 'Taux de terminés parmi les concernés';
+        const filiereLabel = filiere === HISTORY_TOTAL ? 'ensemble' : filiere;
+        const groupLabel = groupBy === 'thematique' ? 'thématique' : 'campagne';
+
+        const groups = computeGroupSeries(indicator, filiere, groupBy);
+        elements.evolutionCampagnesTitle.textContent = `Avancée par ${groupLabel} — ${filiereLabel}`;
+        renderLineChart(elements.evolutionCampagnesChart, elements.evolutionCampagnesLegend, groups, {directLabels: true, tooltipSuffix: filiereLabel});
+
+        const filiereSeries = computeFiliereSeries(indicator);
+        elements.evolutionFilieresTitle.textContent = 'Avancée par filière — toutes campagnes';
+        renderLineChart(elements.evolutionFilieresChart, elements.evolutionFilieresLegend, filiereSeries,
+          {emphasis: filiere === HISTORY_TOTAL ? '' : filiere, tooltipSuffix: 'toutes campagnes'});
+
+        const months = distinctSorted(computeActionSeries(indicator, filiere, '').flatMap((series) => [...series.points.keys()]));
+        elements.evolutionMultiplesTitle.textContent = `Détail par action, par ${groupLabel} — ${filiereLabel}`;
+        renderEvolutionMultiples(groups, months);
+        state.evolutionExport = {indicatorLabel, filiereLabel, groupLabel, groups, filiereSeries};
+      }
+
+      // Export CSV de la vue : une ligne par série × mois (format long, prêt
+      // pour un tableau croisé), plus le tableau des évolutions.
+      function buildEvolutionCsv(data) {
+        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
+        const number = (value) => (value === null || value === undefined ? '' : String(Math.round(value * 10) / 10).replace('.', ','));
+        const lines = [['Bloc', 'Groupe', 'Série', 'Filière', 'Indicateur', 'Mois', 'Valeur (%)'].map(escapeCsv).join(';')];
+        const pushSeries = (bloc, group, series, filiereLabel) => [...series.points.keys()].sort().forEach((month) => {
+          lines.push([bloc, group, series.label, filiereLabel, data.indicatorLabel, month, number(series.points.get(month))].map(escapeCsv).join(';'));
+        });
+        data.groups.forEach((group) => pushSeries(`Moyenne par ${data.groupLabel}`, group.label, group, data.filiereLabel));
+        data.filiereSeries.forEach((series) => pushSeries('Moyenne par filière', '', series, series.label));
+        data.groups.forEach((group) => group.actions.forEach((series) => pushSeries('Action', group.label, series, data.filiereLabel)));
+        return lines.join('\r\n');
+      }
+
+      elements.exportEvolutionCsv.addEventListener('click', () => {
+        if (!state.evolutionExport) return;
+        downloadBlob(new Blob([String.fromCharCode(0xfeff) + buildEvolutionCsv(state.evolutionExport)], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-evolution-${dateStamp()}.csv`);
+      });
+      elements.evolutionGroupe.addEventListener('change', renderEvolution);
+      elements.evolutionFiliere.addEventListener('change', renderEvolution);
 
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
       // (Synthèse, Détail, Contrôle), sur ce qui est actuellement affiché
@@ -2596,26 +3903,60 @@
         });
       });
 
+      // Faits reçus en colonnes ({fields, rows}, cf. getDashboardBootstrap)
+      // -> objets ; accepte aussi l'ancien format (tableau d'objets).
+      function expandFacts(facts) {
+        if (Array.isArray(facts)) return facts;
+        return facts.rows.map((row) => {
+          const fact = {};
+          facts.fields.forEach((field, index) => { fact[field] = row[index]; });
+          return fact;
+        });
+      }
+
+      // Avertissements de données renvoyés par le serveur (colonne
+      // introuvable, territoires vides, historique inaccessible…) : affichés
+      // en tête de page plutôt que de laisser croire à un bug d'affichage.
+      function renderDiagnostics(diagnostics) {
+        const warnings = (diagnostics && diagnostics.warnings) || [];
+        elements.diagnostics.replaceChildren();
+        elements.diagnostics.hidden = warnings.length === 0;
+        if (!warnings.length) return;
+        const title = document.createElement('strong');
+        title.textContent = `⚠ ${warnings.length} point(s) à vérifier dans les données`;
+        const list = document.createElement('ul');
+        warnings.forEach((warning) => {
+          const item = document.createElement('li');
+          item.textContent = warning;
+          list.append(item);
+        });
+        elements.diagnostics.append(title, list);
+      }
+
       // ---------------------------------------------------------------
       // Démarrage — un seul aller-retour serveur ; tout le reste (filtres,
       // agrégations, matrice) se recalcule ensuite dans le navigateur.
       // ---------------------------------------------------------------
       google.script.run
         .withSuccessHandler((bootstrap) => {
+          bootstrap.facts = expandFacts(bootstrap.facts);
           state.bootstrap = bootstrap;
+          renderDiagnostics(bootstrap.diagnostics);
+          state.pilotPoleCodes = computePilotPoleCodes(bootstrap);
           const generated = new Date(bootstrap.generatedAt);
           elements.status.textContent =
             `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;
           populateFiliereSelect(elements.syntheseFiliere, true);
           populateFiliereSelect(elements.detailFiliere, false);
           populateFiliereSelect(elements.controlFiliere, true);
+          populateFiliereSelect(elements.posteFiliere, true);
           updateNiveauAvailability();
-          // Page chargée sur la vue "toutes filières" par défaut : même
-          // règle que dans l'écouteur de synthese-filiere ci-dessus.
-          elements.syntheseIndicateur.value = 'tauxReponse';
           renderSynthese();
           renderMatrix();
           renderControl();
+          renderPoste();
+          populateEvolutionFilters();
+          renderEvolution();
         })
         .withFailureHandler((error) => {
           elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';

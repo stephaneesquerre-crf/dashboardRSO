@@ -12,6 +12,25 @@ const CONFIG = Object.freeze({
   IMPORT_SYNTHESE_FIRST_COLUMN: 'AM',
   IMPORT_SYNTHESE_LAST_COLUMN: 'AZ',
   POLE_REFERENCE_SHEET_NAME: 'BDD NOMS',
+  // Liens vers les outils de suivi par filière : colonne B = libellé,
+  // C = code filière (tel qu'affiché dans le dashboard), D = lien sous forme
+  // de chip intelligente. Plage ouverte vers le bas pour absorber les
+  // ajouts de lignes. Lu via le service avancé Sheets (cf. ToolLinksService.gs).
+  TOOL_LINKS_SHEET_NAME: 'Liens outils',
+  // Référentiel des actions (catalogue) : fait foi pour le poste
+  // d'émissions de chaque action, les fichiers des pôles n'étant pas
+  // toujours cohérents entre eux (cf. ActionReferenceService.gs).
+  ACTIONS_REFERENCE_SHEET_NAME: 'BDD - Actions supplémentaires',
+  // Archives mensuelles du "Tableau de bord VA" (copies manuelles, un onglet
+  // par mois : "Archives 11/25", "Archives 09.26"...) et onglet de sortie
+  // au format long, écrit DANS LE CLASSEUR DES ARCHIVES (cf.
+  // ArchiveImportService.gs). ARCHIVES_SPREADSHEET_ID vide = même classeur
+  // que SPREADSHEET_ID ; pour le classeur dédié "Archives REPORTING
+  // NATIONAL", y coller son ID (la partie entre /d/ et /edit de l'URL).
+  ARCHIVES_SPREADSHEET_ID: '1iUIbQYPfBAYJDTqqg2oO75zMHcbJoIEBbtqQ_IyvM5k', // Archives REPORTING NATIONAL
+  ARCHIVES_SHEET_PREFIX: 'Archives',
+  HISTORY_SHEET_NAME: 'HISTORIQUE TDB VA',
+  TOOL_LINKS_RANGE: 'B2:D',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
   // Cache applicatif des droits (mis en place lors de l'ajout de la couche droits).

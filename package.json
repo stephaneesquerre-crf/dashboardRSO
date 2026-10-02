@@ -1,0 +1,11 @@
+{
+  "name": "dashboard-rso",
+  "private": true,
+  "description": "Tests locaux du Dashboard RSO (Apps Script exécuté dans Node + interface dans Chromium). Non déployé dans Apps Script.",
+  "scripts": {
+    "test": "node --test tests/server.test.js tests/ui.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
