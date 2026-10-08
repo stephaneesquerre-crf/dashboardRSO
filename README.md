@@ -23,7 +23,7 @@ redécouvrir un par un.
 - **`IndicatorService.gs`** — lit `IMPORT DONNEES` (table de faits pôle ×
   action), reclasse PADOM en PA/DOM, joint faits et pôles, assemble
   `getDashboardBootstrap()`.
-- **`ToolLinksService.gs`** — lit l'onglet `Liens outils` (liens vers les
+- **`ToolLinksService.gs`** — lit l'onglet `Liens outils référents` (B:F : outil, outil bis, liste des référents ; arrêt à « Outils non utilisés » ; liens vers les
   outils de suivi par filière, saisis en chips intelligentes). Nécessite le
   **service avancé Sheets** (éditeur Apps Script → Services → Google
   Sheets API, identifiant `Sheets`) : les chips ne sont lisibles que par
@@ -33,6 +33,9 @@ redécouvrir un par un.
   supplémentaires` (poste d'émissions de chaque action).
 - **`ArchiveImportService.gs`** — importe les archives mensuelles du
   `Tableau de bord VA` dans `HISTORIQUE TDB VA` (voir plus bas).
+- **`ProtEnfanceService.gs`** — lit l'onglet `PROT ENFANCE` (données de la
+  protection de l'enfance, absentes d'`IMPORT DONNEES`).
+- **`ReferentsService.gs`** — lit le classeur des référents (vue Référents).
 - **`HistoryService.gs`** — lit `HISTORIQUE TDB VA` pour la vue Évolution.
 - **`IdentityService.gs`** — restreint l'accès aux comptes `@croix-rouge.fr`
   (vérifié dans `doGet` et dans `getDashboardBootstrap`). Pas de couche de droits plus fine
@@ -44,6 +47,68 @@ redécouvrir un par un.
   reste se recalcule dans le navigateur à chaque changement de filtre —
   choix fait pour la rapidité, après qu'une version antérieure relisait le
   classeur à chaque interaction.
+
+## Guide rapide pour Simon (08/10/2026)
+
+### Faire une modification
+
+1. Le code de référence est sur GitHub (`stephaneesquerre-crf/dashboardRSO`) ; la
+   version en ligne est celle copiée dans le projet Apps Script. Les deux
+   doivent rester identiques.
+2. Un fichier modifié sur GitHub se recopie en entier dans le fichier de même
+   nom de l'éditeur Apps Script ; ne jamais coller un fichier dans un autre
+   (c'est ce qui avait fait disparaître `doGet`).
+3. Ce qui varie (noms d'onglets, identifiants de classeurs, plages) se change
+   dans `Config.gs`, pas dans le reste du code.
+4. Les colonnes sont repérées par le début de leur intitulé : renommer un
+   en-tête (ex. « Territoire » dans `BDD NOMS`) peut faire disparaître une
+   donnée. L'encadré « points à vérifier » en tête du dashboard le signale.
+5. Calculs, filtres et graphiques sont dans `Index.html` ; la lecture des
+   classeurs est dans les fichiers `…Service.gs`.
+6. Après chaque copie, exécuter `lancerTests` (`Tests.gs`) dans l'éditeur :
+   tout doit être ✅.
+7. En cas de doute sur un chiffre, `diagnosticDashboard()` liste les colonnes
+   réellement lues et les avertissements.
+8. Avant de publier, vérifier avec Déployer → Tester les déploiements (URL de
+   test, qui affiche toujours le code en cours).
+9. Publier sans changer l'adresse : Déployer → Gérer les déploiements →
+   crayon → Version : « Nouvelle version » → Déployer. Ne jamais créer de
+   nouveau déploiement (nouvelle adresse).
+10. Revenir en arrière : même écran, choisir une version précédente ; décrire
+    chaque changement dans ce README.
+
+### Mettre à jour les actions socles (ex. campagne 2027)
+
+1. Les actions sont lues dans `IMPORT DONNEES`, zone SYNTHESE (colonnes
+   AM:AZ, en-têtes en ligne 2) ; aucune liste d'actions n'est écrite dans le
+   code.
+2. Colonne « Action socles » : écrire « Action socle 2027 » (« Action socle »
+   suivi de l'année). Cette valeur alimente la coche « Actions socles », la
+   trajectoire et l'Évolution par campagne.
+3. Colonne « Type d'action » : c'est la « Campagne » affichée dans la
+   Synthèse et le Détail par pôle.
+4. Ajouter chaque nouvelle action dans `BDD - Actions supplémentaires`
+   (libellé, poste d'émissions, réduction) ; sinon le poste saisi par les
+   pôles est gardé et les pôles pilotes ne sont pas recalculés.
+5. Garder le même libellé partout (`IMPORT DONNEES`, référentiel, onglet
+   `PROT ENFANCE`, Tableau de bord VA) ; seul le préfixe « Action socle - »
+   est toléré.
+6. Protection de l'enfance : ajouter les lignes dans le tableau retravaillé
+   de l'onglet `PROT ENFANCE`, avec le même libellé, sans ligne vide au
+   milieu des actions (la lecture s'arrête à la première ligne sans
+   libellé) ; garder l'en-tête « SOMME » et la ligne des codes pôle du
+   tableau brut.
+7. Tableau de bord VA : la campagne apparaît en « Actions socles 2027 » dans
+   la colonne des campagnes ; les archives mensuelles reprennent ce bloc tel
+   quel.
+8. Archive mensuelle : copier le tableau dans un nouvel onglet
+   « Archives MM/AA » du classeur `Archives REPORTING NATIONAL` ; l'historique
+   se met à jour dans l'heure (déclencheur horaire).
+9. La nouvelle année apparaît seule dans la trajectoire ; l'objectif 2030 se
+   règle dans `TRAJECTOIRE_REFERENCE` (`Index.html`).
+10. Ensuite : recharger le dashboard, lire l'encadré « points à vérifier »,
+    lancer `lancerTests`, et contrôler la campagne dans la Synthèse
+    (Regrouper par Campagne).
 
 ## Mettre à jour le dashboard (copier-coller dans l'éditeur Apps Script)
 
@@ -93,6 +158,50 @@ territoires présents pour chaque filière (y compris avec une colonne
 seule lue, référentiel des actions, mois de l'historique, refus hors
 domaine, import des archives, ordre des onglets, tri des barres. À lancer
 avant chaque copie vers Apps Script.
+
+## Protection de l'enfance (onglet `PROT ENFANCE`, 08/10/2026)
+
+Les avancements de la protection de l'enfance sont produits dans un autre
+outil et n'arrivent pas dans `IMPORT DONNEES`. `ProtEnfanceService.gs` lit
+l'onglet `PROT ENFANCE` du classeur national :
+
+- **tableau retravaillé** = la ligne d'en-tête qui contient « SOMME » ;
+  colonnes pôle = celles situées avant « SOMME » ; une ligne par action
+  (libellés standard) jusqu'à la première ligne sans libellé ;
+- **codes pôle** = la ligne, au-dessus, dont le plus de cellules sont des
+  codes de `BDD NOMS` (ligne 2 du tableau brut, ex. « Territoire A :
+  IDF_4507 ») ; les colonnes des deux tableaux sont alignées ;
+- valeurs : 0,4 → « 40% », « Abandonnée » gardé, vide ignoré ;
+- campagne (Action socle 2024…) reprise des autres filières pour le même
+  libellé d'action ; pas de réduction carbone (absente de l'onglet) ;
+- un pôle déjà présent dans `IMPORT DONNEES` n'est pas repris d'ici (pas de
+  double compte le jour où ces données y arriveront).
+
+Rien n'est repéré par numéro de ligne : l'ajout des actions socles 2027
+décale les tableaux sans casser la lecture (testé). Vérifié sur l'onglet
+réel (copie du 08/10/2026) : 22 actions, 17 pôles, 357 valeurs ; « SPFS
+Besançon » (ligne des codes) n'est pas un code de `BDD NOMS` et apparaît
+sans territoire (signalé dans « points à vérifier »).
+
+## Vue Référents (08/10/2026)
+
+Classeur « Synthèse référents Environnement » (`REFERENTS_SPREADSHEET_ID`,
+`ReferentsService.gs`) :
+
+- **taux de couverture par filière**, courbes à partir des photographies de
+  l'onglet `Evolution référents` (une valeur par mois : la dernière
+  photographie du mois) ; par filière seulement ;
+- **indicateurs** du périmètre (filière, territoire) : taux de couverture =
+  pôles de la liste ayant un·e référent·e 1 ÷ pôles de la liste ; nombre de
+  référent·es 1, 2 et 3 (un·e référent·e compte dès que son nom **ou** son
+  adresse mail est renseigné : pour PADOM, le nom est souvent vide) ;
+- **liste** des référent·es par pôle (onglet `IMPORT REFERENTS`), territoire
+  repris de `BDD NOMS` via le code pôle.
+
+Constats sur la copie du 08/10/2026 : la liste ne couvre que FLEX, PA et
+DOM ; il n'y a pas de colonne « Référent.e 3 » (elle sera lue si elle est
+ajoutée, intitulée « Référent.e 3 … ») ; FLEX : 24 pôles couverts sur 32,
+soit 75 %, identique à la dernière photographie (0,75).
 
 ## Diagnostics
 
@@ -391,7 +500,8 @@ Filière (nom du dashboard), Indicateur, Valeur, Importé le.
 2. **Synthèse**
 3. **Détail par poste d'émissions**
 4. **Détail par pôle** (ex « Détail pôle × action »)
-5. **Contrôle et méthodologie** (les deux anciennes vues, dans un même
+5. **Référents** (08/10/2026)
+6. **Contrôle et méthodologie** (les deux anciennes vues, dans un même
    onglet)
 
 ## Vue Évolution des actions socles
@@ -462,9 +572,8 @@ utilise comme « avancement » — pas une moyenne des % d'avancement.
 
 ## Limites connues
 
-- **PROT ENFANCE** n'a aucune ligne dans la zone SYNTHESE d'IMPORT DONNEES
-  — ses données sont alimentées autrement dans le classeur national.
-  Affiché comme « donnée non disponible », jamais comme un faux 0 %.
+- **PROT ENFANCE** n'a aucune ligne dans la zone SYNTHESE d'IMPORT DONNEES ;
+  ses données sont lues dans l'onglet `PROT ENFANCE` (voir plus haut).
 - **OUTRE-MER** : le pôle correspondant dans BDD NOMS a un code vide, donc
   pas d'univers de pôles fiable pour cette filière (taux de réponse non
   calculable) — à corriger à la source dans BDD NOMS.

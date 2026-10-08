@@ -3,10 +3,19 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {loadAppsScript} = require('./harness');
-const {NATIONAL_ID, ARCHIVES_ID, FILIERES, buildNational, buildArchives} = require('./fixtures');
+const {NATIONAL_ID, ARCHIVES_ID, REFERENTS_ID, FILIERES, buildNational, buildArchives, buildReferents, buildProtEnfance} = require('./fixtures');
+
+// Service avancé Sheets simulé : onglet « Liens outils référents » (B:F).
+const chip = (title, uri) => ({formattedValue: title, chipRuns: [{chip: {richLinkProperties: {uri}}}]});
+const SHEETS_API = {Spreadsheets: {get: () => ({sheets: [{data: [{rowData: [
+  {values: [{formattedValue: 'Outils A4T'}, {formattedValue: 'Code FILIERE'}, {formattedValue: 'Liens outils'}, {formattedValue: 'Liens outils bis'}, {formattedValue: 'Liens référents'}]},
+  {values: [{formattedValue: 'Outil CRC'}, {formattedValue: 'CRC'}, chip('OUTIL DE SUIVI v2 - CRC', 'https://docs.google.com/x'), {}, chip('CRC_Liste référents', 'https://docs.google.com/r')]},
+  {values: [{formattedValue: 'Outils non utilisés'}]},
+  {values: [{formattedValue: 'Outil CRC ancien'}, {formattedValue: 'CRC'}, chip('Ancien outil', 'https://docs.google.com/old')]}
+]}]}]})}};
 
 function bootstrapFor(variant, options) {
-  const app = loadAppsScript({[NATIONAL_ID]: buildNational(variant), [ARCHIVES_ID]: buildArchives()}, options);
+  const app = loadAppsScript({[NATIONAL_ID]: buildNational(variant), [ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()}, options);
   return {app, bootstrap: app.getDashboardBootstrap()};
 }
 
@@ -85,12 +94,7 @@ test('import des archives : nouvelle et ancienne mise en page', () => {
 });
 
 test('lancerTests() (Tests.gs) passe sur les classeurs simulés', () => {
-  // Service avancé Sheets simulé : une ligne de "Liens outils" avec chip.
-  const sheetsApi = {Spreadsheets: {get: () => ({sheets: [{data: [{rowData: [{values: [
-    {formattedValue: 'Outil CRC'}, {formattedValue: 'CRC'},
-    {formattedValue: 'OUTIL DE SUIVI v2 - CRC', chipRuns: [{chip: {richLinkProperties: {uri: 'https://docs.google.com/x'}}}]}
-  ]}]}]}]})}};
-  const app = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: buildArchives()}, {sheetsApi});
+  const app = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()}, {sheetsApi: SHEETS_API});
   const summary = app.lancerTests();
   assert.strictEqual(summary.echecs, 0, app.__logs.join('\n'));
 });
@@ -113,4 +117,42 @@ test('actualisation automatique : réécrit l\'historique seulement si les archi
   const history = app.getHistoryForDashboard_();
   assert.ok(history.refreshedAt, 'date d\'actualisation transmise');
   assert.ok(history.rows.some((row) => row[2] === 'Repas végétariens' && row[3] === 'SAN' && row[4] === 'terminees' && row[5] === 7));
+});
+
+test('protection de l\'enfance : onglet PROT ENFANCE lu (codes pôle, campagne reprise, décalage toléré)', () => {
+  const {bootstrap} = bootstrapFor('normal');
+  const fields = bootstrap.facts.fields;
+  const get = (row, name) => row[fields.indexOf(name)];
+  const prot = bootstrap.facts.rows.filter((row) => get(row, 'filiere') === 'PROT ENFANCE');
+  const repas = prot.filter((row) => get(row, 'action') === 'Repas végétariens');
+  assert.strictEqual(repas.length, 4);
+  assert.deepStrictEqual([...new Set(repas.map((row) => get(row, 'avancement')))].sort(), ['100%', '40%']);
+  assert.ok(repas.every((row) => get(row, 'actionSocle') === 'Action socle 2024'), 'campagne reprise des autres filières');
+  assert.ok(prot.some((row) => get(row, 'action') === 'Bornes électriques' && get(row, 'avancement') === 'Abandonnée'));
+  assert.ok(prot.every((row) => get(row, 'territoire')), 'territoire via BDD NOMS');
+  assert.ok(!prot.some((row) => /Suivi actualisé/.test(get(row, 'action'))), 'tableau brut non lu comme actions');
+
+  const app = loadAppsScript({});
+  const reference = {};
+  buildNational('normal')['BDD NOMS'].slice(1).forEach((row) => { reference[app.normalizeText_(row[0])] = {}; });
+  const shifted = app.parseProtEnfanceValues_(buildProtEnfance(3), reference);
+  assert.strictEqual(shifted.actionCount, 3);
+  assert.strictEqual(shifted.rows.length, 8);
+});
+
+test('liens : outil, outil bis et référents ; « Outils non utilisés » ignorés', () => {
+  const {bootstrap} = bootstrapFor('normal', {sheetsApi: SHEETS_API});
+  assert.strictEqual(bootstrap.toolLinks.length, 1);
+  assert.deepStrictEqual([...bootstrap.toolLinks[0].links.map((link) => link.kind)], ['outil', 'referents']);
+});
+
+test('référents : évolution par filière et liste par pôle', () => {
+  const {bootstrap} = bootstrapFor('normal');
+  const evolution = bootstrap.referents.evolution;
+  assert.deepStrictEqual([...evolution.map((series) => series.filiere)], ['CRC', 'PROT ENFANCE']);
+  assert.strictEqual(evolution[0].points.length, 4);
+  const poles = bootstrap.referents.poles;
+  assert.strictEqual(poles.length, 4);
+  assert.strictEqual(poles.filter((pole) => pole.referents.length > 0).length, 3, 'nom OU adresse mail');
+  assert.strictEqual(poles.reduce((sum, pole) => sum + pole.referents.length, 0), 4);
 });

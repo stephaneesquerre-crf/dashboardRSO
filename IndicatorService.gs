@@ -124,7 +124,8 @@ function getDashboardBootstrap() {
   DASHBOARD_DIAGNOSTICS_.warnings = [];
   DASHBOARD_DIAGNOSTICS_.details = {};
   const poleReference = getPoleReference_();
-  const factRecords = getFactRecords_();
+  const importFactRecords = getFactRecords_();
+  const factRecords = importFactRecords.concat(getProtEnfanceFacts_(poleReference, importFactRecords));
   const padomOverrides = derivePadomOverrides_(factRecords);
   const actionCatalogue = getActionCatalogue_();
 
@@ -182,6 +183,7 @@ function getDashboardBootstrap() {
     poles: poles,
     toolLinks: toolLinks,
     history: history,
+    referents: getReferentsForDashboard_(poleReference),
     diagnostics: DASHBOARD_DIAGNOSTICS_
   };
 }

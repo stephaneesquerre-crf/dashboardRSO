@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {loadAppsScript} = require('./harness');
-const {NATIONAL_ID, ARCHIVES_ID, FILIERES, buildNational, buildArchives} = require('./fixtures');
+const {NATIONAL_ID, ARCHIVES_ID, REFERENTS_ID, FILIERES, buildNational, buildArchives, buildReferents} = require('./fixtures');
 
 let playwright = null;
 try { playwright = require('playwright'); } catch (error) { /* non installé */ }
@@ -22,7 +22,7 @@ function pageWithBootstrap(bootstrap) {
 }
 
 test('interface : territoires de chaque filière dans Synthèse, Détail par pôle et Détail par poste', {skip: !playwright && 'playwright non installé'}, async () => {
-  const app = loadAppsScript({[NATIONAL_ID]: buildNational('territoireEnDouble'), [ARCHIVES_ID]: buildArchives()});
+  const app = loadAppsScript({[NATIONAL_ID]: buildNational('territoireEnDouble'), [ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()});
   const bootstrap = JSON.parse(JSON.stringify(app.getDashboardBootstrap()));
   const file = pageWithBootstrap(bootstrap);
   const browser = await playwright.chromium.launch(process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : {});
@@ -34,7 +34,13 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     await page.waitForFunction(() => typeof state !== 'undefined' && state.bootstrap);
 
     const tabs = await page.$$eval('.tab-button', (buttons) => buttons.map((b) => b.textContent.trim()));
-    assert.deepStrictEqual(tabs, ['Évolution des actions socles', 'Synthèse', "Détail par poste d'émissions", 'Détail par pôle', 'Contrôle et méthodologie']);
+    assert.deepStrictEqual(tabs, ['Évolution des actions socles', 'Synthèse', "Détail par poste d'émissions", 'Détail par pôle', 'Référents', 'Contrôle et méthodologie']);
+
+    // Vue Référents : indicateurs et liste.
+    await page.click('#tab-referents');
+    const kpis = await page.$$eval('#referents-kpis dd', (cells) => cells.map((c) => c.firstChild.textContent));
+    assert.deepStrictEqual(kpis, ['75 %', '4'], kpis.join(' | '));
+    assert.strictEqual(await page.$$eval('#referents-table-body tr', (rows) => rows.length), 4);
 
     for (const [filiere, territories] of Object.entries(FILIERES)) {
       await page.click('#tab-synthese');

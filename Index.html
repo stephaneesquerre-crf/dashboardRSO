@@ -820,6 +820,7 @@
       <button type="button" class="tab-button" id="tab-synthese" role="tab" aria-selected="false" aria-controls="panel-synthese">Synthèse</button>
       <button type="button" class="tab-button" id="tab-poste" role="tab" aria-selected="false" aria-controls="panel-poste">Détail par poste d'émissions</button>
       <button type="button" class="tab-button" id="tab-detail" role="tab" aria-selected="false" aria-controls="panel-detail">Détail par pôle</button>
+      <button type="button" class="tab-button" id="tab-referents" role="tab" aria-selected="false" aria-controls="panel-referents">Référents</button>
       <button type="button" class="tab-button" id="tab-controle" role="tab" aria-selected="false" aria-controls="panel-controle">Contrôle et méthodologie</button>
     </div>
 
@@ -986,6 +987,59 @@
           </table>
           <p class="matrix-empty" id="matrix-empty">Choisissez une filière (et éventuellement un territoire) pour afficher le détail.</p>
         </div>
+      </section>
+    </section>
+
+    <section class="tab-panel" id="panel-referents" role="tabpanel" aria-labelledby="tab-referents" hidden>
+      <p class="view-intro">Couverture des pôles par un·e référent·e environnement, à partir du classeur « Synthèse référents Environnement » : évolution du taux de couverture par filière (photographies datées) et liste des référent·es par pôle.</p>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Filtres</h2>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="referents-filiere">Filière</label>
+            <select id="referents-filiere"></select>
+          </div>
+          <div class="filter-field">
+            <label for="referents-territoire">Territoire</label>
+            <select id="referents-territoire" disabled><option value="">Toute la filière</option></select>
+          </div>
+        </div>
+        <p class="tool-links" id="referents-tool-links" hidden></p>
+        <p class="filter-hint" id="referents-coverage-hint"></p>
+      </section>
+
+      <div class="evolution-grid">
+        <section class="panel">
+          <div class="panel-header">
+            <h2 id="referents-kpi-title">Couverture</h2>
+          </div>
+          <dl class="identity-stats" id="referents-kpis"></dl>
+        </section>
+
+        <section class="panel chart-panel" id="chart-panel-referents">
+          <div class="panel-header">
+            <h2>Taux de couverture par filière</h2>
+            <button type="button" class="fullscreen-toggle" data-fullscreen-target="chart-panel-referents">⤢ Plein écran</button>
+          </div>
+          <div class="line-legend" id="referents-legend"></div>
+          <svg class="line-chart" id="referents-chart" role="img" tabindex="0" aria-label="Évolution du taux de couverture par filière"></svg>
+          <p class="chart-note">Photographies de l'onglet « Evolution référents » (une valeur par mois : la dernière photographie du mois). Par filière seulement : le filtre Territoire ne s'applique pas à ce graphique. La filière choisie est mise en avant.</p>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="referents-list-title">Référent·es par pôle</h2>
+        </div>
+        <div style="overflow-x:auto">
+          <table id="referents-table">
+            <thead id="referents-table-head"></thead>
+            <tbody id="referents-table-body"></tbody>
+          </table>
+        </div>
+        <p class="matrix-empty" id="referents-empty" hidden>Aucun pôle de la liste dans ce périmètre.</p>
       </section>
     </section>
 
@@ -1243,6 +1297,20 @@
         tabSynthese: document.getElementById('tab-synthese'),
         tabDetail: document.getElementById('tab-detail'),
         tabControle: document.getElementById('tab-controle'),
+        tabReferents: document.getElementById('tab-referents'),
+        panelReferents: document.getElementById('panel-referents'),
+        referentsFiliere: document.getElementById('referents-filiere'),
+        referentsTerritoire: document.getElementById('referents-territoire'),
+        referentsToolLinks: document.getElementById('referents-tool-links'),
+        referentsCoverageHint: document.getElementById('referents-coverage-hint'),
+        referentsKpiTitle: document.getElementById('referents-kpi-title'),
+        referentsKpis: document.getElementById('referents-kpis'),
+        referentsLegend: document.getElementById('referents-legend'),
+        referentsChart: document.getElementById('referents-chart'),
+        referentsListTitle: document.getElementById('referents-list-title'),
+        referentsTableHead: document.getElementById('referents-table-head'),
+        referentsTableBody: document.getElementById('referents-table-body'),
+        referentsEmpty: document.getElementById('referents-empty'),
         tabPoste: document.getElementById('tab-poste'),
         tabEvolution: document.getElementById('tab-evolution'),
         panelSynthese: document.getElementById('panel-synthese'),
@@ -1343,6 +1411,7 @@
         if (state.bootstrap) {
           renderEvolution();
           renderPoste();
+          renderReferents();
         }
       }
       elements.themeToggle.addEventListener('click', () => {
@@ -1424,11 +1493,13 @@
         elements.tabSynthese.setAttribute('aria-selected', String(name === 'synthese'));
         elements.tabDetail.setAttribute('aria-selected', String(name === 'detail'));
         elements.tabControle.setAttribute('aria-selected', String(name === 'controle'));
+        elements.tabReferents.setAttribute('aria-selected', String(name === 'referents'));
         elements.tabPoste.setAttribute('aria-selected', String(name === 'poste'));
         elements.tabEvolution.setAttribute('aria-selected', String(name === 'evolution'));
         elements.panelSynthese.hidden = name !== 'synthese';
         elements.panelDetail.hidden = name !== 'detail';
         elements.panelControle.hidden = name !== 'controle';
+        elements.panelReferents.hidden = name !== 'referents';
         elements.panelPoste.hidden = name !== 'poste';
         elements.panelEvolution.hidden = name !== 'evolution';
         // Contrôle et méthodologie partagent un même onglet (01/10/2026).
@@ -1437,6 +1508,7 @@
       elements.tabSynthese.addEventListener('click', () => selectTab('synthese'));
       elements.tabDetail.addEventListener('click', () => selectTab('detail'));
       elements.tabControle.addEventListener('click', () => selectTab('controle'));
+      elements.tabReferents.addEventListener('click', () => selectTab('referents'));
       elements.tabPoste.addEventListener('click', () => selectTab('poste'));
       elements.tabEvolution.addEventListener('click', () => selectTab('evolution'));
 
@@ -2983,22 +3055,38 @@
       // dashboard, sans tenir compte de la casse ni des accents). Plusieurs
       // liens possibles pour une même filière (ex. CRC Nord / Sud).
       // ---------------------------------------------------------------
+      // Liens de la filière choisie (onglet « Liens outils référents ») :
+      // outils de suivi (outil + outil bis) et liste des référents. Code
+      // filière comparé sans tenir compte de la casse ni des accents ;
+      // plusieurs lignes possibles pour une filière (ex. CRC Nord / Sud).
+      const TOOL_LINK_GROUPS = [
+        {kinds: ['outil', 'outilBis'], label: 'Outils de suivi'},
+        {kinds: ['referents'], label: 'Référents'}
+      ];
       function renderToolLinks(container, filiere) {
-        const links = filiere
-          ? (state.bootstrap.toolLinks || []).filter((link) => normalizeSearchText(link.filiereCode) === normalizeSearchText(filiere))
+        const rows = filiere
+          ? (state.bootstrap.toolLinks || []).filter((row) => normalizeSearchText(row.filiereCode) === normalizeSearchText(filiere))
           : [];
+        // Ancien format (une URL par ligne) accepté le temps de la mise à jour.
+        const links = rows.flatMap((row) => row.links || [{kind: 'outil', title: row.title || row.label, url: row.url}]);
         container.replaceChildren();
-        container.hidden = links.length === 0;
-        if (!links.length) return;
-        container.append(links.length > 1 ? 'Outils de suivi de la filière : ' : 'Outil de suivi de la filière : ');
-        links.forEach((link, index) => {
-          if (index > 0) container.append(' · ');
-          const anchor = document.createElement('a');
-          anchor.href = link.url;
-          anchor.target = '_blank';
-          anchor.rel = 'noopener noreferrer';
-          anchor.textContent = link.title || link.label;
-          container.append(anchor);
+        const seen = new Set();
+        const groups = TOOL_LINK_GROUPS
+          .map((group) => ({label: group.label, links: links.filter((link) => group.kinds.includes(link.kind) && !seen.has(link.url) && seen.add(link.url))}))
+          .filter((group) => group.links.length);
+        container.hidden = groups.length === 0;
+        groups.forEach((group, groupIndex) => {
+          if (groupIndex > 0) container.append(' — ');
+          container.append(`${group.label} : `);
+          group.links.forEach((link, index) => {
+            if (index > 0) container.append(' · ');
+            const anchor = document.createElement('a');
+            anchor.href = link.url;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+            anchor.textContent = link.title;
+            container.append(anchor);
+          });
         });
       }
 
@@ -3577,7 +3665,20 @@
           label.textContent = `${tick} %`;
           svg.appendChild(label);
         });
-        (compact ? [...new Set([months[0], months[months.length - 1]])] : months).forEach((month, position, list) => {
+        // Étiquettes de mois espacées d'au moins 46 unités (sinon elles se
+        // chevauchent quand l'historique compte beaucoup de mois) ; le
+        // dernier mois est toujours étiqueté.
+        let lastLabelX = -Infinity;
+        const labelledMonths = compact
+          ? [...new Set([months[0], months[months.length - 1]])]
+          : months.filter((month, position) => {
+            const isLast = position === months.length - 1;
+            const x = xOf(month);
+            if (!isLast && (x - lastLabelX < 46 || xOf(months[months.length - 1]) - x < 46)) return false;
+            lastLabelX = x;
+            return true;
+          });
+        labelledMonths.forEach((month, position, list) => {
           const anchor = compact ? (position === 0 ? 'start' : 'end') : 'middle';
           const label = svgEl('text', {class: 'axis-text', x: xOf(month), y: height - (compact ? 4 : 10), 'text-anchor': list.length === 1 ? 'middle' : anchor});
           label.textContent = formatMonth(month);
@@ -3810,6 +3911,128 @@
       elements.evolutionGroupe.addEventListener('change', renderEvolution);
       elements.evolutionFiliere.addEventListener('change', renderEvolution);
 
+      // ---------------------------------------------------------------
+      // Vue Référents (bootstrap.referents, cf. ReferentsService.gs).
+      // Taux de couverture = pôles de la liste ayant un·e référent·e 1 ÷
+      // pôles de la liste, dans le périmètre (filière / territoire, territoire
+      // repris de BDD NOMS via le code pôle). Nombre de référent·es total =
+      // référent·es 1, 2 et 3 renseigné·es (nom ou adresse mail).
+      // ---------------------------------------------------------------
+      function referentsData() {
+        return state.bootstrap.referents || {evolution: [], poles: []};
+      }
+
+      function referentPoles() {
+        if (state.referentPoles) return state.referentPoles;
+        const byCode = new Map(state.bootstrap.poles.map((pole) => [normalizePoleCode(pole.poleCode), pole]));
+        state.referentPoles = referentsData().poles.map((pole) => {
+          const reference = byCode.get(normalizePoleCode(pole.poleCode));
+          return Object.assign({}, pole, {territoire: reference ? reference.territoire : ''});
+        });
+        return state.referentPoles;
+      }
+
+      function populateReferentsFilters() {
+        const data = referentsData();
+        const filieres = distinctSorted(data.poles.map((pole) => pole.filiere).concat(data.evolution.map((series) => series.filiere)));
+        const current = elements.referentsFiliere.value;
+        elements.referentsFiliere.replaceChildren(new Option('Toutes les filières', ''));
+        filieres.forEach((name) => elements.referentsFiliere.append(new Option(name, name)));
+        if ([...elements.referentsFiliere.options].some((option) => option.value === current)) elements.referentsFiliere.value = current;
+        refreshReferentsTerritoires();
+      }
+
+      function refreshReferentsTerritoires() {
+        const filiere = elements.referentsFiliere.value;
+        const territoires = distinctSorted(referentPoles().filter((pole) => pole.filiere === filiere).map((pole) => pole.territoire));
+        const current = elements.referentsTerritoire.value;
+        elements.referentsTerritoire.replaceChildren(new Option('Toute la filière', ''));
+        territoires.forEach((name) => elements.referentsTerritoire.append(new Option(name, name)));
+        elements.referentsTerritoire.disabled = !filiere || territoires.length === 0;
+        if ([...elements.referentsTerritoire.options].some((option) => option.value === current)) elements.referentsTerritoire.value = current;
+      }
+
+      function renderReferents() {
+        if (!state.bootstrap) return;
+        const filiere = elements.referentsFiliere.value;
+        const territoire = filiere ? elements.referentsTerritoire.value : '';
+        const scopeLabel = [filiere || 'toutes filières', territoire].filter(Boolean).join(' · ');
+        renderToolLinks(elements.referentsToolLinks, filiere);
+
+        const listFilieres = distinctSorted(referentPoles().map((pole) => pole.filiere));
+        elements.referentsCoverageHint.textContent = listFilieres.length
+          ? `Liste des référent·es disponible pour : ${listFilieres.join(', ')} (onglet « IMPORT REFERENTS »). Les autres filières n'apparaissent que dans le graphique d'évolution.`
+          : 'Liste des référent·es indisponible (voir les points à vérifier en tête de page).';
+
+        const poles = referentPoles()
+          .filter((pole) => (!filiere || pole.filiere === filiere) && (!territoire || pole.territoire === territoire))
+          .sort((left, right) => left.territoire.localeCompare(right.territoire, 'fr') || left.poleName.localeCompare(right.poleName, 'fr'));
+        const covered = poles.filter((pole) => pole.referents.length > 0).length;
+        const referentCount = poles.reduce((sum, pole) => sum + pole.referents.length, 0);
+        elements.referentsKpiTitle.textContent = `Couverture — ${scopeLabel}`;
+        elements.referentsKpis.replaceChildren(
+          ...identityStatTile('Taux de couverture', poles.length ? formatRate(roundRate(covered, poles.length)) : '—', `${formatCount(covered)} pôle(s) avec référent·e 1 sur ${formatCount(poles.length)}`),
+          ...identityStatTile('Référent·es (1, 2 et 3)', formatCount(referentCount), poles.length ? `soit ${(referentCount / poles.length).toLocaleString('fr-FR', {maximumFractionDigits: 1})} par pôle` : '')
+        );
+
+        // Évolution : une valeur par mois (dernière photographie du mois).
+        const series = referentsData().evolution.map((item) => {
+          const points = new Map();
+          item.points.slice().sort((left, right) => left[0].localeCompare(right[0])).forEach(([date, value]) => points.set(date.slice(0, 7), value * 100));
+          return {label: item.filiere, points};
+        });
+        renderLineChart(elements.referentsChart, elements.referentsLegend, series, {emphasis: filiere, tooltipSuffix: 'taux de couverture'});
+
+        // Liste.
+        const maxReferents = Math.max(1, ...poles.map((pole) => pole.referents.length));
+        elements.referentsListTitle.textContent = `Référent·es par pôle — ${scopeLabel} (${formatCount(poles.length)} pôle(s))`;
+        elements.referentsTableHead.replaceChildren();
+        const headRow = document.createElement('tr');
+        ['Pôle', 'Filière', 'Territoire', ...Array.from({length: maxReferents}, (_, index) => `Référent·e ${index + 1}`), 'MàJ outil de suivi'].forEach((label) => {
+          const th = document.createElement('th');
+          th.scope = 'col';
+          th.textContent = label;
+          headRow.append(th);
+        });
+        elements.referentsTableHead.append(headRow);
+        elements.referentsTableBody.replaceChildren(...poles.map((pole) => {
+          const row = document.createElement('tr');
+          const cell = (text) => {
+            const td = document.createElement('td');
+            td.textContent = text;
+            return td;
+          };
+          const name = cell(pole.poleName || pole.poleCode);
+          name.title = pole.poleCode;
+          row.append(name, cell(pole.filiere), cell(pole.territoire || '—'));
+          for (let index = 0; index < maxReferents; index += 1) {
+            const referent = pole.referents[index];
+            const td = document.createElement('td');
+            if (referent) {
+              td.textContent = referent.name || referent.email;
+              if (referent.fonction) {
+                const small = document.createElement('small');
+                small.textContent = ` (${referent.fonction})`;
+                td.append(small);
+              }
+              if (referent.email) td.title = referent.email;
+            } else {
+              td.textContent = '—';
+            }
+            row.append(td);
+          }
+          row.append(cell(pole.dateMaj || '—'));
+          return row;
+        }));
+        elements.referentsEmpty.hidden = poles.length > 0;
+      }
+
+      elements.referentsFiliere.addEventListener('change', () => {
+        refreshReferentsTerritoires();
+        renderReferents();
+      });
+      elements.referentsTerritoire.addEventListener('change', renderReferents);
+
       // Un seul bouton pour les 3 exports CSV déjà disponibles séparément
       // (Synthèse, Détail, Contrôle), sur ce qui est actuellement affiché
       // dans chaque vue — pour l'envoi groupé à un tiers plutôt que 3 clics
@@ -3899,6 +4122,8 @@
           renderPoste();
           populateEvolutionFilters();
           renderEvolution();
+          populateReferentsFilters();
+          renderReferents();
         })
         .withFailureHandler((error) => {
           elements.status.textContent = error && error.message ? error.message : 'Impossible de charger le tableau de bord.';
