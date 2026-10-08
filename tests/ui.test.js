@@ -71,6 +71,10 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     await page.selectOption('#synthese-filiere', '');
     assert.strictEqual(await page.$eval('#synthese-indicateur', (select) => select.value), 'tauxTerminees');
     assert.strictEqual(await page.$eval('#synthese-niveau', (select) => select.value), 'filiere');
+    // Détail des données : même tableau par action pour toutes les filières.
+    const tableHeaders = await page.$$eval('#data-table-head th', (cells) => cells.map((c) => c.textContent.replace(/[▲▼]/g, '').trim()));
+    assert.deepStrictEqual(tableHeaders, ['Action', 'Thématique', 'Campagne', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés']);
+    assert.ok(await page.$$eval('#data-table-body tr', (rows) => rows.length) > 0);
 
     // Évolution : regroupement par campagne / thématique, courbes par filière.
     await page.click('#tab-evolution');

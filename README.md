@@ -181,7 +181,15 @@ tableau garde son ordre). Indicateur par défaut : « Terminées /
 concernées ». « Regrouper par » ne propose que les regroupements utiles au
 périmètre : Filière (toutes filières), Territoire (une filière entière, ex-
 option « Tous les territoires (détail) » du filtre Territoire),
-Thématique, Campagne (ex-« Volet »), Action. Graphique principal, graphique de comparaison et
+Thématique, Campagne (ex-« Volet »), Action.
+
+Tableau « Détail des données » (08/10/2026, retour de Simon) : toujours le
+même tableau, une ligne par action (thématique, campagne, % terminés, pôles
+ayant terminé, pôles concernés), que le périmètre soit toutes filières, une
+filière ou un territoire. L'ancien tableau par filière (concernées, taux de
+réponse…) n'est plus affiché ni exporté ; ces chiffres restent dans le
+graphique et la fiche d'identité. Un clic sur une ligne ouvre le Détail par
+pôle seulement quand une filière est choisie (cette vue en exige une). Graphique principal, graphique de comparaison et
 fiche d'identité sur une même ligne (sous 1200px de large, le graphique principal passe seul sur sa
 ligne). Au-delà de 10 groupes (`HORIZONTAL_BAR_THRESHOLD`), les graphiques
 passent en barres horizontales pour que les libellés restent lisibles

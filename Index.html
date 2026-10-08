@@ -1858,6 +1858,14 @@
       // filières/territoires entre eux) ; ignoré pour thématique/volet/
       // action, où la filière/territoire affichés sont déjà ceux du filtre
       // en cours.
+      function navigateToPoleDetail(filiere, territoire) {
+        elements.detailFiliere.value = filiere;
+        refreshDetailFiltersForFiliere(filiere);
+        elements.detailTerritoire.value = territoire || '';
+        renderMatrix();
+        selectTab('detail');
+      }
+
       function navigateFromSyntheseToDetail(label) {
         const options = resolveSyntheseOptions();
         let filiere = options.filiere;
@@ -2068,14 +2076,14 @@
         renderComparisonChart(options);
         renderIdentityCard(options);
 
-        if (options.filiere) {
-          const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, actionTypes: options.actionTypes});
-          state.actionDetail = detail;
-          renderActionTable(detail);
-        } else {
-          state.actionDetail = null;
-          renderTable(snapshot);
-        }
+        // Même tableau « une ligne par action » quel que soit le périmètre
+        // (demande de Simon, 08/10/2026) : toutes filières confondues, une
+        // filière ou un territoire. L'ancien tableau par filière (concernées,
+        // taux de réponse…) n'est plus affiché ; ces chiffres restent dans le
+        // graphique et la fiche d'identité.
+        const detail = computeActionDetail(state.bootstrap, {filiere: options.filiere, territoire: options.territoire, actionTypes: options.actionTypes});
+        state.actionDetail = detail;
+        renderActionTable(detail);
         setSyntheseExportEnabled(true);
       }
 
@@ -2289,56 +2297,6 @@
         elements.tooltip.classList.remove('is-visible');
       }
 
-      function renderTable(snapshot) {
-        const niveauLabel = NIVEAU_LABELS[snapshot.niveau] || 'Filière';
-        elements.dataTableHead.replaceChildren();
-        const headRow = document.createElement('tr');
-        [niveauLabel, 'Concernées', 'Terminées', 'Terminées / concernées', "Moyenne d'avancement", 'Pôles connus', "N'ont pas répondu", 'Taux de réponse']
-          .forEach((label) => {
-            const th = document.createElement('th');
-            th.scope = 'col';
-            th.textContent = label;
-            headRow.appendChild(th);
-          });
-        elements.dataTableHead.appendChild(headRow);
-
-        elements.tableBody.replaceChildren();
-        snapshot.groups.forEach((item) => {
-          const row = document.createElement('tr');
-          if (!item.dataAvailable) row.className = 'is-unavailable';
-          row.classList.add('clickable-row');
-          row.tabIndex = 0;
-          row.title = 'Voir le détail pôle × action de ce groupe';
-          row.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
-          row.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              navigateFromSyntheseToDetail(item.label);
-            }
-          });
-          const cells = [
-            item.label,
-            formatCount(item.concernes),
-            formatCount(item.terminees),
-            item.dataAvailable ? formatRate(item.tauxTerminees) : item.note,
-            item.dataAvailable ? formatRate(item.tauxMoyenAvancement) : '—',
-            formatCount(item.poleUniverseCount),
-            formatCount(item.nonRespondentPoleCount),
-            formatRate(item.tauxReponse)
-          ];
-          cells.forEach((value, index) => {
-            const cell = document.createElement('td');
-            cell.textContent = value;
-            if (!item.dataAvailable && index === 3) cell.colSpan = 2;
-            row.appendChild(cell);
-          });
-          // Le colspan sur "note" masque la cellule "Moyenne d'avancement" :
-          // on l'enlève pour ne pas dupliquer le texte de la note.
-          if (!item.dataAvailable) row.removeChild(row.children[4]);
-          elements.tableBody.appendChild(row);
-        });
-      }
-
       // Tri cliquable sur les 3 colonnes texte (action, thématique, volet),
       // demandé pour retrouver rapidement une action précise dans une
       // filière qui peut en compter plusieurs dizaines.
@@ -2392,16 +2350,20 @@
         elements.tableBody.replaceChildren();
         sortActionRows(detail.rows).forEach((row) => {
           const tr = document.createElement('tr');
-          tr.classList.add('clickable-row');
-          tr.tabIndex = 0;
-          tr.title = 'Voir le détail pôle × action de cette filière/territoire';
-          tr.addEventListener('click', () => navigateFromSyntheseToDetail(row.action));
-          tr.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              navigateFromSyntheseToDetail(row.action);
-            }
-          });
+          // Le Détail par pôle exige une filière : lien seulement dans ce cas.
+          if (detail.filiere) {
+            const openDetail = () => navigateToPoleDetail(detail.filiere, detail.territoire);
+            tr.classList.add('clickable-row');
+            tr.tabIndex = 0;
+            tr.title = 'Voir le détail par pôle de cette filière/territoire';
+            tr.addEventListener('click', openDetail);
+            tr.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openDetail();
+              }
+            });
+          }
           [row.action, row.thematique, row.volet, formatRate(row.tauxTerminees), formatCount(row.terminees), formatCount(row.concernes)]
             .forEach((value) => {
               const td = document.createElement('td');
@@ -2418,22 +2380,6 @@
         const rows = sortActionRows(detail.rows).map((row) =>
           [row.action, row.thematique, row.volet, row.tauxTerminees, row.terminees, row.concernes].map(escapeCsv).join(',')
         );
-        return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
-      }
-
-      function buildCsv(snapshot) {
-        const niveauLabel = NIVEAU_LABELS[snapshot.niveau] || 'Filière';
-        const headers = [
-          niveauLabel, 'Concernées', 'Terminées', 'Taux terminées (%)',
-          'Moyenne avancement (%)', 'Pôles connus', "N'ont pas répondu",
-          'Taux de réponse (%)', 'Note'
-        ];
-        const escapeCsv = (value) => `"${String(value === null || value === undefined ? '' : value).replace(/"/g, '""')}"`;
-        const rows = snapshot.groups.map((item) => [
-          item.label, item.concernes, item.terminees, item.tauxTerminees,
-          item.tauxMoyenAvancement, item.poleUniverseCount, item.nonRespondentPoleCount,
-          item.tauxReponse, item.note
-        ].map(escapeCsv).join(','));
         return [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
       }
 
@@ -2505,9 +2451,7 @@
       });
 
       elements.exportCsv.addEventListener('click', () => {
-        const csv = state.actionDetail
-          ? buildActionDetailCsv(state.actionDetail)
-          : (state.syntheseSnapshot ? buildCsv(state.syntheseSnapshot) : null);
+        const csv = state.actionDetail ? buildActionDetailCsv(state.actionDetail) : null;
         if (!csv) return;
         downloadBlob(new Blob([`\ufeff${csv}`], {type: 'text/csv;charset=utf-8'}), `dashboard-rso-donnees-${dateStamp()}.csv`);
       });
@@ -3877,9 +3821,7 @@
         const stamp = dateStamp();
         const downloads = [];
 
-        const syntheseCsv = state.actionDetail
-          ? buildActionDetailCsv(state.actionDetail)
-          : (state.syntheseSnapshot ? buildCsv(state.syntheseSnapshot) : null);
+        const syntheseCsv = state.actionDetail ? buildActionDetailCsv(state.actionDetail) : null;
         if (syntheseCsv) {
           downloads.push([syntheseCsv, `dashboard-rso-synthese-${stamp}.csv`]);
         }
