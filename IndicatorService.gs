@@ -4,47 +4,53 @@
 // README.md.
 function getFactRecords_() {
   const config = getConfig_();
-  const records = readSheetRecordsInColumnRange_(
+  const table = readSheetTableInColumnRange_(
     config.SPREADSHEET_ID,
     config.IMPORT_SHEET_NAME,
     config.IMPORT_HEADER_ROW,
     config.IMPORT_SYNTHESE_FIRST_COLUMN,
     config.IMPORT_SYNTHESE_LAST_COLUMN
   );
-
-  if (records.length === 0) {
+  if (!table.rows.length) {
+    addDiagnosticWarning_(`${config.IMPORT_SHEET_NAME} : aucune ligne lue dans la zone SYNTHESE.`);
     return [];
   }
 
-  const columns = findFactColumns_(Object.keys(records[0]));
-
-  return records
-    .map((record) => ({
-      poleCode: cleanValue_(record[columns.poleCode]),
-      action: cleanValue_(record[columns.action]),
-      volet: cleanValue_(record[columns.volet]),
-      thematique: cleanValue_(record[columns.thematique]),
-      avancement: cleanValue_(record[columns.avancement]),
-      filiere: cleanValue_(record[columns.filiere]),
-      actionSocle: cleanValue_(record[columns.actionSocle])
+  const columns = findFactColumns_(table, config.IMPORT_SHEET_NAME);
+  return table.rows
+    .map((row) => ({
+      poleCode: cellAt_(row, columns.poleCode),
+      action: cleanActionLabel_(cellAt_(row, columns.action)),
+      volet: cellAt_(row, columns.volet),
+      thematique: cellAt_(row, columns.thematique),
+      avancement: cellAt_(row, columns.avancement),
+      filiere: cellAt_(row, columns.filiere),
+      actionSocle: cellAt_(row, columns.actionSocle),
+      // Valeurs affichées brutes (ex. "-0,10%" ou "-59 700 kgCO2") :
+      // l'unité est interprétée côté client (cf. parseReduction dans
+      // Index.html et README.md, « Sujet ouvert : CO2 en kg/% »).
+      reductionADate: cellAt_(row, columns.reductionADate),
+      reductionCible: cellAt_(row, columns.reductionCible)
     }))
     .filter((fact) => fact.poleCode && fact.action);
 }
 
-function findFactColumns_(headers) {
+function findFactColumns_(table, sheetLabel) {
   return {
-    poleCode: findHeader_(headers, 'site'),
-    action: findHeader_(headers, 'action envisagee'),
-    volet: findHeader_(headers, 'type daction'),
-    thematique: findHeader_(headers, 'poste demissions'),
-    avancement: findHeader_(headers, 'avancement'),
-    filiere: findHeader_(headers, 'filiere'),
+    poleCode: findRequiredColumnIndex_(table, 'site', sheetLabel),
+    action: findRequiredColumnIndex_(table, 'action envisagee', sheetLabel),
+    volet: findRequiredColumnIndex_(table, 'type daction', sheetLabel),
+    thematique: findRequiredColumnIndex_(table, 'poste demissions', sheetLabel),
+    avancement: findRequiredColumnIndex_(table, 'avancement', sheetLabel),
+    filiere: findRequiredColumnIndex_(table, 'filiere', sheetLabel),
     // Colonne "Action socles" (dernière colonne AZ) : distingue actions
     // socle (par année de campagne), actions filière et actions
-    // supplémentaires — cf. diagnosticActionSocles et Index.html, utilisé
-    // pour la coche "actions actuellement suivies". Optionnelle : un
-    // classeur plus ancien peut ne pas avoir cette colonne.
-    actionSocle: findOptionalHeader_(headers, 'action socle')
+    // supplémentaires — utilisée pour les coches "Actions socle" /
+    // "Actions spécifiques filière". Optionnelle (classeurs plus anciens),
+    // comme les deux colonnes de réduction carbone.
+    actionSocle: findColumnIndex_(table, 'action socle'),
+    reductionADate: findColumnIndex_(table, 'reduction carbone a date'),
+    reductionCible: findColumnIndex_(table, 'reduction carbone cible')
   };
 }
 
@@ -109,20 +115,35 @@ function resolveFactTerritoire_(fact, poleReference) {
 // navigateur — un projet sans mainteneur dédié ne doit pas avoir deux
 // versions de la même formule à garder synchronisées.
 function getDashboardBootstrap() {
+  // Même restriction de domaine que doGet (WebApp.gs) : cette fonction est
+  // appelable depuis la page, elle ne doit rien renvoyer hors domaine.
+  if (!isAllowedIdentityEmail_(getActiveUserEmail_())) {
+    throw new Error('Accès réservé aux comptes @croix-rouge.fr.');
+  }
   const config = getConfig_();
+  DASHBOARD_DIAGNOSTICS_.warnings = [];
+  DASHBOARD_DIAGNOSTICS_.details = {};
   const poleReference = getPoleReference_();
-  const factRecords = getFactRecords_();
+  const importFactRecords = getFactRecords_();
+  const factRecords = importFactRecords.concat(getProtEnfanceFacts_(poleReference, importFactRecords));
   const padomOverrides = derivePadomOverrides_(factRecords);
+  const actionCatalogue = getActionCatalogue_();
 
   const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
     action: fact.action,
     volet: fact.volet,
-    thematique: fact.thematique,
+    thematique: resolveFactThematique_(fact, actionCatalogue),
     avancement: fact.avancement,
     filiere: resolveFactFiliere_(fact, poleReference, padomOverrides),
     territoire: resolveFactTerritoire_(fact, poleReference),
-    actionSocle: fact.actionSocle
+    actionSocle: fact.actionSocle,
+    reductionADate: fact.reductionADate,
+    reductionCible: fact.reductionCible,
+    // Réduction du catalogue pour cette action (valeur affichée brute, ex.
+    // "-2,07%") : sert à recalculer les pôles pilotes quand l'option est
+    // choisie dans la vue Détail par poste.
+    catalogueReduction: resolveFactCatalogueReduction_(fact, actionCatalogue)
   }));
 
   // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
@@ -140,12 +161,53 @@ function getDashboardBootstrap() {
     return pole;
   });
 
+  const withoutPole = {};
+  facts.forEach((fact) => {
+    if (!poleReference[normalizeText_(fact.poleCode)]) withoutPole[fact.poleCode] = true;
+  });
+  const missingCodes = Object.keys(withoutPole);
+  setDiagnosticDetail_('faits', {lignes: facts.length, polesAbsentsDeBddNoms: missingCodes.slice(0, 20), nbPolesAbsents: missingCodes.length});
+  if (missingCodes.length) {
+    addDiagnosticWarning_(`${missingCodes.length} code(s) pôle d'${config.IMPORT_SHEET_NAME} absent(s) de ${config.POLE_REFERENCE_SHEET_NAME} (sans territoire), ex. ${missingCodes.slice(0, 3).join(', ')}.`);
+  }
+
+  const toolLinks = getToolLinks_();
+  const history = getHistoryForDashboard_();
   return {
     appVersion: config.APP_VERSION,
     generatedAt: new Date().toISOString(),
-    facts: facts,
-    poles: poles
+    // Faits envoyés en colonnes (une liste de champs + des lignes) plutôt
+    // qu'en objets : environ deux fois moins de données à transférer pour
+    // ~7 000 lignes ; le navigateur reconstruit les objets (expandFacts).
+    facts: toColumnar_(facts, FACT_FIELDS_),
+    poles: poles,
+    toolLinks: toolLinks,
+    history: history,
+    referents: getReferentsForDashboard_(poleReference),
+    diagnostics: DASHBOARD_DIAGNOSTICS_
   };
+}
+
+const FACT_FIELDS_ = ['poleCode', 'action', 'volet', 'thematique', 'avancement', 'filiere', 'territoire', 'actionSocle', 'reductionADate', 'reductionCible', 'catalogueReduction'];
+
+function toColumnar_(records, fields) {
+  return {fields: fields, rows: records.map((record) => fields.map((field) => record[field]))};
+}
+
+// À exécuter depuis l'éditeur Apps Script en cas de doute sur un chiffre ou
+// un affichage (ex. territoires absents) : affiche les avertissements et le
+// détail des colonnes réellement utilisées, sans passer par l'appli.
+function diagnosticDashboard() {
+  const bootstrap = getDashboardBootstrap();
+  Logger.log(JSON.stringify({
+    avertissements: bootstrap.diagnostics.warnings,
+    details: bootstrap.diagnostics.details,
+    faits: bootstrap.facts.rows.length,
+    poles: bootstrap.poles.length,
+    historique: bootstrap.history.rows.length,
+    liensOutils: bootstrap.toolLinks.length,
+    tailleApproxKo: Math.round(JSON.stringify(bootstrap).length / 1024)
+  }, null, 2));
 }
 
 // À exécuter manuellement depuis l'éditeur Apps Script pour éprouver la
@@ -157,9 +219,42 @@ function testDashboardBootstrap() {
   const bootstrap = getDashboardBootstrap();
   Logger.log(JSON.stringify({
     appVersion: bootstrap.appVersion,
-    factCount: bootstrap.facts.length,
+    factCount: bootstrap.facts.rows.length,
     poleCount: bootstrap.poles.length,
-    sampleFact: bootstrap.facts[0],
+    sampleFact: bootstrap.facts.rows[0],
     samplePole: bootstrap.poles[0]
+  }, null, 2));
+}
+
+// À exécuter manuellement depuis l'éditeur : recense les formats réellement
+// présents dans les colonnes "Réduction carbone à date / cible" de la zone
+// SYNTHESE (en %, en kg, vide, autre), pour vérifier que parseReduction
+// (Index.html) couvre bien tous les cas avant de se fier aux chiffres.
+function diagnosticReductionCarbone() {
+  const facts = getFactRecords_();
+  const classify = (value) => {
+    const compact = String(value || '').replace(/[\s  ]/g, '');
+    if (!compact) return 'vide';
+    if (/kg/i.test(compact)) return 'kg';
+    if (/^[+\-−]?\d+(?:[.,]\d+)?%$/.test(compact)) return '%';
+    return 'autre';
+  };
+  const counts = {};
+  const otherSamples = {};
+  const kgPoles = {};
+  facts.forEach((fact) => {
+    ['reductionADate', 'reductionCible'].forEach((field) => {
+      const kind = classify(fact[field]);
+      const key = `${field} | ${kind}`;
+      counts[key] = (counts[key] || 0) + 1;
+      if (kind === 'autre' && Object.keys(otherSamples).length < 15) otherSamples[fact[field]] = true;
+      if (kind === 'kg') kgPoles[fact.poleCode] = true;
+    });
+  });
+  Logger.log(JSON.stringify({
+    lignes: facts.length,
+    formats: counts,
+    exemplesAutres: Object.keys(otherSamples),
+    polesAvecKg: Object.keys(kgPoles).sort()
   }, null, 2));
 }
