@@ -216,6 +216,29 @@ DOM ; il n'y a pas de colonne « Référent.e 3 » (elle sera lue si elle est
 ajoutée, intitulée « Référent.e 3 … ») ; FLEX : 24 pôles couverts sur 32,
 soit 75 %, identique à la dernière photographie (0,75).
 
+## Accès aux classeurs et temps de chargement (14/10/2026)
+
+- **Écran « demander l'accès »** : avec un déploiement « Exécuter en tant
+  que : utilisateur accédant à l'application », chaque personne lit les
+  classeurs avec son propre compte. `checkSpreadsheetAccess_`
+  (`IndicatorService.gs`) teste l'accès à chaque classeur avant lecture.
+  Sans accès au classeur national, la page affiche un lien par classeur
+  manquant au lieu d'une erreur : ce lien ouvre la page Google du fichier,
+  qui propose le bouton « Demander l'accès » (demande envoyée au
+  propriétaire). Sans accès aux archives ou aux référents, le reste
+  s'affiche et l'encadré en tête de page donne le lien. `ACCESS_CONTACT`
+  (`Config.gs`) : personne ou boîte à contacter, affichée sur l'écran.
+- **Lectures groupées** : les trois onglets lus en valeurs affichées du
+  classeur national (`IMPORT DONNEES` AM:AZ, `BDD NOMS`,
+  `BDD - Actions supplémentaires`) sont lus en une seule requête
+  `Sheets.Spreadsheets.Values.batchGet` (service avancé Sheets, déjà
+  activé pour les liens outils). En cas d'échec, lecture onglet par
+  onglet comme avant (`prefetchDisplayValues_`, `Utils.gs`).
+- **Durées** : la durée de chaque étape du chargement s'affiche dans
+  « Contrôle et méthodologie » et dans le journal de
+  `diagnosticDashboard()`, pour cibler les optimisations suivantes sur les
+  vraies données.
+
 ## Export en image et indicateur de chargement (13/10/2026)
 
 - **Bouton « ⤓ Image (PNG) »** sur chaque graphique et carte (Synthèse :
