@@ -43,6 +43,10 @@ const CONFIG = Object.freeze({
   REFERENTS_SPREADSHEET_ID: '1dqBJ4ghIJ7vqlJLBW3-Ou5fnE6U0l7O7wwPXIsuhdIc',
   REFERENTS_EVOLUTION_SHEET_NAME: 'Evolution référents',
   REFERENTS_LIST_SHEET_NAME: 'IMPORT REFERENTS',
+  // Personne ou boîte à contacter pour obtenir l'accès aux classeurs,
+  // affichée sur l'écran « demander l'accès » (vide = seuls les liens
+  // « Demander l'accès » de Google sont proposés).
+  ACCESS_CONTACT: '',
   HEADER_ROW: 1,
   MAX_PREVIEW_ROWS: 50,
   // Cache applicatif des droits (mis en place lors de l'ajout de la couche droits).

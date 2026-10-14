@@ -79,7 +79,30 @@ class FakeSpreadsheet {
   insertSheet(name) { const sheet = new FakeSheet(name, []); this.sheets.push(sheet); return sheet; }
 }
 
-// spreadsheets : {id: {nomOnglet: valeurs 2D}} ; options.email, options.sheetsApi
+// Sheets.Spreadsheets.Values.batchGet simulé sur les classeurs simulés :
+// valeurs affichées, cellules vides de fin de ligne et lignes vides de fin
+// omises comme le fait l'API ; onglet inconnu -> erreur (comme l'API).
+function fakeValuesApi(opened, calls) {
+  return {
+    batchGet(spreadsheetId, params) {
+      calls.push({spreadsheetId, ranges: params.ranges.slice()});
+      const spreadsheet = opened[spreadsheetId];
+      if (!spreadsheet) throw new Error(`Classeur inaccessible : ${spreadsheetId}`);
+      return {valueRanges: params.ranges.map((range) => {
+        const match = range.match(/^'((?:[^']|'')+)'(?:!(.+))?$/);
+        const sheet = spreadsheet.getSheetByName(match[1].replace(/''/g, "'"));
+        if (!sheet) throw new Error(`Unable to parse range: ${range}`);
+        const values = (match[2] ? sheet.getRange(match[2]) : sheet.getDataRange()).getDisplayValues()
+          .map((row) => { const copy = row.slice(); while (copy.length && copy[copy.length - 1] === '') copy.pop(); return copy; });
+        while (values.length && values[values.length - 1].length === 0) values.pop();
+        return {range, values};
+      })};
+    }
+  };
+}
+
+// spreadsheets : {id: {nomOnglet: valeurs 2D}} ; options.email, options.sheetsApi,
+// options.batchGet (true : service avancé avec Values.batchGet simulé)
 function loadAppsScript(spreadsheets, options = {}) {
   const opened = Object.fromEntries(Object.entries(spreadsheets).map(([id, sheets]) => [id, new FakeSpreadsheet(id, sheets)]));
   const logs = [];
@@ -110,13 +133,19 @@ function loadAppsScript(spreadsheets, options = {}) {
     LockService: {getScriptLock: () => ({tryLock: () => true, releaseLock() {}})},
     HtmlService: {}
   };
-  if (options.sheetsApi) context.Sheets = options.sheetsApi;
+  const batchCalls = [];
+  if (options.sheetsApi || options.batchGet) {
+    context.Sheets = Object.assign({}, options.sheetsApi || {});
+    context.Sheets.Spreadsheets = Object.assign({}, (options.sheetsApi && options.sheetsApi.Spreadsheets) || {});
+    if (options.batchGet) context.Sheets.Spreadsheets.Values = fakeValuesApi(opened, batchCalls);
+  }
   vm.createContext(context);
   const files = fs.readdirSync(ROOT).filter((file) => file.endsWith('.gs')).sort();
   // Config.gs d'abord (constantes utilisées par les autres fichiers).
   files.sort((left, right) => (left === 'Config.gs' ? -1 : right === 'Config.gs' ? 1 : 0));
   vm.runInContext(files.map((file) => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n;\n'), context, {filename: 'apps-script.js'});
   context.__logs = logs;
+  context.__batchCalls = batchCalls;
   context.__spreadsheets = opened;
   return context;
 }

@@ -189,3 +189,35 @@ test('bouton « Rafraîchir les archives » : import forcé, compte rendu et his
   const outsider = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: archives}, {email: 'x@gmail.com'});
   assert.throws(() => outsider.rafraichirArchivesDepuisDashboard(), /réservé/);
 });
+
+test('lecture groupée : même résultat en une requête pour le classeur national', () => {
+  const plain = bootstrapFor('territoireEnDouble').bootstrap;
+  const {app, bootstrap: batched} = bootstrapFor('territoireEnDouble', {batchGet: true});
+  assert.strictEqual(app.__batchCalls.length, 1, 'une seule requête');
+  assert.deepStrictEqual([...app.__batchCalls[0].ranges], ["'IMPORT DONNEES'!AM2:AZ", "'BDD NOMS'", "'BDD - Actions supplémentaires'"]);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(batched.facts)), JSON.parse(JSON.stringify(plain.facts)));
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(batched.poles)), JSON.parse(JSON.stringify(plain.poles)));
+  assert.ok(batched.diagnostics.timings.some(([label]) => label === 'IMPORT DONNEES'), 'durées par étape');
+
+  // Onglet renommé : la requête groupée échoue, lecture onglet par onglet.
+  const national = buildNational('normal');
+  national['Catalogue'] = national['BDD - Actions supplémentaires'];
+  delete national['BDD - Actions supplémentaires'];
+  const fallback = loadAppsScript({[NATIONAL_ID]: national, [ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()}, {batchGet: true}).getDashboardBootstrap();
+  assert.ok(fallback.facts.rows.length > 0);
+  assert.ok(fallback.diagnostics.warnings.some((w) => /Référentiel des actions : onglet introuvable/.test(w)));
+});
+
+test('accès : écran « demander l\'accès » sans le classeur national, liens pour les autres', () => {
+  const denied = loadAppsScript({[ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()}).getDashboardBootstrap();
+  assert.ok(denied.accessRequired, 'pas de données sans le classeur national');
+  assert.deepStrictEqual([...denied.accessRequired.missing.map((item) => item.key)], ['national']);
+  assert.match(denied.accessRequired.missing[0].url, new RegExp(`/spreadsheets/d/${NATIONAL_ID}/edit$`));
+  assert.ok(!denied.facts, 'aucune donnée transmise');
+
+  const partial = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: buildArchives()}).getDashboardBootstrap();
+  assert.ok(!partial.accessRequired);
+  assert.ok(partial.facts.rows.length > 0);
+  assert.deepStrictEqual([...partial.diagnostics.accessLinks.map((item) => item.key)], ['referents']);
+});
+

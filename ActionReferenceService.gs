@@ -47,12 +47,15 @@ function resolveFactCatalogueReduction_(fact, actionCatalogue) {
 // "Catégorie…" / "Thématique…".
 function readActionReferenceTable_() {
   const config = getConfig_();
-  const sheet = openSpreadsheet_(config.SPREADSHEET_ID).getSheetByName(config.ACTIONS_REFERENCE_SHEET_NAME);
-  if (!sheet) {
-    addDiagnosticWarning_(`Référentiel des actions : onglet introuvable (${config.ACTIONS_REFERENCE_SHEET_NAME}) — postes saisis par les pôles conservés, pôles pilotes non recalculables.`);
-    return null;
+  let values = takePrefetchedDisplayValues_(config.SPREADSHEET_ID, config.ACTIONS_REFERENCE_SHEET_NAME, '');
+  if (!values) {
+    const sheet = openSpreadsheet_(config.SPREADSHEET_ID).getSheetByName(config.ACTIONS_REFERENCE_SHEET_NAME);
+    if (!sheet) {
+      addDiagnosticWarning_(`Référentiel des actions : onglet introuvable (${config.ACTIONS_REFERENCE_SHEET_NAME}) — postes saisis par les pôles conservés, pôles pilotes non recalculables.`);
+      return null;
+    }
+    values = sheet.getDataRange().getDisplayValues();
   }
-  const values = sheet.getDataRange().getDisplayValues();
   const startsWith = (cell, prefixes) => prefixes.some((prefix) => normalizeText_(cell).indexOf(prefix) === 0);
   for (let rowIndex = 0; rowIndex < Math.min(values.length, 10); rowIndex += 1) {
     const header = values[rowIndex];

@@ -123,11 +123,31 @@ function getDashboardBootstrap() {
   const config = getConfig_();
   DASHBOARD_DIAGNOSTICS_.warnings = [];
   DASHBOARD_DIAGNOSTICS_.details = {};
-  const poleReference = getPoleReference_();
-  const importFactRecords = getFactRecords_();
-  const factRecords = importFactRecords.concat(getProtEnfanceFacts_(poleReference, importFactRecords));
+  DASHBOARD_DIAGNOSTICS_.timings = [];
+  DASHBOARD_DIAGNOSTICS_.accessLinks = [];
+
+  // Droits sur les classeurs (déploiement « exécuté par l'utilisateur ») :
+  // sans accès au classeur national, rien ne peut s'afficher -> écran
+  // « demander l'accès » au lieu d'une erreur ; sans accès aux archives ou
+  // aux référents, le reste s'affiche et l'encadré propose le lien.
+  const access = timed_('Vérification des accès', () => checkSpreadsheetAccess_());
+  const missing = access.filter((item) => !item.ok);
+  if (missing.some((item) => item.required)) {
+    return {appVersion: config.APP_VERSION, accessRequired: {email: getActiveUserEmail_(), missing: missing, contact: config.ACCESS_CONTACT || ''}};
+  }
+  missing.forEach((item) => DASHBOARD_DIAGNOSTICS_.accessLinks.push(item));
+
+  timed_('Lecture groupée du classeur national', () => prefetchDisplayValues_(config.SPREADSHEET_ID, [
+    {sheetName: config.IMPORT_SHEET_NAME, range: `${config.IMPORT_SYNTHESE_FIRST_COLUMN}${config.IMPORT_HEADER_ROW}:${config.IMPORT_SYNTHESE_LAST_COLUMN}`},
+    {sheetName: config.POLE_REFERENCE_SHEET_NAME, range: ''},
+    {sheetName: config.ACTIONS_REFERENCE_SHEET_NAME, range: ''}
+  ]));
+  const poleReference = timed_('BDD NOMS', () => getPoleReference_());
+  const importFactRecords = timed_('IMPORT DONNEES', () => getFactRecords_());
+  const protFacts = timed_('PROT ENFANCE', () => getProtEnfanceFacts_(poleReference, importFactRecords));
+  const factRecords = importFactRecords.concat(protFacts);
   const padomOverrides = derivePadomOverrides_(factRecords);
-  const actionCatalogue = getActionCatalogue_();
+  const actionCatalogue = timed_('Référentiel des actions', () => getActionCatalogue_());
 
   const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
@@ -171,8 +191,9 @@ function getDashboardBootstrap() {
     addDiagnosticWarning_(`${missingCodes.length} code(s) pôle d'${config.IMPORT_SHEET_NAME} absent(s) de ${config.POLE_REFERENCE_SHEET_NAME} (sans territoire), ex. ${missingCodes.slice(0, 3).join(', ')}.`);
   }
 
-  const toolLinks = getToolLinks_();
-  const history = getHistoryForDashboard_();
+  const toolLinks = timed_('Liens outils', () => getToolLinks_());
+  const history = timed_('Historique', () => getHistoryForDashboard_());
+  const referents = timed_('Référents', () => getReferentsForDashboard_(poleReference));
   return {
     appVersion: config.APP_VERSION,
     generatedAt: new Date().toISOString(),
@@ -183,7 +204,7 @@ function getDashboardBootstrap() {
     poles: poles,
     toolLinks: toolLinks,
     history: history,
-    referents: getReferentsForDashboard_(poleReference),
+    referents: referents,
     diagnostics: DASHBOARD_DIAGNOSTICS_
   };
 }
@@ -198,8 +219,15 @@ function toColumnar_(records, fields) {
 // un affichage (ex. territoires absents) : affiche les avertissements et le
 // détail des colonnes réellement utilisées, sans passer par l'appli.
 function diagnosticDashboard() {
+  const start = Date.now();
   const bootstrap = getDashboardBootstrap();
+  if (bootstrap.accessRequired) {
+    Logger.log(JSON.stringify({accesManquant: bootstrap.accessRequired}, null, 2));
+    return;
+  }
   Logger.log(JSON.stringify({
+    dureeTotaleMs: Date.now() - start,
+    dureesParEtapeMs: bootstrap.diagnostics.timings,
     avertissements: bootstrap.diagnostics.warnings,
     details: bootstrap.diagnostics.details,
     faits: bootstrap.facts.rows.length,
@@ -258,3 +286,35 @@ function diagnosticReductionCarbone() {
     polesAvecKg: Object.keys(kgPoles).sort()
   }, null, 2));
 }
+
+// Classeurs lus par le dashboard : accès vérifié avec le compte qui
+// exécute l'application. required : indispensable à l'affichage.
+function spreadsheetSources_() {
+  const config = getConfig_();
+  const sources = [{key: 'national', label: 'REPORTING NATIONAL', id: config.SPREADSHEET_ID, required: true}];
+  if (config.ARCHIVES_SPREADSHEET_ID && config.ARCHIVES_SPREADSHEET_ID !== config.SPREADSHEET_ID) {
+    sources.push({key: 'archives', label: 'Archives REPORTING NATIONAL (vue Évolution)', id: config.ARCHIVES_SPREADSHEET_ID, required: false});
+  }
+  if (config.REFERENTS_SPREADSHEET_ID) {
+    sources.push({key: 'referents', label: 'Synthèse référents Environnement (vue Référents)', id: config.REFERENTS_SPREADSHEET_ID, required: false});
+  }
+  return sources;
+}
+
+// [{key, label, url, required, ok, error}]. Ouvrir le lien sans droits
+// affiche la page Google « Vous avez besoin d'une autorisation » avec le
+// bouton « Demander l'accès » (demande envoyée au propriétaire du fichier).
+function checkSpreadsheetAccess_() {
+  return spreadsheetSources_().map((source) => {
+    const item = {key: source.key, label: source.label, required: source.required,
+      url: `https://docs.google.com/spreadsheets/d/${source.id}/edit`, ok: true, error: ''};
+    try {
+      openSpreadsheet_(source.id);
+    } catch (error) {
+      item.ok = false;
+      item.error = error.message;
+    }
+    return item;
+  });
+}
+

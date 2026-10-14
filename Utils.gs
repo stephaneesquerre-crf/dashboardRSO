@@ -52,13 +52,18 @@ function getSheetOrThrow_(spreadsheetId, sheetName) {
 // plafond arbitraire tronquerait silencieusement les données (bug vécu sur
 // IMPORT DONNEES).
 function readSheetTable_(spreadsheetId, sheetName, headerRow) {
-  const values = getSheetOrThrow_(spreadsheetId, sheetName).getDataRange().getDisplayValues();
+  const prefetched = takePrefetchedDisplayValues_(spreadsheetId, sheetName, '');
+  const values = prefetched || getSheetOrThrow_(spreadsheetId, sheetName).getDataRange().getDisplayValues();
   return toTable_(values, headerRow);
 }
 
 // Variante restreinte à une plage de colonnes (ex. AM:AZ), nécessaire quand
 // les mêmes intitulés de colonnes se répètent ailleurs sur la feuille.
 function readSheetTableInColumnRange_(spreadsheetId, sheetName, headerRow, firstColumn, lastColumn) {
+  const prefetched = takePrefetchedDisplayValues_(spreadsheetId, sheetName, `${firstColumn}${headerRow}:${lastColumn}`);
+  if (prefetched) {
+    return toTable_(prefetched, 1);
+  }
   const sheet = getSheetOrThrow_(spreadsheetId, sheetName);
   const lastRow = sheet.getLastRow();
   if (lastRow < headerRow) {
@@ -123,3 +128,70 @@ function addDiagnosticWarning_(message) {
 function setDiagnosticDetail_(key, value) {
   DASHBOARD_DIAGNOSTICS_.details[key] = value;
 }
+
+// ---------------------------------------------------------------------
+// Lectures groupées (14/10/2026) : les onglets lus en « valeurs
+// affichées » d'un même classeur sont demandés en UNE requête
+// Sheets.Spreadsheets.Values.batchGet (service avancé Sheets) au lieu
+// d'un appel SpreadsheetApp par onglet. FORMATTED_VALUE renvoie le même
+// texte que getDisplayValues(). Les lecteurs (readSheetTable_…)
+// prennent ces valeurs si elles ont été préchargées, sinon lisent comme
+// avant : si le service avancé est absent ou si la requête groupée
+// échoue (onglet renommé…), rien ne change pour l'utilisateur.
+// ---------------------------------------------------------------------
+const PREFETCHED_DISPLAY_VALUES_ = {};
+
+function prefetchKey_(spreadsheetId, sheetName, a1Range) {
+  return [spreadsheetId, sheetName, a1Range || ''].join('|');
+}
+
+function quoteSheetName_(sheetName) {
+  return `'${String(sheetName).replace(/'/g, "''")}'`;
+}
+
+// requests : [{sheetName, range}] (range A1 sans nom d'onglet, ex.
+// 'AM2:AZ' ; vide = onglet entier à partir de A1). Renvoie true si le
+// préchargement a réussi.
+function prefetchDisplayValues_(spreadsheetId, requests) {
+  if (typeof Sheets === 'undefined' || !Sheets.Spreadsheets || !Sheets.Spreadsheets.Values) {
+    return false;
+  }
+  try {
+    const ranges = requests.map((request) => quoteSheetName_(request.sheetName) + (request.range ? `!${request.range}` : ''));
+    const response = Sheets.Spreadsheets.Values.batchGet(spreadsheetId, {ranges: ranges, valueRenderOption: 'FORMATTED_VALUE'});
+    (response.valueRanges || []).forEach((valueRange, index) => {
+      // L'API omet les cellules vides en fin de ligne : lignes complétées
+      // à la même largeur, comme getDisplayValues().
+      const rows = valueRange.values || [];
+      const width = rows.reduce((max, row) => Math.max(max, row.length), 0);
+      PREFETCHED_DISPLAY_VALUES_[prefetchKey_(spreadsheetId, requests[index].sheetName, requests[index].range)] =
+        rows.map((row) => row.map((cell) => (cell == null ? '' : String(cell))).concat(new Array(width - row.length).fill('')));
+    });
+    return true;
+  } catch (error) {
+    console.warn(`Lecture groupée impossible (${error.message}) : lecture onglet par onglet.`);
+    return false;
+  }
+}
+
+// Valeurs préchargées (une seule utilisation), ou null.
+function takePrefetchedDisplayValues_(spreadsheetId, sheetName, a1Range) {
+  const key = prefetchKey_(spreadsheetId, sheetName, a1Range);
+  const values = PREFETCHED_DISPLAY_VALUES_[key] || null;
+  delete PREFETCHED_DISPLAY_VALUES_[key];
+  return values;
+}
+
+// Durée de chaque étape du chargement (ms), renvoyée dans les diagnostics
+// et affichée dans « Contrôle et méthodologie » : pour savoir où passe le
+// temps sur les vraies données avant d'optimiser plus loin.
+function timed_(label, fn) {
+  const start = Date.now();
+  try {
+    return fn();
+  } finally {
+    DASHBOARD_DIAGNOSTICS_.timings = DASHBOARD_DIAGNOSTICS_.timings || [];
+    DASHBOARD_DIAGNOSTICS_.timings.push([label, Date.now() - start]);
+  }
+}
+

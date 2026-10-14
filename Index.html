@@ -501,6 +501,9 @@
         .loading-spinner { animation-duration: 3s; }
       }
       .loading-panel[hidden] { display: none; }
+      .loading-panel.access .loading-spinner { display: none; }
+      .access-links { margin: 8px 0 0; padding-left: 20px; font-size: 0.9rem; }
+      .access-links li { margin: 4px 0; }
       .loading-panel.error .loading-spinner { display: none; }
       .loading-panel.error strong { color: #b3261e; }
       body.is-loading .tabs,
@@ -883,6 +886,7 @@
       <div class="loading-spinner" aria-hidden="true"></div>
       <div>
         <strong id="loading-title">⏳ Chargement des données en cours…</strong>
+        <ul class="access-links" id="loading-links" hidden></ul>
         <p id="loading-detail">Lecture des classeurs Google Sheets (actions, référentiels, archives, référents). Cela peut prendre plusieurs secondes : merci de ne pas fermer la page.</p>
       </div>
     </div>
@@ -1327,6 +1331,10 @@
     <section class="tab-panel" id="panel-doc" aria-labelledby="tab-controle" hidden>
       <section class="panel">
         <div class="doc-section">
+          <h3>Durée du dernier chargement</h3>
+          <p id="load-timings">—</p>
+        </div>
+        <div class="doc-section">
           <h3>Sources</h3>
           <p>Deux onglets du classeur REPORTING NATIONAL : <code>IMPORT DONNEES</code> (zone SYNTHESE, colonnes AM:AZ) pour la table de faits — un couple pôle × action par ligne — et <code>BDD NOMS</code> pour la dimension pôle (filière, territoire, régions). La jointure se fait sur le code pôle.</p>
         </div>
@@ -1431,6 +1439,8 @@
         loadingPanel: document.getElementById('loading-panel'),
         loadingTitle: document.getElementById('loading-title'),
         loadingDetail: document.getElementById('loading-detail'),
+        loadingLinks: document.getElementById('loading-links'),
+        loadTimings: document.getElementById('load-timings'),
         refreshArchives: document.getElementById('refresh-archives'),
         refreshArchivesStatus: document.getElementById('refresh-archives-status'),
         tabPoste: document.getElementById('tab-poste'),
@@ -4564,10 +4574,53 @@
       // Avertissements de données renvoyés par le serveur (colonne
       // introuvable, territoires vides, historique inaccessible…) : affichés
       // en tête de page plutôt que de laisser croire à un bug d'affichage.
+      // Lien « Demander l'accès » : la page Google d'un fichier sans droits
+      // propose ce bouton (demande envoyée au propriétaire du fichier).
+      function accessLinkItem(item) {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = item.label;
+        li.append('Classeur « ', link, ' » : cliquer sur le lien puis sur « Demander l\'accès » dans la page Google.');
+        return li;
+      }
+
+      // Pas d'accès au classeur national (déploiement « exécuté par
+      // l'utilisateur ») : écran explicatif au lieu d'une erreur.
+      function renderAccessRequired(info) {
+        elements.loadingPanel.classList.add('access');
+        elements.loadingTitle.textContent = '🔒 Accès aux données nécessaire';
+        elements.loadingLinks.replaceChildren(...info.missing.map(accessLinkItem));
+        elements.loadingLinks.hidden = false;
+        elements.loadingDetail.textContent = `Le tableau de bord lit les classeurs Google Sheets avec votre compte (${info.email || 'compte inconnu'}), qui n'a pas encore accès au classeur ci-dessus.`
+          + (info.contact ? ` Pour toute question : ${info.contact}.` : '')
+          + ' Une fois l\'accès accordé, recharger cette page.';
+        elements.status.textContent = 'Accès aux données nécessaire.';
+      }
+
+      function renderLoadTimings(diagnostics) {
+        const timings = (diagnostics && diagnostics.timings) || [];
+        const total = timings.reduce((sum, [, ms]) => sum + ms, 0);
+        elements.loadTimings.textContent = timings.length
+          ? `Côté serveur : ${(total / 1000).toLocaleString('fr-FR', {maximumFractionDigits: 1})} s — ` + timings.map(([label, ms]) => `${label} ${(ms / 1000).toLocaleString('fr-FR', {maximumFractionDigits: 1})} s`).join(' · ')
+            + `. Total vu par le navigateur : ${((Date.now() - loadingStartedAt) / 1000).toLocaleString('fr-FR', {maximumFractionDigits: 1})} s.`
+          : '—';
+      }
+
       function renderDiagnostics(diagnostics) {
         const warnings = (diagnostics && diagnostics.warnings) || [];
+        const accessLinks = (diagnostics && diagnostics.accessLinks) || [];
         elements.diagnostics.replaceChildren();
-        elements.diagnostics.hidden = warnings.length === 0;
+        elements.diagnostics.hidden = warnings.length === 0 && accessLinks.length === 0;
+        if (accessLinks.length) {
+          const accessTitle = document.createElement('strong');
+          accessTitle.textContent = '🔒 Une partie des données n\'est pas accessible avec votre compte';
+          const accessList = document.createElement('ul');
+          accessList.append(...accessLinks.map(accessLinkItem));
+          elements.diagnostics.append(accessTitle, accessList);
+        }
         if (!warnings.length) return;
         const title = document.createElement('strong');
         title.textContent = `⚠ ${warnings.length} point(s) à vérifier dans les données`;
@@ -4599,8 +4652,14 @@
 
       google.script.run
         .withSuccessHandler((bootstrap) => {
+          if (bootstrap.accessRequired) {
+            clearInterval(loadingTimer);
+            renderAccessRequired(bootstrap.accessRequired);
+            return;
+          }
           endLoading();
           elements.loadingPanel.hidden = true;
+          renderLoadTimings(bootstrap.diagnostics);
           bootstrap.facts = expandFacts(bootstrap.facts);
           state.bootstrap = bootstrap;
           renderDiagnostics(bootstrap.diagnostics);

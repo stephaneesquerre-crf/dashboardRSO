@@ -191,3 +191,22 @@ test('interface : indicateur de chargement visible pendant la lecture des donné
     await browser.close();
   }
 });
+
+test('interface : écran « demander l\'accès » sans droits sur le classeur national', {skip: !playwright && 'playwright non installé'}, async () => {
+  const app = loadAppsScript({[ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents()});
+  const file = pageWithBootstrap(JSON.parse(JSON.stringify(app.getDashboardBootstrap())));
+  const browser = await playwright.chromium.launch(process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : {});
+  const errors = [];
+  try {
+    const page = await browser.newPage();
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(`file://${file}`);
+    await page.waitForFunction(() => /Accès aux données/.test(document.getElementById('loading-title').textContent));
+    const links = await page.$$eval('#loading-links a', (anchors) => anchors.map((a) => [a.textContent, a.getAttribute('href'), a.target]));
+    assert.deepStrictEqual(links, [['REPORTING NATIONAL', `https://docs.google.com/spreadsheets/d/${NATIONAL_ID}/edit`, '_blank']]);
+    assert.ok(!(await page.isVisible('.tabs')), 'aucune vue affichée');
+    assert.deepStrictEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
