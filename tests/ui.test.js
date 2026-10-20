@@ -42,7 +42,8 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual(kpis, ['75 %', '4'], kpis.join(' | '));
     assert.strictEqual(await page.$$eval('#referents-table-body tr', (rows) => rows.length), 4);
     const head = await page.$$eval('#referents-table-head th', (cells) => cells.map((c) => c.textContent.replace(/ [▲▼]$/, '')));
-    assert.deepStrictEqual(head.slice(0, 4), ['Pôle', 'Filière', 'Territoire', 'Directeur·rice de territoire']);
+    assert.deepStrictEqual(head.slice(0, 5), ['Pôle', 'Code pôle', 'Filière', 'Territoire', 'Directeur·rice de territoire']);
+    assert.deepStrictEqual(await page.$$eval('#referents-table-body td.referents-code', (cells) => cells.map((c) => c.textContent)).then((codes) => [...codes].sort()), ['CRC_00', 'CRC_01', 'CRC_10', 'CRC_11']);
     assert.deepStrictEqual(await page.$$eval('#referents-table-body a[href^="mailto:"]', (links) => links.map((l) => l.getAttribute('href'))), ['mailto:mail@croix-rouge.fr']);
     // Tri par nom du pôle, croissant puis décroissant.
     const names = () => page.$$eval('#referents-table-body tr td:first-child', (cells) => cells.map((c) => c.textContent));
@@ -53,10 +54,11 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual(await names(), [...ascending].reverse());
     // Couverture par filière : une ligne par filière (évolution ou liste).
     const filieresRows = await page.$$eval('#referents-filieres-body tr', (rows) => rows.map((r) => [...r.cells].map((c) => c.textContent)));
-    assert.deepStrictEqual(filieresRows.map((r) => r[0]), ['CRC', 'PROT ENFANCE']);
+    assert.deepStrictEqual(filieresRows.map((r) => r[0]), ['CRC', 'DOM', 'PROT ENFANCE'], 'DNOM affiché comme DOM');
     assert.match(filieresRows[0][1], /100/);
     assert.match(filieresRows[0][3], /75 %.*3 \/ 4/);
-    assert.strictEqual(filieresRows[1][3], '—');
+    assert.match(filieresRows[1][1], /85/);
+    assert.strictEqual(filieresRows[2][3], '—');
 
     // Export en image (PNG) : panneau d'un graphique et tuile d'un poste.
     const pngOf = async (click) => {

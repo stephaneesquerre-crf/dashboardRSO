@@ -107,6 +107,7 @@ function buildReferents() {
       [], ['', new Date(2026, 0, 7), new Date(2026, 0, 14), new Date(2026, 3, 16), new Date(2026, 7, 31)],
       ['CRC', 0.8, 0.82, 0.9, 1],
       ['Protection de l’Enfance', 0.5, 0.5, 0.6, 0.73],
+      ['DNOM', 0.8, 0.8, 0.85, 0.85],
       ['', '', '', '', '']
     ],
     'IMPORT REFERENTS': [

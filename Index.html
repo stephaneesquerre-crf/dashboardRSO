@@ -399,6 +399,7 @@
       .coverage-bar span { display: block; height: 100%; background: var(--series-1); }
       tr.is-selected td { font-weight: 600; }
       #referents-table th, #referents-table td { text-align: left; }
+      #referents-table td.referents-code { font-size: 0.74rem; color: var(--text-secondary); min-width: 160px; max-width: 260px; overflow-wrap: anywhere; }
 
       .refresh-status { margin: 0 0 20px; font-size: 0.8rem; color: var(--text-secondary); }
       .refresh-status details { margin-top: 4px; }
@@ -1093,7 +1094,7 @@
     </section>
 
     <section class="tab-panel" id="panel-referents" role="tabpanel" aria-labelledby="tab-referents" hidden>
-      <p class="view-intro">Couverture des pôles par un·e référent·e environnement : évolution du taux de couverture par filière (photographies datées du classeur « Synthèse référents Environnement ») et liste des référent·es par pôle (listes de chaque filière, liens « Liens référents », complétées par l'onglet « IMPORT REFERENTS »).</p>
+      <p class="view-intro">Couverture des pôles par un·e référent·e environnement : évolution du taux de couverture par filière (photographies datées du classeur « Synthèse référents Environnement ») et liste des référent·es par pôle (onglet « IMPORT REFERENTS », un bloc par filière ; fichiers « Liens référents » seulement pour une filière absente de l'onglet).</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1137,7 +1138,7 @@
                 <tbody id="referents-filieres-body"></tbody>
               </table>
             </div>
-            <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Listes : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans les listes des référents (fichiers « Liens référents » de chaque filière, complétés par l'onglet « IMPORT REFERENTS »), recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
+            <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Listes : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans la liste des référents (onglet « IMPORT REFERENTS »), recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
           </section>
         </div>
 
@@ -1165,7 +1166,7 @@
             <tbody id="referents-table-body"></tbody>
           </table>
         </div>
-        <p class="chart-note">Cliquer sur un nom pour écrire au ou à la référent·e (ouvre la messagerie). Cliquer sur l'en-tête Pôle, Filière ou Territoire pour trier. Directeur·rice de territoire : colonne « DT (directeur territorial) » de l'onglet « IMPORT REFERENTS ».</p>
+        <p class="chart-note">Cliquer sur un nom pour écrire au ou à la référent·e (ouvre la messagerie). Cliquer sur l'en-tête Pôle, Code pôle, Filière ou Territoire pour trier. Code pôle : tel qu'écrit dans la liste des référents (survol : code de BDD NOMS rapproché quand il diffère). Directeur·rice de territoire : colonne « DT (directeur territorial) » de l'onglet « IMPORT REFERENTS ».</p>
         <p class="matrix-empty" id="referents-empty" hidden>Aucun pôle de la liste dans ce périmètre.</p>
       </section>
     </section>
@@ -4372,6 +4373,7 @@
       // départagent toujours par nom du pôle.
       const REFERENTS_SORT_KEYS = {
         poleName: (pole) => pole.poleName || pole.poleCode,
+        poleCode: (pole) => pole.poleCode,
         filiere: (pole) => pole.filiere,
         territoire: (pole) => pole.territoire
       };
@@ -4513,6 +4515,7 @@
         const headRow = document.createElement('tr');
         const headers = [
           {key: 'poleName', label: 'Pôle'},
+          {key: 'poleCode', label: 'Code pôle'},
           {key: 'filiere', label: 'Filière'},
           {key: 'territoire', label: 'Territoire'},
           {label: 'Directeur·rice de territoire'},
@@ -4554,10 +4557,15 @@
             return td;
           };
           const name = cell(pole.poleName || pole.poleCode);
-          name.title = pole.poleCode;
+          // Code tel qu'écrit dans la liste ; code BDD NOMS rapproché au survol
+          // quand il diffère (suffixe « - n », libellé de territoire).
+          const code = cell(pole.poleCode);
+          code.className = 'referents-code';
+          if (pole.referenceCode && pole.referenceCode !== pole.poleCode) code.title = `Rapproché de « ${pole.referenceCode} » (BDD NOMS)`;
+          if (!pole.knownCode) code.title = `Code absent de BDD NOMS (filière ${pole.filiere})`;
           const territoireCell = cell(pole.territoire || '—');
           if (!pole.knownCode) territoireCell.title = `Code pôle ${pole.poleCode} absent de BDD NOMS (filière ${pole.filiere})`;
-          row.append(name, cell(pole.filiere), territoireCell, cell(pole.directeur || '—'));
+          row.append(name, code, cell(pole.filiere), territoireCell, cell(pole.directeur || '—'));
           for (let index = 0; index < maxReferents; index += 1) {
             row.append(referentCell(pole.referents[index]));
           }

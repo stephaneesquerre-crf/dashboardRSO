@@ -253,6 +253,9 @@ soit 75 %, identique à la dernière photographie (0,75).
   sinon mêmes numéros d'établissement (libellé de territoire différent).
   `testListesReferents()` affiche les sources lues et le nombre de pôles
   par filière.
+  « DNOM » (onglet `Evolution référents`) = DOM. Le tableau par pôle
+  affiche le code pôle tel qu'écrit dans la liste (survol : code de
+  `BDD NOMS` rapproché quand il diffère) et peut être trié par code.
 - **Vue Référents** : la carte « Couverture par filière — dernière valeur »
   est sous la carte « Couverture », à gauche du graphique.
 

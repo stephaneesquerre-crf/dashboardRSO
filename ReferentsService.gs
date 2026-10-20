@@ -199,6 +199,9 @@ const REFERENTS_FILIERE_ALIASES_ = {
   'personnes agees': 'PA',
   'padom-pa': 'PA',
   'padom-dom': 'DOM',
+  // « DNOM » dans l'onglet « Evolution référents » = filière DOM (PADOM -
+  // domicile), « PADOM-DOM » dans la liste (constat du 20/10/2026).
+  'dnom': 'DOM',
   'padom pa': 'PA',
   'padom dom': 'DOM',
   // Libellés des listes des filières (journal du 20/10/2026).

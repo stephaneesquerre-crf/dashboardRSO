@@ -149,7 +149,7 @@ test('liens : outil, outil bis et référents ; « Outils non utilisés » ignor
 test('référents : évolution par filière et liste par pôle', () => {
   const {bootstrap} = bootstrapFor('normal');
   const evolution = bootstrap.referents.evolution;
-  assert.deepStrictEqual([...evolution.map((series) => series.filiere)], ['CRC', 'PROT ENFANCE']);
+  assert.deepStrictEqual([...evolution.map((series) => series.filiere)], ['CRC', 'PROT ENFANCE', 'DOM'], 'DNOM = DOM');
   assert.strictEqual(evolution[0].points.length, 4);
   const poles = bootstrap.referents.poles;
   assert.strictEqual(poles.length, 4);
