@@ -37,7 +37,8 @@ function lancerTests() {
     'HistoryService.gs': ['getHistoryForDashboard_', 'historyMonthKey_'],
     'ArchiveImportService.gs': ['importArchivesTableauDeBord', 'actualiserHistoriqueSiModifie', 'rafraichirArchivesDepuisDashboard', 'parseArchiveValues_', 'archiveMonthFromName_'],
     'ProtEnfanceService.gs': ['getProtEnfanceFacts_', 'parseProtEnfanceValues_'],
-    'ReferentsService.gs': ['getReferentsForDashboard_', 'parseReferentsList_']
+    'ReferentsService.gs': ['getReferentsForDashboard_', 'parseReferentsList_'],
+    'BilanCarboneService.gs': ['getBilanCarbone_', 'parseBilanCarboneValues_', 'computeCibleCalculee_']
   };
   const scope = typeof globalThis !== 'undefined' ? globalThis : this;
   Object.keys(expected).forEach((file) => {
@@ -96,6 +97,10 @@ function lancerTests() {
     const badMonths = bootstrap.history.rows.filter((row) => !/^\d{4}-\d{2}$/.test(row[0]));
     check('Historique : mois au format AAAA-MM', bootstrap.history.rows.length > 0 && badMonths.length === 0,
       `${bootstrap.history.rows.length} valeurs${badMonths.length ? `, ${badMonths.length} mois mal formés` : ''}`);
+
+    const bilan = bootstrap.diagnostics.details.bilanCarbone;
+    check('Bilan carbone : poids des filières lus', Boolean(bilan && bilan.filieres.length),
+      bilan ? `${bilan.filieres.join(', ')} ; cibles calculées : ${JSON.stringify(bilan.ciblesCalculeesParFiliere)}` : 'onglet non lu');
 
     const referentPoles = bootstrap.referents.poles;
     const withDirector = referentPoles.filter((pole) => pole.directeur).length;

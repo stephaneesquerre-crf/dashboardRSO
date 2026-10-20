@@ -117,8 +117,31 @@ function buildReferents() {
   };
 }
 
+// Extrait de l'onglet « BDD - Bilan carbone » (capture du 20/10/2026) :
+// tableau type d'établissement × poste, puis bloc « Bilan CRF » à droite
+// (colonnes L:M). options.incoherent : bloc de droite avec Achats de biens
+// et Immobilisations inversés par rapport à la ligne « Bilan CRF » du
+// tableau, comme dans la capture.
+function buildBilanCarbone(options = {}) {
+  const head = ['', '', 'Transport', 'Immobilisations', 'Énergie', 'Achats de biens', 'Achats de services', 'Hors énergie', 'Déchets', 'Total', '', "Catégorie d'émissions", 'Filières'];
+  const row = (filiere, type, weights, side = ['', '']) => [filiere, type, ...weights, '100,00%', '', ...side];
+  const side = options.incoherent
+    ? [['Transport', '34,65%'], ['Achats de biens', '21,00%'], ['Énergie', '15,90%'], ['Immobilisations', '14,70%']]
+    : [['Transport', '34,65%'], ['Achats de biens', '14,70%'], ['Énergie', '15,90%'], ['Immobilisations', '21,00%']];
+  return [
+    head,
+    row('', 'Bilan CRF', ['34,65%', '21,00%', '15,90%', '14,70%', '8,70%', '0,80%', '4,25%'], ['Transport', 'Bénévoles']),
+    row('Compétence', 'Moyenne filière Compétence', ['62,50%', '12,50%', '12,50%', '4,42%', '4,42%', '1,00%', '2,67%']),
+    row('Protection de l\'enfance', 'Établissement d’hébergement pour jeunes en difficulté', ['10,00%', '25,00%', '25,00%', '30,00%', '5,00%', '0,00%', '5,00%']),
+    row('Protection de l\'enfance', 'Moyenne filière Protection de l\'enfance', ['32,00%', '19,00%', '21,00%', '16,00%', '8,00%', '1,00%', '3,00%'], ['', 'Bilan CRF']),
+    ...side.map(([label, value]) => row('', '', ['', '', '', '', '', '', ''], [label, value])),
+    row('Sanitaire', 'Moyenne filière Sanitaire', ['23,00%', '24,00%', '16,00%', '23,00%', '11,00%', '2,00%', '1,00%'])
+  ].map((line, index) => (index === 0 ? line : line));
+}
+
 function buildNational(variant) {
   return {
+    'BDD - Bilan carbone': buildBilanCarbone(),
     'PROT ENFANCE': buildProtEnfance(),
     'IMPORT DONNEES': buildImportDonnees(),
     'BDD NOMS': buildBddNoms(variant),
@@ -143,4 +166,4 @@ function buildArchives() {
   };
 }
 
-module.exports = {NATIONAL_ID, ARCHIVES_ID, REFERENTS_ID, FILIERES, buildNational, buildArchives, buildReferents, buildProtEnfance, buildPoles};
+module.exports = {buildBilanCarbone, NATIONAL_ID, ARCHIVES_ID, REFERENTS_ID, FILIERES, buildNational, buildArchives, buildReferents, buildProtEnfance, buildPoles};

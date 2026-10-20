@@ -3276,6 +3276,7 @@
         const byPole = new Map();
         const excludedPilots = new Set();
         const recalculatedPilots = new Set();
+        let computedTargetCount = 0;
         facts.forEach((fact) => {
           const code = normalizePoleCode(fact.poleCode);
           let aDate = parseReduction(fact.reductionADate);
@@ -3294,6 +3295,13 @@
             const target = -Math.abs(catalogue.value);
             cible = {unit: 'pct', value: target};
             aDate = {unit: 'pct', value: target * parseAvancementFraction(fact.avancement)};
+          } else if (!cible && fact.cibleCalculee) {
+            // Ligne sans cible saisie (ex. PROT ENFANCE, PET E) : cible
+            // calculée côté serveur avec « BDD - Bilan carbone »
+            // (BilanCarboneService.gs) ; à date = cible × avancement.
+            cible = parseReduction(fact.cibleCalculee);
+            if (cible && !aDate) aDate = {unit: 'pct', value: cible.value * parseAvancementFraction(fact.avancement)};
+            if (cible) computedTargetCount += 1;
           }
           if (!aDate && !cible) return;
           if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
@@ -3310,7 +3318,7 @@
         });
         const poles = [...byPole.values()];
         const mean = (key) => poles.length ? poles.reduce((sum, pole) => sum + pole[key], 0) / poles.length : null;
-        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size, recalculatedPilotCount: recalculatedPilots.size};
+        return {aDate: mean('aDate'), cible: mean('cible'), poleCount: poles.length, excludedPilotCount: excludedPilots.size, recalculatedPilotCount: recalculatedPilots.size, computedTargetCount};
       }
 
       function formatReduction(value) {
@@ -3777,9 +3785,12 @@
           elements.posteCo2Summary.append('Réduction du bilan carbone : aucune valeur en % exploitable dans ce périmètre');
         }
         if (total.excludedPilotCount) {
-          elements.posteCo2Summary.append(`, ${formatCount(total.excludedPilotCount)} pôle(s) pilote(s) exclu(s) (valeurs en kgCO2).`);
+          elements.posteCo2Summary.append(`, ${formatCount(total.excludedPilotCount)} pôle(s) pilote(s) exclu(s) (valeurs en kgCO2)`);
         } else if (total.recalculatedPilotCount) {
-          elements.posteCo2Summary.append(`, dont ${formatCount(total.recalculatedPilotCount)} pôle(s) pilote(s) recalculé(s) avec le catalogue.`);
+          elements.posteCo2Summary.append(`, dont ${formatCount(total.recalculatedPilotCount)} pôle(s) pilote(s) recalculé(s) avec le catalogue`);
+        }
+        if (total.computedTargetCount) {
+          elements.posteCo2Summary.append(` ; ${formatCount(total.computedTargetCount)} ligne(s) sans cible saisie : cible calculée avec « BDD - Bilan carbone » (moyenne de la filière).`);
         } else {
           elements.posteCo2Summary.append('.');
         }

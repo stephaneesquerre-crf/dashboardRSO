@@ -194,7 +194,7 @@ test('lecture groupée : même résultat en une requête pour le classeur nation
   const plain = bootstrapFor('territoireEnDouble').bootstrap;
   const {app, bootstrap: batched} = bootstrapFor('territoireEnDouble', {batchGet: true});
   assert.strictEqual(app.__batchCalls.length, 1, 'une seule requête');
-  assert.deepStrictEqual([...app.__batchCalls[0].ranges], ["'IMPORT DONNEES'!AM2:AZ", "'BDD NOMS'", "'BDD - Actions supplémentaires'"]);
+  assert.deepStrictEqual([...app.__batchCalls[0].ranges], ["'IMPORT DONNEES'!AM2:AZ", "'BDD NOMS'", "'BDD - Actions supplémentaires'", "'BDD - Bilan carbone'"]);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(batched.facts)), JSON.parse(JSON.stringify(plain.facts)));
   assert.deepStrictEqual(JSON.parse(JSON.stringify(batched.poles)), JSON.parse(JSON.stringify(plain.poles)));
   assert.ok(batched.diagnostics.timings.some(([label]) => label === 'IMPORT DONNEES'), 'durées par étape');
@@ -221,3 +221,30 @@ test('accès : écran « demander l\'accès » sans le classeur national, liens 
   assert.deepStrictEqual([...partial.diagnostics.accessLinks.map((item) => item.key)], ['referents']);
 });
 
+
+test('cibles calculées avec « BDD - Bilan carbone » pour les lignes sans cible (PROT ENFANCE)', () => {
+  const {bootstrap} = bootstrapFor('normal');
+  const fields = bootstrap.facts.fields;
+  const get = (row, name) => row[fields.indexOf(name)];
+  const prot = bootstrap.facts.rows.filter((row) => get(row, 'filiere') === 'PROT ENFANCE');
+  // Repas végétariens : -2,07 × 16 % (moyenne filière, achats de biens) ÷ 14,70 % (bilan CRF).
+  const repas = prot.filter((row) => get(row, 'action') === 'Repas végétariens');
+  assert.ok(repas.length > 0);
+  repas.forEach((row) => assert.strictEqual(get(row, 'cibleCalculee'), '-2,253%'));
+  const bornes = prot.find((row) => get(row, 'action') === 'Bornes électriques');
+  assert.strictEqual(get(bornes, 'cibleCalculee'), '-1,487%', 'transport : -1,61 × 32 ÷ 34,65');
+  // Cible saisie : jamais remplacée.
+  const withTarget = bootstrap.facts.rows.filter((row) => get(row, 'reductionCible'));
+  assert.ok(withTarget.length > 0 && withTarget.every((row) => get(row, 'cibleCalculee') === ''));
+  assert.deepStrictEqual({...bootstrap.diagnostics.details.bilanCarbone.ciblesCalculeesParFiliere}, {'PROT ENFANCE': prot.filter((row) => ['Repas végétariens', 'Bornes électriques'].includes(get(row, 'action'))).length});
+  assert.ok(!bootstrap.diagnostics.warnings.some((w) => /Bilan carbone/.test(w)), bootstrap.diagnostics.warnings.join(' | '));
+
+  // Capture réelle : bloc « Bilan CRF » de droite différent de la ligne du
+  // tableau (achats de biens / immobilisations) -> signalé, bloc de droite
+  // utilisé comme dans la formule des pôles.
+  const app = loadAppsScript({});
+  const parsed = app.parseBilanCarboneValues_(require('./fixtures').buildBilanCarbone({incoherent: true}));
+  assert.strictEqual(parsed.national['achats de biens'], 21);
+  assert.ok(parsed.warnings.some((w) => /Achats de biens 14\.7 % \/ 21 %/.test(w)), parsed.warnings.join(' | '));
+  assert.deepStrictEqual(Object.keys(parsed.filieres).sort(), ['CRC', 'PROT ENFANCE', 'SAN']);
+});
