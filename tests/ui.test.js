@@ -89,6 +89,19 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual((await tileRows()).map((r) => r[0]), ['54,5 %', '42,3 %']);
     await page.selectOption('#poste-reduction-mode', 'termines');
 
+    // PROT ENFANCE (aucune cible saisie) : cibles calculées avec « BDD -
+    // Bilan carbone », donc une réduction cible non nulle.
+    await page.selectOption('#poste-filiere', 'PROT ENFANCE');
+    assert.match(await page.textContent('#poste-co2-summary'), /cible -\d+,\d+ %.*cible calculée avec « BDD - Bilan carbone »/s);
+    await page.selectOption('#poste-filiere', '');
+
+    // Actions spécifiques filière repérées dans les tuiles par une étiquette.
+    assert.strictEqual(await page.$$eval('#poste-grid .action-badge', (badges) => badges.length), 0, 'aucune sans la coche');
+    await page.check('#poste-filiere-specific');
+    const badged = await page.$$eval('#poste-grid tr.is-specific td:first-child', (cells) => cells.map((c) => c.textContent));
+    assert.deepStrictEqual(badged, ['Action filière X Spécifique filière']);
+    await page.uncheck('#poste-filiere-specific');
+
     // Tableau des tuiles : CSV (toutes les tuiles, une tuile) et copie.
     const csvOf = async (click) => {
       const [download] = await Promise.all([page.waitForEvent('download'), click()]);
@@ -126,6 +139,14 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       await page.selectOption('#detail-filiere', filiere);
       const matrixTerritories = await page.$$eval('#matrix-territoire-row th', (cells) => cells.map((c) => c.textContent).filter(Boolean));
       assert.strictEqual(matrixTerritories.length, territories.length, `Détail par pôle ${filiere}`);
+      // Changement de territoire : teintes alternées et filet vertical.
+      const groupClasses = await page.$$eval('#matrix-territoire-row th.matrix-territoire-group', (cells) => cells.map((c) => c.className));
+      groupClasses.forEach((className, index) => {
+        assert.match(className, index % 2 ? /terr-b/ : /terr-a/);
+        assert.strictEqual(/terr-start/.test(className), index > 0);
+      });
+      const starts = await page.$$eval('#matrix-header-row th.terr-start', (cells) => cells.length);
+      assert.strictEqual(starts, territories.length - 1, `filets ${filiere}`);
 
       await page.click('#tab-poste');
       await page.selectOption('#poste-filiere', filiere);

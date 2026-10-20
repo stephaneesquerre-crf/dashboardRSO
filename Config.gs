@@ -22,6 +22,10 @@ const CONFIG = Object.freeze({
   // d'émissions de chaque action, les fichiers des pôles n'étant pas
   // toujours cohérents entre eux (cf. ActionReferenceService.gs).
   ACTIONS_REFERENCE_SHEET_NAME: 'BDD - Actions supplémentaires',
+  // Poids des postes d'émissions par filière / type d'établissement et dans
+  // le bilan CRF : cibles calculées des lignes sans cible
+  // (cf. BilanCarboneService.gs).
+  BILAN_CARBONE_SHEET_NAME: 'BDD - Bilan carbone',
   // Archives mensuelles du "Tableau de bord VA" (copies manuelles, un onglet
   // par mois : "Archives 11/25", "Archives 09.26"...) et onglet de sortie
   // au format long, écrit DANS LE CLASSEUR DES ARCHIVES (cf.

@@ -216,6 +216,48 @@ DOM ; il n'y a pas de colonne « Référent.e 3 » (elle sera lue si elle est
 ajoutée, intitulée « Référent.e 3 … ») ; FLEX : 24 pôles couverts sur 32,
 soit 75 %, identique à la dernière photographie (0,75).
 
+## Cibles calculées et listes des référents des filières (20/10/2026)
+
+- **Cibles calculées** (`BilanCarboneService.gs`) : pour une ligne sans
+  « Réduction carbone cible » (cas de PROT ENFANCE et PET E), cible =
+  réduction de l'action au catalogue (`BDD - Actions supplémentaires`, en
+  points de % du bilan CRF) × poids du poste dans la ligne « Moyenne
+  filière … » de `BDD - Bilan carbone` ÷ poids du poste dans le bilan CRF
+  (bloc « Bilan CRF » à droite du tableau, comme la formule L22 des
+  pôles). À date = cible × avancement (ou cible si terminé, selon
+  l'indicateur). Une cible saisie n'est jamais remplacée. Le type
+  d'établissement des pôles n'étant renseigné nulle part, c'est toujours la
+  moyenne de la filière. Correspondances : Compétence → CRC, Handicap →
+  PSH, PADOM → PA et DOM, Petite Enfance → PET E, Protection de
+  l'enfance → PROT ENFANCE, Sanitaire → SAN (Bénévoles : aucune filière).
+  Si la ligne « Bilan CRF » du tableau et le bloc de droite diffèrent,
+  l'écart est signalé. `testBilanCarbone()` affiche les poids lus et le
+  nombre de cibles calculées par filière.
+- **Listes des référents des filières** (`ReferentsService.gs`) : chaque
+  lien de la colonne « Liens référents » (onglet `Liens outils
+  référents`) vers un classeur Google Sheets est lu (premier onglet dont
+  une des 20 premières lignes contient « Code pôle »). Filière : colonne
+  Filière du fichier, sinon code filière du lien. Pour un même code pôle,
+  la liste de la filière l'emporte sur `IMPORT REFERENTS`, qui complète.
+  Fichier inaccessible, fichier Excel ou en-tête introuvable : signalé en
+  tête de page. `testListesReferents()` affiche, pour chaque liste,
+  l'onglet lu et le nombre de pôles, ou la raison de l'échec.
+- **Vue Référents** : la carte « Couverture par filière — dernière valeur »
+  est sous la carte « Couverture », à gauche du graphique.
+
+## Repères visuels (20/10/2026)
+
+- **Détail par pôle** : les en-têtes de colonnes alternent deux teintes
+  d'un territoire à l'autre, et un filet vertical sépare deux territoires,
+  comme dans le reporting national. Survol d'un pôle : code et territoire.
+- **Détail par poste d'émissions** : une action spécifique à la filière
+  (colonne « Action socles » = « Action filière » ou « Action spécifique
+  filière ») porte l'étiquette « Spécifique filière » et un trait de
+  couleur à gauche de sa ligne. Étiquette texte plutôt que couleur seule :
+  lisible sans légende, en image exportée et par un lecteur d'écran. Le
+  CSV des tuiles a une colonne « Type d'action » ; le tableau copié ajoute
+  « (spécifique filière) » au nom de l'action.
+
 ## Accès aux classeurs et temps de chargement (14/10/2026)
 
 - **Écran « demander l'accès »** : avec un déploiement « Exécuter en tant

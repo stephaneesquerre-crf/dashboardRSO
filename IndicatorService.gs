@@ -140,7 +140,8 @@ function getDashboardBootstrap() {
   timed_('Lecture groupée du classeur national', () => prefetchDisplayValues_(config.SPREADSHEET_ID, [
     {sheetName: config.IMPORT_SHEET_NAME, range: `${config.IMPORT_SYNTHESE_FIRST_COLUMN}${config.IMPORT_HEADER_ROW}:${config.IMPORT_SYNTHESE_LAST_COLUMN}`},
     {sheetName: config.POLE_REFERENCE_SHEET_NAME, range: ''},
-    {sheetName: config.ACTIONS_REFERENCE_SHEET_NAME, range: ''}
+    {sheetName: config.ACTIONS_REFERENCE_SHEET_NAME, range: ''},
+    {sheetName: config.BILAN_CARBONE_SHEET_NAME, range: ''}
   ]));
   const poleReference = timed_('BDD NOMS', () => getPoleReference_());
   const importFactRecords = timed_('IMPORT DONNEES', () => getFactRecords_());
@@ -148,6 +149,7 @@ function getDashboardBootstrap() {
   const factRecords = importFactRecords.concat(protFacts);
   const padomOverrides = derivePadomOverrides_(factRecords);
   const actionCatalogue = timed_('Référentiel des actions', () => getActionCatalogue_());
+  const bilanCarbone = timed_('Bilan carbone', () => getBilanCarbone_());
 
   const facts = factRecords.map((fact) => ({
     poleCode: fact.poleCode,
@@ -165,6 +167,20 @@ function getDashboardBootstrap() {
     // choisie dans la vue Détail par poste.
     catalogueReduction: resolveFactCatalogueReduction_(fact, actionCatalogue)
   }));
+  // Cible calculée pour les lignes sans cible saisie (BilanCarboneService.gs).
+  const computedByFiliere = {};
+  facts.forEach((fact) => {
+    fact.cibleCalculee = computeCibleCalculee_(fact, bilanCarbone);
+    if (fact.cibleCalculee) computedByFiliere[fact.filiere] = (computedByFiliere[fact.filiere] || 0) + 1;
+  });
+  if (bilanCarbone) {
+    setDiagnosticDetail_('bilanCarbone', {
+      sourcePoidsBilanCrf: bilanCarbone.nationalSource,
+      poidsBilanCrf: bilanCarbone.national,
+      filieres: Object.keys(bilanCarbone.filieres),
+      ciblesCalculeesParFiliere: computedByFiliere
+    });
+  }
 
   // Le pôle lui-même (envoyé au client pour construire l'univers des pôles
   // par filière/territoire) doit refléter le même reclassement PADOM -> PA/DOM
@@ -193,7 +209,7 @@ function getDashboardBootstrap() {
 
   const toolLinks = timed_('Liens outils', () => getToolLinks_());
   const history = timed_('Historique', () => getHistoryForDashboard_());
-  const referents = timed_('Référents', () => getReferentsForDashboard_(poleReference));
+  const referents = timed_('Référents', () => getReferentsForDashboard_(poleReference, toolLinks));
   return {
     appVersion: config.APP_VERSION,
     generatedAt: new Date().toISOString(),
@@ -209,7 +225,7 @@ function getDashboardBootstrap() {
   };
 }
 
-const FACT_FIELDS_ = ['poleCode', 'action', 'volet', 'thematique', 'avancement', 'filiere', 'territoire', 'actionSocle', 'reductionADate', 'reductionCible', 'catalogueReduction'];
+const FACT_FIELDS_ = ['poleCode', 'action', 'volet', 'thematique', 'avancement', 'filiere', 'territoire', 'actionSocle', 'reductionADate', 'reductionCible', 'catalogueReduction', 'cibleCalculee'];
 
 function toColumnar_(records, fields) {
   return {fields: fields, rows: records.map((record) => fields.map((field) => record[field]))};
