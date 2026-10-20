@@ -171,7 +171,9 @@ function getDashboardBootstrap() {
   const computedByFiliere = {};
   facts.forEach((fact) => {
     fact.cibleCalculee = computeCibleCalculee_(fact, bilanCarbone);
-    if (fact.cibleCalculee) computedByFiliere[fact.filiere] = (computedByFiliere[fact.filiere] || 0) + 1;
+    if (fact.cibleCalculee && hasMissingTarget_(fact) && !/kg/i.test(String(fact.reductionCible))) {
+      computedByFiliere[fact.filiere] = (computedByFiliere[fact.filiere] || 0) + 1;
+    }
   });
   if (bilanCarbone) {
     setDiagnosticDetail_('bilanCarbone', {

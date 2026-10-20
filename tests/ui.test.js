@@ -94,6 +94,13 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     await page.selectOption('#poste-filiere', 'PROT ENFANCE');
     assert.match(await page.textContent('#poste-co2-summary'), /cible -\d+,\d+ %.*cible calculée avec « BDD - Bilan carbone »/s);
     await page.selectOption('#poste-filiere', '');
+    // Cible saisie à 0 : remplacée par la cible calculée (à date = cible ×
+    // avancement) ; cible saisie non nulle : conservée.
+    const zero = await page.evaluate(() => aggregateReductionByPole([
+      {poleCode: 'Z1', reductionCible: '0%', reductionADate: '0%', cibleCalculee: '-1,5%', avancement: '100%'},
+      {poleCode: 'Z2', reductionCible: '-0,2%', reductionADate: '-0,1%', cibleCalculee: '-1,5%', avancement: '50%'}
+    ]));
+    assert.deepStrictEqual([zero.cible, zero.computedTargetCount], [(-1.5 - 0.2) / 2, 1]);
 
     // Actions spécifiques filière repérées dans les tuiles par une étiquette.
     assert.strictEqual(await page.$$eval('#poste-grid .action-badge', (badges) => badges.length), 0, 'aucune sans la coche');

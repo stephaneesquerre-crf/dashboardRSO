@@ -233,18 +233,20 @@ test('cibles calculées avec « BDD - Bilan carbone » pour les lignes sans cibl
   repas.forEach((row) => assert.strictEqual(get(row, 'cibleCalculee'), '-2,253%'));
   const bornes = prot.find((row) => get(row, 'action') === 'Bornes électriques');
   assert.strictEqual(get(bornes, 'cibleCalculee'), '-1,487%', 'transport : -1,61 × 32 ÷ 34,65');
-  // Cible saisie : jamais remplacée.
+  // Cible calculée aussi pour les lignes avec cible (pôles pilotes) ; seules
+  // les lignes sans cible sont comptées comme « cible calculée ».
   const withTarget = bootstrap.facts.rows.filter((row) => get(row, 'reductionCible'));
-  assert.ok(withTarget.length > 0 && withTarget.every((row) => get(row, 'cibleCalculee') === ''));
+  assert.ok(withTarget.length > 0 && withTarget.some((row) => get(row, 'cibleCalculee')));
   assert.deepStrictEqual({...bootstrap.diagnostics.details.bilanCarbone.ciblesCalculeesParFiliere}, {'PROT ENFANCE': prot.filter((row) => ['Repas végétariens', 'Bornes électriques'].includes(get(row, 'action'))).length});
   assert.ok(!bootstrap.diagnostics.warnings.some((w) => /Bilan carbone/.test(w)), bootstrap.diagnostics.warnings.join(' | '));
 
   // Capture réelle : bloc « Bilan CRF » de droite différent de la ligne du
-  // tableau (achats de biens / immobilisations) -> signalé, bloc de droite
-  // utilisé comme dans la formule des pôles.
+  // tableau (achats de biens / immobilisations) -> signalé ; ligne du
+  // tableau utilisée (immobilisations = 21 %, confirmé le 20/10/2026).
   const app = loadAppsScript({});
   const parsed = app.parseBilanCarboneValues_(require('./fixtures').buildBilanCarbone({incoherent: true}));
-  assert.strictEqual(parsed.national['achats de biens'], 21);
+  assert.strictEqual(parsed.national['achats de biens'], 14.7);
+  assert.strictEqual(parsed.national.immobilisations, 21);
   assert.ok(parsed.warnings.some((w) => /Achats de biens 14\.7 % \/ 21 %/.test(w)), parsed.warnings.join(' | '));
   assert.deepStrictEqual(Object.keys(parsed.filieres).sort(), ['CRC', 'PROT ENFANCE', 'SAN']);
 });
@@ -277,7 +279,18 @@ test('référents : listes des filières lues depuis « Liens référents », IM
   assert.strictEqual(poles.length, 4);
   assert.strictEqual(poles.filter((pole) => pole.source === 'IMPORT REFERENTS').length, 1);
   const sources = bootstrap.referents.sources;
-  assert.ok(sources.some((source) => source.title === 'Liste référents environnement CRC' && source.ok && source.detail === 'onglet « Liste »'));
+  const crcSource = sources.find((source) => source.title === 'Liste référents environnement CRC');
+  assert.ok(crcSource.ok && /^onglet « Liste »/.test(crcSource.detail), crcSource.detail);
+  assert.strictEqual(crcSource.withReferents, 3);
+
+  // Autres intitulés de colonnes et libellés de filière des listes réelles.
+  const other = app.parseReferentsList_([
+    ['Filière', 'Nom', 'Code pôle', 'Référent n°1 (Prénom NOM)', 'Mail référent 1', 'Référent 2', 'Mail référent 2'],
+    ['PROT.E.', 'MECS A', 'P1', 'Alice B', 'a@croix-rouge.fr', '', ''],
+    ['PE', 'Crèche B', 'P2', '', '', 'Chloé D', 'c@croix-rouge.fr']
+  ]);
+  assert.strictEqual(JSON.stringify(other.poles.map((pole) => [pole.filiere, pole.poleName, pole.referents.map((ref) => ref.name).join()])),
+    JSON.stringify([['PROT ENFANCE', 'MECS A', 'Alice B'], ['PET E', 'Crèche B', 'Chloé D']]));
   assert.ok(bootstrap.diagnostics.warnings.some((w) => /PROT\.E\._Liste référents.*non lue/.test(w)), bootstrap.diagnostics.warnings.join(' | '));
   assert.ok(bootstrap.diagnostics.accessLinks.some((item) => /PROT\.E\._Liste référents/.test(item.label)));
 });

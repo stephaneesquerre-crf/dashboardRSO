@@ -11,7 +11,14 @@
 //   cible = réduction catalogue × poids du poste pour la filière
 //           ÷ poids du poste dans le bilan CRF
 // Le type d'établissement des pôles n'étant renseigné nulle part, la ligne
-// « Moyenne filière … » de la filière est utilisée.
+// « Moyenne filière … » de la filière est utilisée (moyenne pondérée par
+// les effectifs des types d'établissement, d'après Stéphane, 20/10/2026).
+// Poids du bilan CRF : ligne « Bilan CRF » du tableau (immobilisations =
+// 2e poste, 21 %, confirmé le 20/10/2026) ; le bloc « Bilan CRF » à
+// droite (M14:M21, utilisé par la formule L22 des fichiers des pôles)
+// inverse achats de biens et immobilisations : écart signalé.
+// Utilisée aussi pour les pôles pilotes (valeurs en kg), à la place de la
+// réduction du catalogue seule (décision du 20/10/2026).
 //
 // Ne fait jamais échouer le chargement : onglet absent ou illisible ->
 // aucune cible calculée et avertissement.
@@ -76,7 +83,7 @@ function parseBilanCarboneValues_(values) {
   }
 
   // Bloc « Bilan CRF » à droite du tableau (colonne des catégories, puis
-  // colonne des poids) : c'est lui qu'utilise la formule L22 des pôles.
+  // colonne des poids) : utilisé seulement si la ligne du tableau manque.
   let sideNational = null;
   for (let rowIndex = 0; rowIndex < values.length && !sideNational; rowIndex += 1) {
     values[rowIndex].forEach((cell, col) => {
@@ -90,8 +97,8 @@ function parseBilanCarboneValues_(values) {
       if (Object.keys(weights).length) sideNational = weights;
     });
   }
-  result.national = sideNational || mainNational || {};
-  result.nationalSource = sideNational ? 'bloc « Bilan CRF » à droite du tableau' : (mainNational ? 'ligne « Bilan CRF » du tableau' : '');
+  result.national = mainNational || sideNational || {};
+  result.nationalSource = mainNational ? 'ligne « Bilan CRF » du tableau' : (sideNational ? 'bloc « Bilan CRF » à droite du tableau' : '');
   if (!result.nationalSource) result.warnings.push('poids du bilan CRF introuvables');
 
   if (sideNational && mainNational) {
@@ -100,7 +107,7 @@ function parseBilanCarboneValues_(values) {
         Math.abs(sideNational[key] - mainNational[key]) > 0.05)
       .map(({key, label}) => `${label} ${mainNational[key]} % / ${sideNational[key]} %`);
     if (differing.length) {
-      result.warnings.push(`poids du bilan CRF différents entre la ligne du tableau et le bloc de droite (${differing.join(' ; ')}) : bloc de droite utilisé, comme la formule des pôles`);
+      result.warnings.push(`poids du bilan CRF différents entre la ligne du tableau et le bloc de droite M14:M21 (${differing.join(' ; ')}) : ligne du tableau utilisée ; le bloc de droite sert aussi à la formule « Réduction carbone cible » des fichiers des pôles, à corriger`);
     }
   }
   return result;
@@ -122,12 +129,13 @@ function getBilanCarbone_() {
   return parsed;
 }
 
-// Cible calculée (texte « -0,61% », comme les cibles saisies) ou '' :
-// seulement pour une ligne SANS cible saisie, dont l'action a une
-// réduction au catalogue, un poste connu et une filière présente dans
-// « BDD - Bilan carbone ».
+// Cible calculée (texte « -0,61% », comme les cibles saisies) ou '' si
+// l'action n'a pas de réduction au catalogue, de poste connu ou si la
+// filière est absente de « BDD - Bilan carbone ». Calculée pour toutes les
+// lignes : le navigateur l'utilise quand la cible saisie est vide ou nulle,
+// et pour les pôles pilotes.
 function computeCibleCalculee_(fact, bilan) {
-  if (!bilan || cleanValue_(fact.reductionCible)) return '';
+  if (!bilan) return '';
   const catalogue = parsePercentCell_(String(fact.catalogueReduction || '').replace(/−/g, '-'));
   if (catalogue === null || /kg/i.test(String(fact.catalogueReduction))) return '';
   const filiereWeights = bilan.filieres[fact.filiere];
@@ -142,6 +150,13 @@ function computeCibleCalculee_(fact, bilan) {
 
 // À lancer depuis l'éditeur : poids lus, source des poids du bilan CRF et
 // nombre de cibles calculées par filière.
+// Cible saisie absente ou nulle (« 0% », « 0,00 % ») : remplacée par la
+// cible calculée.
+function hasMissingTarget_(fact) {
+  const value = parsePercentCell_(String(fact.reductionCible || '').replace(/−/g, '-'));
+  return value === null || value === 0;
+}
+
 function testBilanCarbone() {
   const bootstrap = getDashboardBootstrap();
   if (bootstrap.accessRequired) {

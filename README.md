@@ -223,9 +223,15 @@ soit 75 %, identique à la dernière photographie (0,75).
   réduction de l'action au catalogue (`BDD - Actions supplémentaires`, en
   points de % du bilan CRF) × poids du poste dans la ligne « Moyenne
   filière … » de `BDD - Bilan carbone` ÷ poids du poste dans le bilan CRF
-  (bloc « Bilan CRF » à droite du tableau, comme la formule L22 des
-  pôles). À date = cible × avancement (ou cible si terminé, selon
-  l'indicateur). Une cible saisie n'est jamais remplacée. Le type
+  (ligne « Bilan CRF » du tableau : immobilisations = 2e poste, 21 %,
+  confirmé le 20/10/2026 ; le bloc de droite M14:M21, utilisé par la
+  formule L22 des fichiers des pôles, inverse achats de biens et
+  immobilisations et doit être corrigé). À date = cible × avancement (ou
+  cible si terminé, selon l'indicateur). Une cible saisie non nulle n'est
+  jamais remplacée ; une cible vide ou à 0 l'est. Les pôles pilotes
+  utilisent aussi cette cible ajustée à leur filière (décision du
+  20/10/2026). Lignes « Moyenne filière » : moyennes pondérées par les
+  effectifs des types d'établissement. Le type
   d'établissement des pôles n'étant renseigné nulle part, c'est toujours la
   moyenne de la filière. Correspondances : Compétence → CRC, Handicap →
   PSH, PADOM → PA et DOM, Petite Enfance → PET E, Protection de
@@ -237,7 +243,10 @@ soit 75 %, identique à la dernière photographie (0,75).
   lien de la colonne « Liens référents » (onglet `Liens outils
   référents`) vers un classeur Google Sheets est lu (premier onglet dont
   une des 20 premières lignes contient « Code pôle »). Filière : colonne
-  Filière du fichier, sinon code filière du lien. Pour un même code pôle,
+  Filière du fichier (libellés « PROT.E. », « PE »… reconnus), sinon code
+  filière du lien. Colonnes des référent·es reconnues sous plusieurs
+  intitulés (« Référent.e 1 », « Référent n°1 », « Mail référent 1 »…) ;
+  le journal de `testListesReferents()` indique celles retenues. Pour un même code pôle,
   la liste de la filière l'emporte sur `IMPORT REFERENTS`, qui complète.
   Fichier inaccessible, fichier Excel ou en-tête introuvable : signalé en
   tête de page. `testListesReferents()` affiche, pour chaque liste,

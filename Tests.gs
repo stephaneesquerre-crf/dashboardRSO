@@ -28,7 +28,7 @@ function lancerTests() {
   const expected = {
     'WebApp.gs': ['doGet'],
     'Config.gs': ['getConfig_'],
-    'Utils.gs': ['openSpreadsheet_', 'readSheetTable_', 'findColumnIndex_', 'cleanActionLabel_'],
+    'Utils.gs': ['openSpreadsheet_', 'readSheetTable_', 'findColumnIndex_', 'cleanActionLabel_', 'prefetchDisplayValues_', 'takePrefetchedDisplayValues_', 'timed_'],
     'IdentityService.gs': ['isAllowedIdentityEmail_', 'getActiveUserEmail_'],
     'PoleReferenceService.gs': ['getPoleReference_'],
     'IndicatorService.gs': ['getDashboardBootstrap', 'getFactRecords_', 'diagnosticDashboard'],

@@ -107,6 +107,7 @@ function readLinkedReferentsLists_(toolLinks) {
       const values = sheets[index].getDataRange().getValues();
       if (findReferentsHeaderRow_(values) === -1) continue;
       const parsed = parseReferentsList_(values, source.filieres.length === 1 ? source.filieres[0] : '');
+      report.withReferents = 0;
       parsed.poles.forEach((pole) => {
         const code = normalizeText_(pole.poleCode);
         if (seen[code]) return;
@@ -114,9 +115,13 @@ function readLinkedReferentsLists_(toolLinks) {
         pole.source = source.title;
         poles.push(pole);
         report.poles += 1;
+        if (pole.referents.length) report.withReferents += 1;
       });
       report.ok = true;
-      report.detail = `onglet « ${sheets[index].getName()} »`;
+      report.detail = `onglet « ${sheets[index].getName()} » ; colonnes référent·es : ${parsed.referentHeaders.join(' | ') || 'AUCUNE TROUVÉE'}`;
+      if (!parsed.referentHeaders.length) {
+        addDiagnosticWarning_(`Référents : liste « ${source.title} » lue mais aucune colonne de référent·e reconnue.`);
+      }
       break;
     }
     if (!report.ok) report.detail = 'aucun onglet avec un en-tête « Code pôle »';
@@ -145,7 +150,25 @@ const REFERENTS_FILIERE_ALIASES_ = {
   'padom-pa': 'PA',
   'padom-dom': 'DOM',
   'padom pa': 'PA',
-  'padom dom': 'DOM'
+  'padom dom': 'DOM',
+  // Libellés des listes des filières (journal du 20/10/2026).
+  'prot.e.': 'PROT ENFANCE',
+  'prot. e.': 'PROT ENFANCE',
+  'prot.e': 'PROT ENFANCE',
+  'prot e': 'PROT ENFANCE',
+  'protection enfance': 'PROT ENFANCE',
+  'pe': 'PET E',
+  'p.e.': 'PET E',
+  'pet. enf.': 'PET E',
+  'pet e': 'PET E',
+  'pet. e.': 'PET E',
+  'handicap psh': 'PSH',
+  'san': 'SAN',
+  'psh': 'PSH',
+  'crc': 'CRC',
+  'flex': 'FLEX',
+  'pa': 'PA',
+  'dom': 'DOM'
 };
 
 function mapReferentsFiliere_(label) {
@@ -190,18 +213,17 @@ function parseReferentsList_(values, defaultFiliere) {
   const table = {headers: values[headerRow].map((cell) => cleanValue_(cell)), rows: values.slice(headerRow + 1)};
   const col = {
     filiere: findColumnIndex_(table, 'filiere'),
-    poleName: findColumnIndex_(table, 'nom pole'),
+    // Intitulés essayés dans l'ordre (« Nom » seul en dernier recours :
+    // il pourrait aussi désigner le nom d'un·e référent·e).
+    poleName: ['nom pole', 'nom du pole', 'nom de la structure', 'etablissement', 'structure', 'nom']
+      .map((prefix) => findColumnIndex_(table, prefix)).concat([-1]).find((index, position, all) => index !== -1 || position === all.length - 1),
     poleCode: findColumnIndex_(table, 'code pole'),
     dateMaj: findColumnIndex_(table, 'date maj'),
     // « DT (directeur territorial) » : texte libre, parfois deux noms
     // (« X / Y (appui) »), affiché tel quel.
     directeur: findColumnIndex_(table, ['dt (directeur', 'directeur territorial', 'directrice territoriale'])
   };
-  const referentCols = [1, 2, 3].map((rank) => ({
-    name: findColumnIndex_(table, [`referent.e ${rank}`, `referent ${rank}`, `referente ${rank}`]),
-    email: findColumnIndex_(table, `adresse mail (ref. ${rank})`),
-    fonction: findColumnIndex_(table, `fonction (ref. ${rank})`)
-  })).filter((ref) => ref.name !== -1);
+  const referentCols = findReferentColumns_(table);
 
   const poles = [];
   let withoutCode = 0;
@@ -232,7 +254,40 @@ function parseReferentsList_(values, defaultFiliere) {
         : cleanValue_(dateValue)
     });
   });
-  return {poles, withoutCode};
+  return {poles, withoutCode, referentHeaders: referentCols.map((ref) => [ref.name, ref.email, ref.fonction]
+    .filter((index) => index !== -1).map((index) => table.headers[index]).join(' / '))};
+}
+
+// Colonnes des référent·es 1, 2, 3 (nom, adresse mail, fonction). Les
+// listes des filières n'ont pas toutes les intitulés de « IMPORT
+// REFERENTS » (« Référent.e 1 », « Adresse mail (réf. 1) ») : on accepte
+// aussi « Référent 1 », « Référent·e n°1 », « Mail référent 1 »… et, à
+// défaut de numéro, une seule colonne « Référent… » (+ « mail »).
+function findReferentColumns_(table) {
+  const headers = table.headers.map((header) => normalizeText_(header));
+  const isOther = (header) => /mail|fonction|oui|date|tel|poste|statut/.test(header);
+  const rankOf = (header) => {
+    const match = header.match(/(?:ref(?:erent)?\S*|n°|no)\s*\.?\s*(\d)\b/) || header.match(/\b(\d)\b/);
+    return match ? Number(match[1]) : null;
+  };
+  const pick = (test) => {
+    const candidates = headers.map((header, index) => (test(header) ? index : -1)).filter((index) => index !== -1);
+    if (candidates.length <= 1) return candidates.length ? candidates[0] : -1;
+    const filled = (index) => table.rows.filter((row) => cleanValue_(row[index])).length;
+    return candidates.reduce((best, index) => (filled(index) > filled(best) ? index : best), candidates[0]);
+  };
+  const ranked = [1, 2, 3].map((rank) => ({
+    name: pick((header) => header.indexOf('referent') !== -1 && !isOther(header) && rankOf(header) === rank),
+    email: pick((header) => header.indexOf('mail') !== -1 && rankOf(header) === rank),
+    fonction: pick((header) => header.indexOf('fonction') !== -1 && rankOf(header) === rank)
+  })).filter((ref) => ref.name !== -1 || ref.email !== -1);
+  if (ranked.length) return ranked;
+  const single = {
+    name: pick((header) => header.indexOf('referent') !== -1 && !isOther(header)),
+    email: pick((header) => header.indexOf('mail') !== -1),
+    fonction: pick((header) => header.indexOf('fonction') !== -1)
+  };
+  return single.name !== -1 || single.email !== -1 ? [single] : [];
 }
 
 // À lancer depuis l'éditeur : pour chaque liste « Liens référents », onglet
@@ -241,7 +296,7 @@ function testListesReferents() {
   const toolLinks = getToolLinks_();
   const result = getReferentsForDashboard_(getPoleReference_(), toolLinks);
   result.sources.forEach((source) => {
-    Logger.log(`${source.ok ? 'OK ' : 'NON'} | ${source.filiere || '-'} | ${source.title} | ${source.poles} pôle(s) | ${source.detail}`);
+    Logger.log(`${source.ok ? 'OK ' : 'NON'} | ${source.filiere || '-'} | ${source.title} | ${source.poles} pôle(s)${typeof source.withReferents === 'number' ? `, dont ${source.withReferents} avec référent·e` : ''} | ${source.detail}`);
   });
   const byFiliere = {};
   result.poles.forEach((pole) => { byFiliere[pole.filiere] = (byFiliere[pole.filiere] || 0) + 1; });

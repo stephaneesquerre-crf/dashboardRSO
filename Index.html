@@ -3292,22 +3292,27 @@
               excludedPilots.add(code);
               return;
             }
-            // Pôle pilote recalculé : réduction du catalogue (toujours
-            // comptée comme une baisse) × avancement du pôle, sans ajustement
-            // au profil d'émissions (non disponible pour ces pôles).
-            const catalogue = parseReduction(fact.catalogueReduction);
+            // Pôle pilote recalculé : cible ajustée au profil d'émissions
+            // moyen de sa filière (« BDD - Bilan carbone », cibleCalculee,
+            // décision du 20/10/2026), à défaut réduction du catalogue ;
+            // toujours comptée comme une baisse, × avancement du pôle.
+            const catalogue = parseReduction(fact.cibleCalculee) || parseReduction(fact.catalogueReduction);
             if (!catalogue || catalogue.unit !== 'pct') return;
             recalculatedPilots.add(code);
             const target = -Math.abs(catalogue.value);
             cible = {unit: 'pct', value: target};
             aDate = {unit: 'pct', value: target * parseAvancementFraction(fact.avancement)};
-          } else if (!cible && fact.cibleCalculee) {
-            // Ligne sans cible saisie (ex. PROT ENFANCE, PET E) : cible
-            // calculée côté serveur avec « BDD - Bilan carbone »
-            // (BilanCarboneService.gs) ; à date = cible × avancement.
-            cible = parseReduction(fact.cibleCalculee);
-            if (cible && !aDate) aDate = {unit: 'pct', value: cible.value * parseAvancementFraction(fact.avancement)};
-            if (cible) computedTargetCount += 1;
+          } else if ((!cible || (cible.unit === 'pct' && cible.value === 0)) && fact.cibleCalculee) {
+            // Ligne sans cible saisie, ou à 0 (ex. PROT ENFANCE, PET E) :
+            // cible calculée côté serveur avec « BDD - Bilan carbone »
+            // (BilanCarboneService.gs) ; à date = cible × avancement (la
+            // valeur à date saisie découlait de la cible absente).
+            const computed = parseReduction(fact.cibleCalculee);
+            if (computed) {
+              cible = computed;
+              aDate = {unit: 'pct', value: cible.value * parseAvancementFraction(fact.avancement)};
+              computedTargetCount += 1;
+            }
           }
           if (!aDate && !cible) return;
           if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
