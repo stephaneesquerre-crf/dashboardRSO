@@ -1,0 +1,22 @@
+# Lance les tests (tests/ : code .gs exécuté dans Node + interface dans
+# Chromium) sur les serveurs de GitHub à chaque envoi de code : rien à
+# installer sur le poste. Résultat visible dans l'onglet « Actions » du
+# dépôt, et en pastille verte/rouge à côté de chaque commit.
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
