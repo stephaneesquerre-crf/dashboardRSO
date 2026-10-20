@@ -4339,8 +4339,10 @@
         if (state.referentPoles) return state.referentPoles;
         const byCode = new Map(state.bootstrap.poles.map((pole) => [normalizePoleCode(pole.poleCode), pole]));
         state.referentPoles = referentsData().poles.map((pole) => {
-          const reference = byCode.get(normalizePoleCode(pole.poleCode));
-          return Object.assign({directeur: ''}, pole, {territoire: reference ? reference.territoire : '', knownCode: Boolean(reference)});
+          // referenceCode : code BDD NOMS rapproché côté serveur (code sans
+          // suffixe « - n » ou mêmes numéros d'établissement).
+          const reference = byCode.get(normalizePoleCode(pole.referenceCode || pole.poleCode));
+          return Object.assign({directeur: ''}, pole, {territoire: reference ? reference.territoire : (pole.territoire || ''), knownCode: Boolean(reference)});
         });
         return state.referentPoles;
       }

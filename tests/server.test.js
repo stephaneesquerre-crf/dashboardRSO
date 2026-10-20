@@ -251,39 +251,37 @@ test('cibles calculées avec « BDD - Bilan carbone » pour les lignes sans cibl
   assert.deepStrictEqual(Object.keys(parsed.filieres).sort(), ['CRC', 'PROT ENFANCE', 'SAN']);
 });
 
-test('référents : listes des filières lues depuis « Liens référents », IMPORT REFERENTS en complément', () => {
-  const LINKED_ID = 'linked-crc';
-  const crcPoles = require('./fixtures').buildPoles().filter((pole) => pole.filiere === 'CRC');
+test("référents : IMPORT REFERENTS d'abord, listes des filières seulement pour une filière absente", () => {
+  const LINKED_ID = 'linked-psh';
   const linkedApi = {Spreadsheets: {get: () => ({sheets: [{data: [{rowData: [
     {values: [{formattedValue: 'Outils A4T'}, {formattedValue: 'Code FILIERE'}, {formattedValue: 'Liens outils'}, {formattedValue: 'Liens outils bis'}, {formattedValue: 'Liens référents'}]},
-    {values: [{formattedValue: 'Outil CRC NORD'}, {formattedValue: 'CRC'}, chip('Outil CRC', 'https://docs.google.com/x'), {}, chip('Liste référents environnement CRC', `https://docs.google.com/spreadsheets/d/${LINKED_ID}/edit#gid=0`)]},
-    {values: [{formattedValue: 'Outil PROT.E.'}, {formattedValue: 'PROT ENFANCE'}, chip('Compilation', 'https://docs.google.com/y'), {}, chip('PROT.E._Liste référents', 'https://docs.google.com/spreadsheets/d/inconnu/edit')]}
+    // CRC est dans IMPORT REFERENTS : son lien n'est pas ouvert.
+    {values: [{formattedValue: 'Outil CRC NORD'}, {formattedValue: 'CRC'}, chip('Outil CRC', 'https://docs.google.com/x'), {}, chip('Liste référents environnement CRC', 'https://docs.google.com/spreadsheets/d/jamais-ouvert/edit')]},
+    {values: [{formattedValue: 'Outil HANDICAP'}, {formattedValue: 'PSH'}, chip('Outil PSH', 'https://docs.google.com/y'), {}, chip('Liste référents PSH', `https://docs.google.com/spreadsheets/d/${LINKED_ID}/edit#gid=0`)]},
+    {values: [{formattedValue: 'Outil PROT.E.'}, {formattedValue: 'PROT ENFANCE'}, chip('Compilation', 'https://docs.google.com/z'), {}, chip('PROT.E._Liste référents', 'https://docs.google.com/spreadsheets/d/inconnu/edit')]}
   ]}]}]})}};
   const linked = {
     'Notice': [['Mode d\'emploi']],
     'Liste': [
-      ['Liste des référents environnement — CRC'],
+      ['Liste des référents environnement — PSH'],
       [],
       ['Nom du pôle', 'Code pôle', 'Référent.e 1 Prénom et nom', 'Adresse mail (réf. 1)', 'Fonction (réf. 1)'],
-      ...crcPoles.slice(0, 3).map((pole, i) => [pole.nom, pole.code, `Réf CRC ${i}`, `crc${i}@croix-rouge.fr`, 'Directeur·rice']),
+      ['MAS A', 'PSH_1', 'Réf PSH', 'psh@croix-rouge.fr', 'AMP'],
       ['', '', '', '', '']
     ]
   };
   const app = loadAppsScript({[NATIONAL_ID]: buildNational('normal'), [ARCHIVES_ID]: buildArchives(), [REFERENTS_ID]: buildReferents(), [LINKED_ID]: linked}, {sheetsApi: linkedApi});
   const bootstrap = app.getDashboardBootstrap();
   const poles = bootstrap.referents.poles;
-  const fromLinked = poles.filter((pole) => pole.source === 'Liste référents environnement CRC');
-  assert.strictEqual(fromLinked.length, 3);
-  assert.ok(fromLinked.every((pole) => pole.filiere === 'CRC' && pole.referents.length === 1), 'filière reprise du lien');
-  // Le 4e pôle CRC n'est que dans IMPORT REFERENTS : gardé ; pas de doublon.
-  assert.strictEqual(poles.length, 4);
-  assert.strictEqual(poles.filter((pole) => pole.source === 'IMPORT REFERENTS').length, 1);
-  const sources = bootstrap.referents.sources;
-  const crcSource = sources.find((source) => source.title === 'Liste référents environnement CRC');
-  assert.ok(crcSource.ok && /^onglet « Liste »/.test(crcSource.detail), crcSource.detail);
-  assert.strictEqual(crcSource.withReferents, 3);
+  assert.strictEqual(poles.filter((pole) => pole.source === 'IMPORT REFERENTS').length, 4, 'CRC lus dans IMPORT REFERENTS');
+  const psh = poles.filter((pole) => pole.source === 'Liste référents PSH');
+  assert.strictEqual(JSON.stringify(psh.map((pole) => [pole.filiere, pole.poleCode, pole.referents.length])), JSON.stringify([['PSH', 'PSH_1', 1]]));
+  const titles = bootstrap.referents.sources.map((source) => source.title);
+  assert.ok(!titles.includes('Liste référents environnement CRC'), 'lien CRC non ouvert');
+  assert.ok(bootstrap.diagnostics.warnings.some((w) => /PROT\.E\._Liste référents.*non lue/.test(w)), bootstrap.diagnostics.warnings.join(' | '));
+  assert.ok(bootstrap.diagnostics.accessLinks.some((item) => /PROT\.E\._Liste référents/.test(item.label)));
 
-  // Autres intitulés de colonnes et libellés de filière des listes réelles.
+  // Autres intitulés de colonnes et libellés de filière.
   const other = app.parseReferentsList_([
     ['Filière', 'Nom', 'Code pôle', 'Référent n°1 (Prénom NOM)', 'Mail référent 1', 'Référent 2', 'Mail référent 2'],
     ['PROT.E.', 'MECS A', 'P1', 'Alice B', 'a@croix-rouge.fr', '', ''],
@@ -291,6 +289,52 @@ test('référents : listes des filières lues depuis « Liens référents », IM
   ]);
   assert.strictEqual(JSON.stringify(other.poles.map((pole) => [pole.filiere, pole.poleName, pole.referents.map((ref) => ref.name).join()])),
     JSON.stringify([['PROT ENFANCE', 'MECS A', 'Alice B'], ['PET E', 'Crèche B', 'Chloé D']]));
-  assert.ok(bootstrap.diagnostics.warnings.some((w) => /PROT\.E\._Liste référents.*non lue/.test(w)), bootstrap.diagnostics.warnings.join(' | '));
-  assert.ok(bootstrap.diagnostics.accessLinks.some((item) => /PROT\.E\._Liste référents/.test(item.label)));
+});
+
+test('référents : onglet IMPORT REFERENTS en blocs (une filière par bloc, lignes de fin et de synthèse)', () => {
+  const head = (code) => ['Réf. territoire', 'Région', 'DT (directeur territorial)', 'Filière', 'Nom pôle / établissement', 'Activité', 'Ville', code,
+    'Référent.e 1 \nPrénom et nom', 'Adresse mail (réf. 1)', 'Fonction (réf. 1)', 'Référent.e 2 \nPrénom et nom', 'Adresse mail (réf. 2)', 'Fonction (réf. 2)',
+    'Référent.e 3 \nPrénom et nom', 'Adresse mail (réf. 3)', 'Fonction (réf. 3)', 'Référent.e \nOui/Non', 'Date MàJ outil de suivi'];
+  const line = (cells) => { const row = Array(21).fill(''); Object.entries(cells).forEach(([i, v]) => { row[i] = v; }); return row; };
+  const end = line({0: '-------  LIGNE DE FIN DES DONNEES ----------', 5: '-------  LIGNE DE FIN DES DONNEES ----------   NE RIEN ECRIRE EN DESSOUS'});
+  const peBlock = [
+    head('Code Pôle'),
+    line({3: 'PE', 4: 'Univers des Patabulles', 7: 'Territoire B : GE - BFC - ARA - PACAC_4603 4497 - 1', 8: 'directeur 1', 17: 'OUI'}),
+    line({3: 'PE', 4: 'Multi-Accueil Laval', 7: 'Territoire A : HDF - IDF - NA - PDL_1405', 8: 'directeur 6', 17: 'OUI'}),
+    line({17: 'NON'}),
+    end,
+    line({3: 'Nb pôles/ établissements', 4: 26}),
+    line({3: 'taux de couverture référents / pôle', 4: '100%'}),
+    line({18: 'FAIT'})
+  ];
+  const values = [
+    head('Code Pôle'),
+    line({0: 'A - IDF', 2: 'Françoise BOUSQUET', 3: 'FLEX', 4: 'Pôle 75/92', 7: 'Territoire A : IDF_2537 4377', 8: 'Marie B', 9: 'marie.b@croix-rouge.fr', 17: 'OUI'}),
+    line({0: 'D - BFC', 3: 'FLEX', 4: 'Pôle 20', 7: 'Territoire D : BFC_4567', 17: 'NON'}),
+    line({}),
+    end,
+    line({3: 'Nb pôles/ établissements', 4: 32, 7: 'Nombre de référents'}),
+    line({0: 'EHPAD'}),
+    ...peBlock,
+    head('Code'),
+    line({0: 'A - HDF', 3: 'CRC', 4: 'Calais', 7: 'Territoire A : HDF_1768', 8: 'Rudy Bogaert', 9: 'Rudy Bogaert', 17: 'OUI'}),
+    end,
+    ...peBlock
+  ];
+  const app = loadAppsScript({});
+  const parsed = app.parseReferentsList_(values);
+  assert.strictEqual(JSON.stringify(parsed.poles.map((pole) => [pole.filiere, pole.poleName, pole.referents.length])), JSON.stringify([
+    ['FLEX', 'Pôle 75/92', 1], ['FLEX', 'Pôle 20', 0], ['PET E', 'Univers des Patabulles', 1], ['PET E', 'Multi-Accueil Laval', 1], ['CRC', 'Calais', 1]
+  ]), 'synthèses ignorées, bloc PE en double lu une fois, bloc CRC (« Code ») lu');
+  assert.strictEqual(parsed.withoutCode, 0);
+
+  // Rapprochement avec BDD NOMS : suffixe « - n » retiré, puis mêmes numéros.
+  const reference = {};
+  [['Territoire B : GE - BFC - ARA - PACAC_4603 4497', 'Territoire B'], ['PE Territoire A : HDF - IDF - PDL_1405', 'Territoire A']].forEach(([code, territoire]) => {
+    reference[app.normalizeText_(code)] = {poleCode: code, territoire};
+  });
+  const index = app.buildPoleCodeIndex_(reference);
+  assert.strictEqual(app.matchPoleCode_('Territoire B : GE - BFC - ARA - PACAC_4603 4497 - 1', reference, index).territoire, 'Territoire B');
+  assert.strictEqual(app.matchPoleCode_('Territoire A : HDF - IDF - NA - PDL_1405', reference, index).territoire, 'Territoire A');
+  assert.strictEqual(app.matchPoleCode_('Territoire A : IDF_9999', reference, index), null);
 });

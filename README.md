@@ -239,18 +239,20 @@ soit 75 %, identique à la dernière photographie (0,75).
   Si la ligne « Bilan CRF » du tableau et le bloc de droite diffèrent,
   l'écart est signalé. `testBilanCarbone()` affiche les poids lus et le
   nombre de cibles calculées par filière.
-- **Listes des référents des filières** (`ReferentsService.gs`) : chaque
-  lien de la colonne « Liens référents » (onglet `Liens outils
-  référents`) vers un classeur Google Sheets est lu (premier onglet dont
-  une des 20 premières lignes contient « Code pôle »). Filière : colonne
-  Filière du fichier (libellés « PROT.E. », « PE »… reconnus), sinon code
-  filière du lien. Colonnes des référent·es reconnues sous plusieurs
-  intitulés (« Référent.e 1 », « Référent n°1 », « Mail référent 1 »…) ;
-  le journal de `testListesReferents()` indique celles retenues. Pour un même code pôle,
-  la liste de la filière l'emporte sur `IMPORT REFERENTS`, qui complète.
-  Fichier inaccessible, fichier Excel ou en-tête introuvable : signalé en
-  tête de page. `testListesReferents()` affiche, pour chaque liste,
-  l'onglet lu et le nombre de pôles, ou la raison de l'échec.
+- **Listes des référents** (`ReferentsService.gs`, revu le 20/10/2026) :
+  l'onglet `IMPORT REFERENTS` regroupe les listes de toutes les filières,
+  un bloc par filière (en-tête, pôles, « LIGNE DE FIN DES DONNEES », lignes
+  de synthèse). Chaque bloc est lu avec ses propres colonnes (le bloc CRC
+  a un en-tête « Code » au lieu de « Code Pôle ») ; les lignes entre une
+  ligne de fin et l'en-tête suivant sont ignorées ; une ligne en double
+  (bloc Petite enfance présent deux fois) n'est lue qu'une fois. Filières
+  « PROT.E. » et « PE » reconnues. Les fichiers de la colonne « Liens
+  référents » (`Liens outils référents`) ne sont ouverts que pour une
+  filière absente de `IMPORT REFERENTS`. Codes pôle rapprochés de
+  `BDD NOMS` : code identique, sinon sans le suffixe « - 1 » / « - 2 »,
+  sinon mêmes numéros d'établissement (libellé de territoire différent).
+  `testListesReferents()` affiche les sources lues et le nombre de pôles
+  par filière.
 - **Vue Référents** : la carte « Couverture par filière — dernière valeur »
   est sous la carte « Couverture », à gauche du graphique.
 
