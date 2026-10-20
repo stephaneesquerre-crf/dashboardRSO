@@ -465,6 +465,20 @@
         font-weight: 600;
       }
       .tile-tools { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+      .action-badge {
+        display: inline-block;
+        margin-left: 4px;
+        padding: 0 6px;
+        border: 1px solid var(--cat-5);
+        border-radius: 999px;
+        color: var(--text-secondary);
+        font-size: 0.68rem;
+        font-weight: 600;
+        line-height: 1.5;
+        white-space: nowrap;
+        vertical-align: 1px;
+      }
+      table.poste-table tr.is-specific td:first-child { box-shadow: inset 3px 0 0 var(--cat-5); }
       .tile-image-export {
         min-height: auto;
         padding: 2px 8px;
@@ -821,6 +835,12 @@
       table.matrix thead th.matrix-action-header {
         z-index: 3;
       }
+
+      /* Changement de territoire : en-têtes de deux teintes alternées et
+         filet vertical entre deux territoires. */
+      table.matrix thead th.terr-a { background: color-mix(in srgb, var(--series-1) 16%, var(--surface-1)); }
+      table.matrix thead th.terr-b { background: color-mix(in srgb, var(--cat-4) 22%, var(--surface-1)); }
+      table.matrix .terr-start { border-left: 2px solid var(--text-secondary); }
 
       table.matrix thead .matrix-territoire-header {
         top: 0;
@@ -3024,6 +3044,17 @@
           return;
         }
 
+        // Groupes de territoires (pôles déjà triés par territoire) : couleur
+        // d'en-tête alternée et filet vertical au changement de territoire,
+        // comme dans le reporting national (demande du 20/10/2026).
+        const territoireKey = (pole) => pole.territoire || 'Territoire non renseigné';
+        let groupIndex = -1;
+        const poleGroups = matrix.poles.map((pole, index) => {
+          const start = index === 0 || territoireKey(pole) !== territoireKey(matrix.poles[index - 1]);
+          if (start) groupIndex += 1;
+          return {start: start && index > 0, parity: groupIndex % 2 === 0 ? 'terr-a' : 'terr-b'};
+        });
+
         const showTerritoireRow = !matrix.territoire; // "tous les territoires" : sous-en-tête groupé
         elements.matrixTerritoireRow.replaceChildren();
         elements.matrixTerritoireRow.hidden = !showTerritoireRow;
@@ -3039,6 +3070,7 @@
             while (index + span < matrix.poles.length && (matrix.poles[index + span].territoire || 'Territoire non renseigné') === territoire) span += 1;
             const th = document.createElement('th');
             th.colSpan = span;
+            th.className = `matrix-territoire-group ${poleGroups[index].parity}${poleGroups[index].start ? ' terr-start' : ''}`;
             th.textContent = territoireDisplayLabel(matrix.filiere, territoire) || territoire;
             elements.matrixTerritoireRow.appendChild(th);
             index += span;
@@ -3068,10 +3100,11 @@
           th.appendChild(button);
           elements.matrixHeaderRow.appendChild(th);
         });
-        matrix.poles.forEach((pole) => {
+        matrix.poles.forEach((pole, poleIndex) => {
           const th = document.createElement('th');
           th.scope = 'col';
-          th.title = pole.poleCode;
+          th.className = `${poleGroups[poleIndex].parity}${poleGroups[poleIndex].start ? ' terr-start' : ''}`;
+          th.title = `${pole.poleCode} — ${territoireKey(pole)}`;
           const labelLine = document.createElement('div');
           labelLine.className = 'matrix-pole-label';
           labelLine.textContent = pole.label || pole.poleCode;
@@ -3100,9 +3133,10 @@
           thematiqueCell.className = 'matrix-meta';
           thematiqueCell.textContent = row.thematique;
           tr.appendChild(thematiqueCell);
-          row.cells.forEach((rawValue) => {
+          row.cells.forEach((rawValue, poleIndex) => {
             const style = matrixCellStyle(rawValue);
             const td = document.createElement('td');
+            if (poleGroups[poleIndex] && poleGroups[poleIndex].start) td.className = 'terr-start';
             td.textContent = style.text;
             td.style.background = style.background;
             td.style.color = style.color;
@@ -3162,8 +3196,9 @@
           const action = fact.action || UNKNOWN_LABEL;
           if (!byPoste.has(poste)) byPoste.set(poste, new Map());
           const actions = byPoste.get(poste);
-          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0, facts: []});
+          if (!actions.has(action)) actions.set(action, {action, concernes: 0, terminees: 0, somme: 0, facts: [], types: new Set()});
           const bucket = actions.get(action);
+          bucket.types.add(actionTypeOf(fact));
           if (isConcerne(fact.avancement)) {
             bucket.concernes += 1;
             bucket.somme += parseAvancementFraction(fact.avancement);
@@ -3195,6 +3230,9 @@
               // affiché comme donnée non disponible, jamais comme 0 %.
               tauxMoyenAvancement: bucket.concernes ? roundRate(bucket.somme, bucket.concernes) : null,
               tauxTerminees: bucket.concernes ? roundRate(bucket.terminees, bucket.concernes) : null,
+              // Action spécifique filière (cf. actionTypeOf) : repérée dans
+              // la tuile par une étiquette (demande du 20/10/2026).
+              specific: bucket.types.has('filiere'),
               co2: aggregateReductionByPole(bucket.facts)
             })),
           co2: aggregateReductionByPole([...byPoste.get(poste).values()].flatMap((bucket) => bucket.facts))
@@ -3356,6 +3394,16 @@
         const row = document.createElement('tr');
         const name = document.createElement('td');
         name.textContent = card.action;
+        if (card.specific) {
+          // Étiquette texte plutôt qu'une couleur seule : lisible sans
+          // légende, en impression, en image et par un lecteur d'écran.
+          row.classList.add('is-specific');
+          const badge = document.createElement('span');
+          badge.className = 'action-badge';
+          badge.textContent = 'Spécifique filière';
+          badge.title = 'Action spécifique à la filière (colonne « Action socles » : « Action filière » ou « Action spécifique filière »)';
+          name.append(' ', badge);
+        }
 
         const rate = document.createElement('td');
         const rateBox = document.createElement('div');
@@ -3637,15 +3685,16 @@
       // points de % du bilan carbone, moyenne par pôle (cf.
       // aggregateReductionByPole).
       const POSTE_EXPORT_HEADERS = ['Périmètre', 'Indicateur', 'Poste d\'émissions', 'Action', '% Terminées / concernées', '% Avancement moyen',
-        'Pôles ayant terminé', 'Pôles concernés', 'Réduction à date (pts de %)', 'Réduction cible (pts de %)', 'Pôles comptés (réduction)'];
+        'Pôles ayant terminé', 'Pôles concernés', 'Réduction à date (pts de %)', 'Réduction cible (pts de %)', 'Pôles comptés (réduction)', 'Type d\'action'];
 
       function posteExportRows(groups) {
         const scope = state.posteExport ? state.posteExport.scope : '';
         const indicator = elements.posteReductionMode.selectedOptions[0].textContent;
         const reduction = (co2, key) => (co2.poleCount && co2[key] !== null ? Math.round(co2[key] * 100) / 100 : null);
         return groups.flatMap((group) => group.cards.map((card) => [scope, indicator, group.poste, card.action, card.tauxTerminees, card.tauxMoyenAvancement,
-          card.terminees, card.concernes, reduction(card.co2, 'aDate'), reduction(card.co2, 'cible'), card.co2.poleCount])
-          .concat([[scope, indicator, group.poste, 'Total du poste', null, null, null, null, reduction(group.co2, 'aDate'), reduction(group.co2, 'cible'), group.co2.poleCount]]));
+          card.terminees, card.concernes, reduction(card.co2, 'aDate'), reduction(card.co2, 'cible'), card.co2.poleCount,
+          card.specific ? 'Spécifique filière' : 'Socle'])
+          .concat([[scope, indicator, group.poste, 'Total du poste', null, null, null, null, reduction(group.co2, 'aDate'), reduction(group.co2, 'cible'), group.co2.poleCount, '']]));
       }
 
       function downloadPosteCsv(groups, label) {
@@ -3675,7 +3724,10 @@
         const body = table.createTBody();
         posteExportRows(groups).forEach((row) => {
           const tr = body.insertRow();
-          columns.forEach((index) => { tr.insertCell().textContent = formatValue(row[index], index); });
+          columns.forEach((index) => {
+            const specific = index === 3 && row[11] === 'Spécifique filière';
+            tr.insertCell().textContent = formatValue(row[index], index) + (specific ? ' (spécifique filière)' : '');
+          });
         });
         const holder = document.createElement('div');
         holder.style.cssText = 'position:fixed;left:-10000px;top:0;';

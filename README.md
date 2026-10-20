@@ -216,6 +216,19 @@ DOM ; il n'y a pas de colonne « Référent.e 3 » (elle sera lue si elle est
 ajoutée, intitulée « Référent.e 3 … ») ; FLEX : 24 pôles couverts sur 32,
 soit 75 %, identique à la dernière photographie (0,75).
 
+## Repères visuels (20/10/2026)
+
+- **Détail par pôle** : les en-têtes de colonnes alternent deux teintes
+  d'un territoire à l'autre, et un filet vertical sépare deux territoires,
+  comme dans le reporting national. Survol d'un pôle : code et territoire.
+- **Détail par poste d'émissions** : une action spécifique à la filière
+  (colonne « Action socles » = « Action filière » ou « Action spécifique
+  filière ») porte l'étiquette « Spécifique filière » et un trait de
+  couleur à gauche de sa ligne. Étiquette texte plutôt que couleur seule :
+  lisible sans légende, en image exportée et par un lecteur d'écran. Le
+  CSV des tuiles a une colonne « Type d'action » ; le tableau copié ajoute
+  « (spécifique filière) » au nom de l'action.
+
 ## Accès aux classeurs et temps de chargement (14/10/2026)
 
 - **Écran « demander l'accès »** : avec un déploiement « Exécuter en tant
