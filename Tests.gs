@@ -37,7 +37,7 @@ function lancerTests() {
     'HistoryService.gs': ['getHistoryForDashboard_', 'historyMonthKey_'],
     'ArchiveImportService.gs': ['importArchivesTableauDeBord', 'actualiserHistoriqueSiModifie', 'rafraichirArchivesDepuisDashboard', 'parseArchiveValues_', 'archiveMonthFromName_'],
     'ProtEnfanceService.gs': ['getProtEnfanceFacts_', 'parseProtEnfanceValues_'],
-    'ReferentsService.gs': ['getReferentsForDashboard_', 'parseReferentsList_'],
+    'ReferentsService.gs': ['getReferentsForDashboard_', 'parseReferentsList_', 'readLinkedReferentsLists_'],
     'BilanCarboneService.gs': ['getBilanCarbone_', 'parseBilanCarboneValues_', 'computeCibleCalculee_']
   };
   const scope = typeof globalThis !== 'undefined' ? globalThis : this;

@@ -464,6 +464,8 @@
         font-size: 0.95rem;
         font-weight: 600;
       }
+      .referents-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+      .referents-side > .panel { margin: 0; }
       .tile-tools { display: inline-flex; gap: 4px; flex: 0 0 auto; }
       .action-badge {
         display: inline-block;
@@ -1091,7 +1093,7 @@
     </section>
 
     <section class="tab-panel" id="panel-referents" role="tabpanel" aria-labelledby="tab-referents" hidden>
-      <p class="view-intro">Couverture des pôles par un·e référent·e environnement, à partir du classeur « Synthèse référents Environnement » : évolution du taux de couverture par filière (photographies datées) et liste des référent·es par pôle.</p>
+      <p class="view-intro">Couverture des pôles par un·e référent·e environnement : évolution du taux de couverture par filière (photographies datées du classeur « Synthèse référents Environnement ») et liste des référent·es par pôle (listes de chaque filière, liens « Liens référents », complétées par l'onglet « IMPORT REFERENTS »).</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1111,13 +1113,33 @@
       </section>
 
       <div class="evolution-grid">
-        <section class="panel" id="referents-kpi-panel">
-          <div class="panel-header">
-            <h2 id="referents-kpi-title">Couverture</h2>
-            <button type="button" class="image-export" data-image-target="referents-kpi-panel">⤓ Image (PNG)</button>
-          </div>
-          <dl class="identity-stats" id="referents-kpis"></dl>
-        </section>
+        <!-- Colonne de gauche : couverture du périmètre puis couverture par
+             filière, à gauche du graphique (demande du 20/10/2026). -->
+        <div class="referents-side">
+          <section class="panel" id="referents-kpi-panel">
+            <div class="panel-header">
+              <h2 id="referents-kpi-title">Couverture</h2>
+              <button type="button" class="image-export" data-image-target="referents-kpi-panel">⤓ Image (PNG)</button>
+            </div>
+            <dl class="identity-stats" id="referents-kpis"></dl>
+          </section>
+
+          <section class="panel" id="referents-filieres-panel">
+            <div class="panel-header">
+              <h2>Couverture par filière — dernière valeur</h2>
+              <button type="button" class="image-export" data-image-target="referents-filieres-panel">⤓ Image (PNG)</button>
+            </div>
+            <div style="overflow-x:auto">
+              <table id="referents-filieres-table">
+                <thead>
+                  <tr><th scope="col">Filière</th><th scope="col">Dernière photographie</th><th scope="col">Date</th><th scope="col">Listes des référents</th></tr>
+                </thead>
+                <tbody id="referents-filieres-body"></tbody>
+              </table>
+            </div>
+            <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Listes : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans les listes des référents (fichiers « Liens référents » de chaque filière, complétés par l'onglet « IMPORT REFERENTS »), recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
+          </section>
+        </div>
 
         <section class="panel chart-panel" id="chart-panel-referents">
           <div class="panel-header">
@@ -1132,22 +1154,6 @@
           <p class="chart-note">Photographies de l'onglet « Evolution référents » (une valeur par mois : la dernière photographie du mois). Par filière seulement : le filtre Territoire ne s'applique pas à ce graphique. La filière choisie est mise en avant.</p>
         </section>
       </div>
-
-      <section class="panel" id="referents-filieres-panel">
-        <div class="panel-header">
-          <h2>Couverture par filière — dernière valeur</h2>
-          <button type="button" class="image-export" data-image-target="referents-filieres-panel">⤓ Image (PNG)</button>
-        </div>
-        <div style="overflow-x:auto">
-          <table id="referents-filieres-table">
-            <thead>
-              <tr><th scope="col">Filière</th><th scope="col">Dernière photographie</th><th scope="col">Date</th><th scope="col">Liste « IMPORT REFERENTS »</th></tr>
-            </thead>
-            <tbody id="referents-filieres-body"></tbody>
-          </table>
-        </div>
-        <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Liste : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans l'onglet « IMPORT REFERENTS », recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
-      </section>
 
       <section class="panel">
         <div class="panel-header">
@@ -4462,8 +4468,16 @@
         renderToolLinks(elements.referentsToolLinks, filiere);
 
         const listFilieres = distinctSorted(referentPoles().map((pole) => pole.filiere));
+        // Sources de la liste : listes des filières (« Liens référents »)
+        // puis « IMPORT REFERENTS » pour les pôles qu'elles ne contiennent pas.
+        const sources = referentsData().sources || [];
+        const read = sources.filter((source) => source.ok && source.poles > 0)
+          .map((source) => `${source.title}${source.filiere ? ` (${source.filiere})` : ''} : ${formatCount(source.poles)} pôle(s)`);
+        const unread = sources.filter((source) => !source.ok).map((source) => `${source.title} (${source.filiere})`);
         elements.referentsCoverageHint.textContent = listFilieres.length
-          ? `Liste des référent·es disponible pour : ${listFilieres.join(', ')} (onglet « IMPORT REFERENTS »). Les autres filières n'apparaissent que dans le graphique d'évolution.`
+          ? `Liste des référent·es disponible pour : ${listFilieres.join(', ')}.`
+            + (read.length ? ` Sources : ${read.join(' ; ')}.` : '')
+            + (unread.length ? ` Non lues : ${unread.join(' ; ')} (voir les points à vérifier en tête de page).` : '')
           : 'Liste des référent·es indisponible (voir les points à vérifier en tête de page).';
 
         const poles = sortReferentPoles(referentPoles()

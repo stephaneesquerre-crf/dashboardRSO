@@ -209,7 +209,7 @@ function getDashboardBootstrap() {
 
   const toolLinks = timed_('Liens outils', () => getToolLinks_());
   const history = timed_('Historique', () => getHistoryForDashboard_());
-  const referents = timed_('Référents', () => getReferentsForDashboard_(poleReference));
+  const referents = timed_('Référents', () => getReferentsForDashboard_(poleReference, toolLinks));
   return {
     appVersion: config.APP_VERSION,
     generatedAt: new Date().toISOString(),

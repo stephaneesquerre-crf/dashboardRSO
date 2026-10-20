@@ -6,14 +6,20 @@
 //   format que BDD NOMS) et référent·es 1, 2 (et 3 si la colonne existe).
 // Repérage par le contenu (ligne de dates, en-tête « Code Pôle »), pas par
 // numéros de ligne. Ne fait jamais échouer le chargement du dashboard.
-function getReferentsForDashboard_(poleReference) {
+function getReferentsForDashboard_(poleReference, toolLinks) {
   const config = getConfig_();
-  const result = {evolution: [], poles: []};
+  const result = {evolution: [], poles: [], sources: []};
+  // Listes des filières (colonne « Liens référents » de l'onglet « Liens
+  // outils référents ») : lues en plus de « IMPORT REFERENTS » ; pour un
+  // même code pôle, la liste de la filière l'emporte.
+  const linked = readLinkedReferentsLists_(toolLinks || []);
+  result.sources = linked.sources;
   let spreadsheet;
   try {
     spreadsheet = openSpreadsheet_(config.REFERENTS_SPREADSHEET_ID);
   } catch (error) {
     addDiagnosticWarning_(`Référents : classeur inaccessible (${error.message}).`);
+    result.poles = linked.poles;
     return result;
   }
 
@@ -27,10 +33,15 @@ function getReferentsForDashboard_(poleReference) {
   const listSheet = spreadsheet.getSheetByName(config.REFERENTS_LIST_SHEET_NAME);
   if (listSheet) {
     const parsed = parseReferentsList_(listSheet.getDataRange().getValues());
-    result.poles = parsed.poles;
+    const linkedCodes = {};
+    linked.poles.forEach((pole) => { linkedCodes[normalizeText_(pole.poleCode)] = true; });
+    const fromImport = parsed.poles.filter((pole) => !linkedCodes[normalizeText_(pole.poleCode)]);
+    fromImport.forEach((pole) => { pole.source = config.REFERENTS_LIST_SHEET_NAME; });
+    result.sources.unshift({filiere: '', title: config.REFERENTS_LIST_SHEET_NAME, url: '', ok: true, poles: fromImport.length, detail: 'pôles absents des listes des filières'});
+    result.poles = linked.poles.concat(fromImport);
     // Codes inconnus regroupés par filière (filière de la liste des
     // référents), pour savoir où corriger.
-    const unknown = parsed.poles.filter((pole) => !poleReference[normalizeText_(pole.poleCode)]);
+    const unknown = result.poles.filter((pole) => !poleReference[normalizeText_(pole.poleCode)]);
     if (unknown.length) {
       const byFiliere = {};
       unknown.forEach((pole) => { (byFiliere[pole.filiere] = byFiliere[pole.filiere] || []).push(pole.poleCode); });
@@ -44,8 +55,84 @@ function getReferentsForDashboard_(poleReference) {
     }
   } else {
     addDiagnosticWarning_(`Référents : onglet « ${config.REFERENTS_LIST_SHEET_NAME} » introuvable.`);
+    result.poles = linked.poles;
   }
   return result;
+}
+
+// ID d'un classeur Google Sheets à partir de son URL, ou ''.
+function spreadsheetIdFromUrl_(url) {
+  const match = String(url || '').match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : '';
+}
+
+// Lit chaque classeur « Liens référents » une seule fois (PADOM : un
+// fichier pour PA et DOM). Dans chaque classeur, premier onglet dont une
+// des 20 premières lignes contient l'en-tête « Code pôle » ; filière lue
+// dans la colonne Filière si elle existe, sinon code filière du lien.
+// Ne fait jamais échouer le chargement : fichier inaccessible (droits,
+// fichier Excel, autre format) -> source signalée et ignorée.
+function readLinkedReferentsLists_(toolLinks) {
+  const byId = {};
+  toolLinks.forEach((row) => {
+    (row.links || []).filter((link) => link.kind === 'referents').forEach((link) => {
+      const id = spreadsheetIdFromUrl_(link.url);
+      const key = id || link.url;
+      if (!byId[key]) byId[key] = {id, title: link.title, url: link.url, filieres: []};
+      if (row.filiereCode && byId[key].filieres.indexOf(row.filiereCode) === -1) byId[key].filieres.push(row.filiereCode);
+    });
+  });
+  const sources = [];
+  const poles = [];
+  const seen = {};
+  Object.keys(byId).forEach((key) => {
+    const source = byId[key];
+    const report = {filiere: source.filieres.join(', '), title: source.title, url: source.url, ok: false, poles: 0, detail: ''};
+    sources.push(report);
+    if (!source.id) {
+      report.detail = 'lien qui n\'est pas un classeur Google Sheets';
+      return;
+    }
+    let spreadsheet;
+    try {
+      spreadsheet = openSpreadsheet_(source.id);
+    } catch (error) {
+      report.detail = `classeur inaccessible (${error.message})`;
+      DASHBOARD_DIAGNOSTICS_.accessLinks = DASHBOARD_DIAGNOSTICS_.accessLinks || [];
+      DASHBOARD_DIAGNOSTICS_.accessLinks.push({key: `referents-${key}`, label: `${source.title} (liste des référents ${report.filiere})`, url: source.url, required: false});
+      return;
+    }
+    const sheets = spreadsheet.getSheets();
+    for (let index = 0; index < sheets.length; index += 1) {
+      const values = sheets[index].getDataRange().getValues();
+      if (findReferentsHeaderRow_(values) === -1) continue;
+      const parsed = parseReferentsList_(values, source.filieres.length === 1 ? source.filieres[0] : '');
+      parsed.poles.forEach((pole) => {
+        const code = normalizeText_(pole.poleCode);
+        if (seen[code]) return;
+        seen[code] = true;
+        pole.source = source.title;
+        poles.push(pole);
+        report.poles += 1;
+      });
+      report.ok = true;
+      report.detail = `onglet « ${sheets[index].getName()} »`;
+      break;
+    }
+    if (!report.ok) report.detail = 'aucun onglet avec un en-tête « Code pôle »';
+  });
+  sources.filter((source) => !source.ok).forEach((source) => {
+    addDiagnosticWarning_(`Référents : liste « ${source.title} » (${source.filiere}) non lue — ${source.detail}.`);
+  });
+  return {poles, sources};
+}
+
+function findReferentsHeaderRow_(values) {
+  const limit = Math.min(values.length, 20);
+  for (let row = 0; row < limit; row += 1) {
+    if (values[row].some((cell) => normalizeText_(cell).indexOf('code pole') === 0)) return row;
+  }
+  return -1;
 }
 
 // Libellés de filière du classeur des référents -> filière du dashboard.
@@ -92,8 +179,10 @@ function parseReferentsEvolution_(values) {
 }
 
 // {poles: [{poleCode, poleName, filiere, directeur, referents: [{name, email, fonction}], dateMaj}], withoutCode}
-function parseReferentsList_(values) {
-  const headerRow = values.findIndex((row) => row.some((cell) => normalizeText_(cell) === 'code pole'));
+// defaultFiliere : filière à utiliser quand le fichier n'a pas de colonne
+// Filière ou qu'elle est vide (listes propres à une filière).
+function parseReferentsList_(values, defaultFiliere) {
+  const headerRow = findReferentsHeaderRow_(values);
   if (headerRow === -1) {
     addDiagnosticWarning_('Référents : en-tête « Code Pôle » introuvable dans la liste.');
     return {poles: [], withoutCode: 0};
@@ -117,10 +206,11 @@ function parseReferentsList_(values) {
   const poles = [];
   let withoutCode = 0;
   table.rows.forEach((row) => {
-    const filiere = cellAt_(row, col.filiere);
+    const filiere = cellAt_(row, col.filiere) || cleanValue_(defaultFiliere);
     const poleCode = cellAt_(row, col.poleCode);
     // Lignes de titre répétées, totaux, lignes vides.
-    if (!filiere || normalizeText_(filiere) === 'filiere' || normalizeText_(poleCode) === 'code pole') return;
+    if (!filiere || normalizeText_(filiere) === 'filiere' || normalizeText_(poleCode).indexOf('code pole') === 0) return;
+    if (!poleCode && !cellAt_(row, col.poleName)) return;
     if (!poleCode) {
       withoutCode += 1;
       return;
@@ -143,4 +233,18 @@ function parseReferentsList_(values) {
     });
   });
   return {poles, withoutCode};
+}
+
+// À lancer depuis l'éditeur : pour chaque liste « Liens référents », onglet
+// lu et nombre de pôles, ou raison de l'échec (droits, en-tête introuvable).
+function testListesReferents() {
+  const toolLinks = getToolLinks_();
+  const result = getReferentsForDashboard_(getPoleReference_(), toolLinks);
+  result.sources.forEach((source) => {
+    Logger.log(`${source.ok ? 'OK ' : 'NON'} | ${source.filiere || '-'} | ${source.title} | ${source.poles} pôle(s) | ${source.detail}`);
+  });
+  const byFiliere = {};
+  result.poles.forEach((pole) => { byFiliere[pole.filiere] = (byFiliere[pole.filiere] || 0) + 1; });
+  Logger.log(`Pôles par filière : ${JSON.stringify(byFiliere)}`);
+  DASHBOARD_DIAGNOSTICS_.warnings.forEach((warning) => Logger.log(`⚠ ${warning}`));
 }
