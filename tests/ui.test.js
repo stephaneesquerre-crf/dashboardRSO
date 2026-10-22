@@ -44,6 +44,13 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     const head = await page.$$eval('#referents-table-head th', (cells) => cells.map((c) => c.textContent.replace(/ [▲▼]$/, '')));
     assert.deepStrictEqual(head.slice(0, 5), ['Pôle', 'Code pôle', 'Filière', 'Territoire', 'Directeur·rice de territoire']);
     assert.deepStrictEqual(await page.$$eval('#referents-table-body td.referents-code', (cells) => cells.map((c) => c.textContent)).then((codes) => [...codes].sort()), ['CRC_00', 'CRC_01', 'CRC_10', 'CRC_11']);
+    // Territoire affiché avec ses régions (BDD NOMS), filtre compris.
+    const referentTerritories = await page.$$eval('#referents-table-body tr td:nth-child(4)', (cells) => cells.map((c) => c.textContent));
+    assert.ok(referentTerritories.every((text) => /^Territoire [AB] · Régions [01]$/.test(text)), referentTerritories.join(' | '));
+    await page.selectOption('#referents-filiere', 'CRC');
+    const referentOptions = await page.$$eval('#referents-territoire option', (options) => options.map((o) => [o.value, o.textContent]));
+    assert.deepStrictEqual(referentOptions, [['', 'Toute la filière'], ['Territoire A', 'Territoire A · Régions 0'], ['Territoire B', 'Territoire B · Régions 1']]);
+    await page.selectOption('#referents-filiere', '');
     assert.deepStrictEqual(await page.$$eval('#referents-table-body a[href^="mailto:"]', (links) => links.map((l) => l.getAttribute('href'))), ['mailto:mail@croix-rouge.fr']);
     // Tri par nom du pôle, croissant puis décroissant.
     const names = () => page.$$eval('#referents-table-body tr td:first-child', (cells) => cells.map((c) => c.textContent));
@@ -142,7 +149,11 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       assert.deepStrictEqual(niveaux, ['territoire', 'thematique', 'volet', 'action'], `Regrouper par ${filiere}`);
       await page.selectOption('#synthese-niveau', 'territoire');
       const bars = await page.$$eval('#chart .category-text', (labels) => labels.map((l) => l.textContent));
-      assert.deepStrictEqual([...bars].sort(), [...territories].sort(), `graphique Synthèse ${filiere}`);
+      assert.deepStrictEqual([...bars].sort(), territories.map((t, i) => `${t} · Régions ${i}`).sort(), `graphique Synthèse ${filiere}`);
+      // Clic sur une barre : le filtre reçoit le nom court du territoire.
+      await page.click('#chart .bar-hit');
+      assert.ok(territories.includes(await page.$eval('#detail-territoire', (select) => select.value)), `navigation ${filiere}`);
+      await page.selectOption('#detail-territoire', '');
 
       await page.click('#tab-detail');
       await page.selectOption('#detail-filiere', filiere);
@@ -156,6 +167,18 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       });
       const starts = await page.$$eval('#matrix-header-row th.terr-start', (cells) => cells.length);
       assert.strictEqual(starts, territories.length - 1, `filets ${filiere}`);
+      // Couleur de l'année socle sur les colonnes Action/Campagne/Thématique.
+      const socleRows = await page.$$eval('#matrix-body tr', (rows) => rows.map((r) => [r.cells[0].textContent, r.className, getComputedStyle(r.cells[0]).backgroundColor]));
+      const socleOf = (action) => socleRows.find(([label]) => label === action);
+      assert.strictEqual(socleOf('Repas végétariens')[1], 'socle-2024', `socle 2024 ${filiere}`);
+      assert.strictEqual(socleOf('Bornes électriques')[1], 'socle-2025', `socle 2025 ${filiere}`);
+      assert.notStrictEqual(socleOf('Repas végétariens')[2], socleOf('Bornes électriques')[2]);
+      if (filiere !== 'PROT ENFANCE') {
+        await page.uncheck('#detail-tracked-only');
+        const filiereRow = await page.$$eval('#matrix-body tr', (rows) => rows.filter((r) => r.cells[0].textContent === 'Action filière X').map((r) => r.className));
+        assert.deepStrictEqual(filiereRow, [''], 'action filière sans couleur');
+        await page.check('#detail-tracked-only');
+      }
 
       await page.click('#tab-poste');
       await page.selectOption('#poste-filiere', filiere);
@@ -188,6 +211,7 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       const groups = await page.$$eval('#evolution-multiples .evolution-group h3', (titles) => titles.map((t) => t.textContent));
       assert.ok(groups.length > 0, `Évolution groupée par ${groupe}`);
     }
+    assert.match(await page.textContent('#evolution-caveat'), /augmentation du nombre de répondants/);
     const filiereLegend = await page.$$eval('#evolution-filieres-legend span', (items) => items.map((i) => i.textContent).filter(Boolean));
     assert.ok(filiereLegend.includes('Ensemble'), filiereLegend.join(', '));
     const values = await page.evaluate(() => {
