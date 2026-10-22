@@ -282,12 +282,12 @@ soit 75 %, identique à la dernière photographie (0,75).
   Détail par pôle sur le bon territoire. Sur le graphique en barres
   verticales, un libellé de plus de 28 caractères est abrégé (« … ») ; le
   libellé complet s'affiche au survol.
-- **Détail par pôle** : les colonnes Action, Campagne et Thématique sont
-  teintées selon l'année socle de l'action (colonne « Action socles »),
+- **Synthèse, tableau « Détail des données »** : chaque ligne est
+  teintée selon l'année socle de l'action (colonne « Action socles »),
   avec les couleurs de l'outil de suivi : 2024 vert pastel, 2025 bleu
-  pastel, 2026 rouge pastel. Les cellules pôle gardent la couleur
-  d'avancement. Une action sans année socle (action filière,
-  supplémentaire…) n'est pas teintée. Pour les socles 2027 : ajouter
+  pastel, 2026 rouge pastel. Une action sans année socle (action filière,
+  supplémentaire…) ou rattachée à plusieurs années dans le périmètre
+  n'est pas teintée. Pour les socles 2027 : ajouter
   `--socle-2027` dans le style (modes clair et sombre), la règle CSS
   correspondante et l'année dans `SOCLE_COLOR_YEARS` (`Index.html`).
 - **Vue Évolution** : encadré sous les filtres expliquant que les courbes

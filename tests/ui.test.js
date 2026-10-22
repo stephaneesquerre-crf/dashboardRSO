@@ -167,18 +167,6 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       });
       const starts = await page.$$eval('#matrix-header-row th.terr-start', (cells) => cells.length);
       assert.strictEqual(starts, territories.length - 1, `filets ${filiere}`);
-      // Couleur de l'année socle sur les colonnes Action/Campagne/Thématique.
-      const socleRows = await page.$$eval('#matrix-body tr', (rows) => rows.map((r) => [r.cells[0].textContent, r.className, getComputedStyle(r.cells[0]).backgroundColor]));
-      const socleOf = (action) => socleRows.find(([label]) => label === action);
-      assert.strictEqual(socleOf('Repas végétariens')[1], 'socle-2024', `socle 2024 ${filiere}`);
-      assert.strictEqual(socleOf('Bornes électriques')[1], 'socle-2025', `socle 2025 ${filiere}`);
-      assert.notStrictEqual(socleOf('Repas végétariens')[2], socleOf('Bornes électriques')[2]);
-      if (filiere !== 'PROT ENFANCE') {
-        await page.uncheck('#detail-tracked-only');
-        const filiereRow = await page.$$eval('#matrix-body tr', (rows) => rows.filter((r) => r.cells[0].textContent === 'Action filière X').map((r) => r.className));
-        assert.deepStrictEqual(filiereRow, [''], 'action filière sans couleur');
-        await page.check('#detail-tracked-only');
-      }
 
       await page.click('#tab-poste');
       await page.selectOption('#poste-filiere', filiere);
@@ -203,6 +191,18 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     const tableHeaders = await page.$$eval('#data-table-head th', (cells) => cells.map((c) => c.textContent.replace(/[▲▼]/g, '').trim()));
     assert.deepStrictEqual(tableHeaders, ['Action', 'Thématique', 'Campagne', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés']);
     assert.ok(await page.$$eval('#data-table-body tr', (rows) => rows.length) > 0);
+    // Ligne teintée selon l'année socle de l'action ; action filière sans couleur.
+    const socleRows = () => page.$$eval('#data-table-body tr', (rows) => rows.map((r) => [r.cells[0].textContent, r.className.replace('clickable-row', '').trim(), getComputedStyle(r).backgroundColor]));
+    let rowsBySocle = await socleRows();
+    const socleOf = (action) => rowsBySocle.find(([label]) => label === action);
+    assert.strictEqual(socleOf('Repas végétariens')[1], 'socle-2024');
+    assert.strictEqual(socleOf('Bornes électriques')[1], 'socle-2025');
+    assert.notStrictEqual(socleOf('Repas végétariens')[2], socleOf('Bornes électriques')[2]);
+    await page.uncheck('#synthese-tracked-only');
+    rowsBySocle = await socleRows();
+    assert.strictEqual(socleOf('Action filière X')[1], '', 'action filière sans couleur');
+    await page.check('#synthese-tracked-only');
+    assert.strictEqual(await page.$$eval('#matrix-body tr[class*="socle-"]', (rows) => rows.length), 0, 'Détail par pôle sans couleur de socle');
 
     // Évolution : regroupement par campagne / thématique, courbes par filière.
     await page.click('#tab-evolution');
