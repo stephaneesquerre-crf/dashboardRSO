@@ -49,6 +49,10 @@
            ordre fixe, jamais recyclé. */
         --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a; --cat-4: #eda100;
         --cat-5: #e87ba4; --cat-6: #008300; --cat-7: #4a3aa7; --cat-8: #e34948;
+        /* Années socle (tableau Détail des données de la Synthèse) : mêmes
+           teintes pastel que l'outil de suivi des pôles (2024 vert, 2025
+           bleu, 2026 rouge). */
+        --socle-2024: #d4efd4; --socle-2025: #d3e4f7; --socle-2026: #f7d4d4;
       }
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme="light"]) .viz-root {
@@ -67,6 +71,7 @@
           --traj-adate:     #5598e7;
           --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
           --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
+          --socle-2024: #24402a; --socle-2025: #213651; --socle-2026: #4a2628;
         }
       }
       :root[data-theme="dark"] .viz-root {
@@ -85,6 +90,7 @@
         --traj-adate:     #5598e7;
         --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
         --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
+        --socle-2024: #24402a; --socle-2025: #213651; --socle-2026: #4a2628;
       }
 
       * { box-sizing: border-box; }
@@ -399,6 +405,7 @@
       .coverage-bar span { display: block; height: 100%; background: var(--series-1); }
       tr.is-selected td { font-weight: 600; }
       #referents-table th, #referents-table td { text-align: left; }
+      #referents-table td.referents-code { font-size: 0.74rem; color: var(--text-secondary); min-width: 160px; max-width: 260px; overflow-wrap: anywhere; }
 
       .refresh-status { margin: 0 0 20px; font-size: 0.8rem; color: var(--text-secondary); }
       .refresh-status details { margin-top: 4px; }
@@ -764,6 +771,14 @@
       .clickable-row:hover,
       .clickable-row:focus-visible { background: var(--surface-2); }
 
+      /* Détail des données (Synthèse) : ligne teintée selon l'année socle
+         de l'action ; assombrie au survol quand elle est cliquable. */
+      #data-table tr.socle-2024 { background: var(--socle-2024); }
+      #data-table tr.socle-2025 { background: var(--socle-2025); }
+      #data-table tr.socle-2026 { background: var(--socle-2026); }
+      #data-table tr[class*="socle-"].clickable-row:hover,
+      #data-table tr[class*="socle-"].clickable-row:focus-visible { filter: brightness(0.94); }
+
       .is-unavailable td {
         color: var(--text-muted);
         font-style: italic;
@@ -1019,6 +1034,11 @@
             <button type="button" id="export-csv">Exporter le tableau (CSV)</button>
           </div>
         </div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--socle-2024)"></span>Action socle 2024</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--socle-2025)"></span>Action socle 2025</span>
+          <span class="legend-item"><span class="legend-swatch" style="background:var(--socle-2026)"></span>Action socle 2026</span>
+        </div>
         <div style="overflow-x:auto">
           <table id="data-table">
             <caption id="data-table-caption">Les taux sont exprimés en %.</caption>
@@ -1093,7 +1113,7 @@
     </section>
 
     <section class="tab-panel" id="panel-referents" role="tabpanel" aria-labelledby="tab-referents" hidden>
-      <p class="view-intro">Couverture des pôles par un·e référent·e environnement : évolution du taux de couverture par filière (photographies datées du classeur « Synthèse référents Environnement ») et liste des référent·es par pôle (listes de chaque filière, liens « Liens référents », complétées par l'onglet « IMPORT REFERENTS »).</p>
+      <p class="view-intro">Couverture des pôles par un·e référent·e environnement : évolution du taux de couverture par filière (photographies datées du classeur « Synthèse référents Environnement ») et liste des référent·es par pôle (onglet « IMPORT REFERENTS », un bloc par filière ; fichiers « Liens référents » seulement pour une filière absente de l'onglet).</p>
       <section class="panel">
         <div class="panel-header">
           <h2>Filtres</h2>
@@ -1137,7 +1157,7 @@
                 <tbody id="referents-filieres-body"></tbody>
               </table>
             </div>
-            <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Listes : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans les listes des référents (fichiers « Liens référents » de chaque filière, complétés par l'onglet « IMPORT REFERENTS »), recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
+            <p class="chart-note">Dernière photographie : dernière valeur de l'onglet « Evolution référents » pour la filière (filière entière, tous territoires). Listes : pôles ayant au moins un·e référent·e ÷ pôles de la filière dans la liste des référents (onglet « IMPORT REFERENTS »), recalculé à chaque chargement ; « — » si la filière n'y figure pas. Les deux peuvent différer si la photographie date d'avant la dernière mise à jour de la liste.</p>
           </section>
         </div>
 
@@ -1165,7 +1185,7 @@
             <tbody id="referents-table-body"></tbody>
           </table>
         </div>
-        <p class="chart-note">Cliquer sur un nom pour écrire au ou à la référent·e (ouvre la messagerie). Cliquer sur l'en-tête Pôle, Filière ou Territoire pour trier. Directeur·rice de territoire : colonne « DT (directeur territorial) » de l'onglet « IMPORT REFERENTS ».</p>
+        <p class="chart-note">Cliquer sur un nom pour écrire au ou à la référent·e (ouvre la messagerie). Cliquer sur l'en-tête Pôle, Code pôle, Filière ou Territoire pour trier. Code pôle : tel qu'écrit dans la liste des référents (survol : code de BDD NOMS rapproché quand il diffère). Directeur·rice de territoire : colonne « DT (directeur territorial) » de l'onglet « IMPORT REFERENTS ».</p>
         <p class="matrix-empty" id="referents-empty" hidden>Aucun pôle de la liste dans ce périmètre.</p>
       </section>
     </section>
@@ -1313,6 +1333,7 @@
         <div class="refresh-status" id="refresh-archives-status" role="status" hidden></div>
         <p class="filter-hint">Taux de terminés = pôles ayant terminé l'action ÷ pôles concernés, tel que calculé dans le Tableau de bord VA. Avant 11/2025, les archives ne donnent ce taux que pour l'ensemble (pas par filière).</p>
         <p class="filter-hint">Valeur inconnue = point absent, jamais 0. Sont considérés comme inconnus : une campagne avant son année (ex. socles 2026 en 11/2025) ; une filière sans aucun répondant ce mois-là ; un 0 terminé alors que toutes les structures de la filière sont comptées « concernées » sans que toutes aient répondu (valeurs par défaut, ex. Petite enfance en 09/2026 après le changement d'outil) ; les indicateurs DIP (flotte, véhicules électriques).</p>
+        <p class="doc-caveat" id="evolution-caveat">Les évolutions connaissent des baisses liées à l'augmentation du nombre de répondants ou à la division de pôles en plusieurs outils de suivi.</p>
         <p class="matrix-empty" id="evolution-empty" hidden>Aucun historique disponible : lancer importArchivesTableauDeBord() depuis l'éditeur Apps Script (cf. README).</p>
       </section>
 
@@ -1764,6 +1785,18 @@
         return denominator === 0 ? 0 : Math.round((numerator / denominator) * 1000) / 10;
       }
 
+      // Libellé affiché d'un territoire : lettre ou numéro suivi des régions
+      // de BDD NOMS (« Territoire A · HDF - IDF - GE »). Le nom court reste
+      // la clé des filtres et des regroupements.
+      function formatTerritoireLabel(territoireName, regions) {
+        return territoireName && regions ? `${territoireName} · ${regions}` : territoireName;
+      }
+
+      function territoireLabelIn(poles, filiereName, territoireName) {
+        const pole = poles.find((item) => item.filiere === filiereName && item.territoire === territoireName && item.regions);
+        return formatTerritoireLabel(territoireName, pole ? pole.regions : '');
+      }
+
       function poleUniverseCodes(poles, filiereName, territoireName) {
         return poles
           .filter((pole) => pole.filiere === filiereName && (!territoireName || pole.territoire === territoireName))
@@ -1831,7 +1864,10 @@
             const dataAvailable = bucket.total > 0;
 
             return {
-              label: name,
+              // key : valeur du filtre (navigation vers Détail par pôle) ;
+              // label : texte affiché (régions ajoutées pour un territoire).
+              key: name,
+              label: niveau === 'territoire' && scopeFiliere ? territoireLabelIn(bootstrap.poles, scopeFiliere, name) : name,
               dataAvailable: dataAvailable,
               note: dataAvailable ? '' : 'Donnée non disponible pour ce groupe dans ce périmètre (voir onglet Méthodologie).',
               total: bucket.total,
@@ -1947,6 +1983,10 @@
       // affichées plutôt que d'en choisir une arbitrairement.
       // Le tableau "Détail des données" de la vue synthèse n'appelle cette
       // fonction que lorsqu'une filière précise est choisie.
+      // Années socle qui ont une couleur (--socle-AAAA dans le style) : en
+      // ajouter une ici et dans le style pour les actions socles 2027.
+      const SOCLE_COLOR_YEARS = [2024, 2025, 2026];
+
       function computeActionDetail(bootstrap, options) {
         const filiere = options.filiere || '';
         const territoire = options.territoire || '';
@@ -1962,9 +2002,11 @@
         scopedFacts.forEach((fact) => {
           const key = fact.action || UNKNOWN_LABEL;
           if (!byAction.has(key)) {
-            byAction.set(key, {action: key, thematiques: new Set(), volets: new Set(), concernes: 0, terminees: 0});
+            byAction.set(key, {action: key, thematiques: new Set(), volets: new Set(), socleYears: new Set(), concernes: 0, terminees: 0});
           }
           const bucket = byAction.get(key);
+          const socleYear = actionSocleYear(fact);
+          if (socleYear) bucket.socleYears.add(socleYear);
           if (fact.thematique) bucket.thematiques.add(fact.thematique);
           if (fact.volet) bucket.volets.add(fact.volet);
           if (isConcerne(fact.avancement)) {
@@ -1977,6 +2019,8 @@
           action: bucket.action,
           thematique: joinDistinct(bucket.thematiques),
           volet: joinDistinct(bucket.volets),
+          // Année socle seulement si l'action n'en a qu'une dans le périmètre.
+          socleYear: bucket.socleYears.size === 1 ? [...bucket.socleYears][0] : null,
           concernes: bucket.concernes,
           terminees: bucket.terminees,
           tauxTerminees: roundRate(bucket.terminees, bucket.concernes)
@@ -1998,8 +2042,7 @@
       }
 
       function territoireDisplayLabel(filiereName, territoireName) {
-        const pole = state.bootstrap.poles.find((item) => item.filiere === filiereName && item.territoire === territoireName && item.regions);
-        return pole ? `${territoireName} · ${pole.regions}` : territoireName;
+        return territoireLabelIn(state.bootstrap.poles, filiereName, territoireName);
       }
 
       function populateFiliereSelect(select, includeGlobalOption) {
@@ -2164,7 +2207,7 @@
         const niveauLabel = NIVEAU_LABELS[options.niveau] || 'Filière';
         const scopeBits = [];
         if (options.filiere) scopeBits.push(options.filiere);
-        if (options.territoire) scopeBits.push(options.territoire);
+        if (options.territoire) scopeBits.push(territoireDisplayLabel(options.filiere, options.territoire));
         const scopeSuffix = scopeBits.length ? ` — ${scopeBits.join(' · ')}` : ' — toutes filières';
         elements.chartTitle.textContent = `${indicateur.label}, par ${niveauLabel.toLowerCase()}${scopeSuffix}`;
         elements.dataTableCaption.textContent = `${scopeBits.length ? scopeBits.join(' · ') : 'Toutes filières confondues'} — les taux sont exprimés en %.`;
@@ -2280,7 +2323,7 @@
 
       function renderIdentityCard(options) {
         const card = computeIdentityCard(state.bootstrap, options);
-        const scopeBits = [options.filiere, options.territoire].filter(Boolean);
+        const scopeBits = [options.filiere, options.territoire && territoireDisplayLabel(options.filiere, options.territoire)].filter(Boolean);
         elements.identityCardTitle.textContent = `Fiche d'identité — ${scopeBits.length ? scopeBits.join(' · ') : 'ensemble de la CRF'}`;
         elements.identityStats.replaceChildren();
         elements.identityStats.append(
@@ -2370,11 +2413,11 @@
           hit.addEventListener('blur', hideTooltip);
           if (clickable) {
             hit.style.cursor = 'pointer';
-            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.label));
+            hit.addEventListener('click', () => navigateFromSyntheseToDetail(item.key || item.label));
             hit.addEventListener('keydown', (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                navigateFromSyntheseToDetail(item.label);
+                navigateFromSyntheseToDetail(item.key || item.label);
               }
             });
           }
@@ -2582,6 +2625,7 @@
         elements.tableBody.replaceChildren();
         sortActionRows(detail.rows).forEach((row) => {
           const tr = document.createElement('tr');
+          if (SOCLE_COLOR_YEARS.includes(row.socleYear)) tr.classList.add(`socle-${row.socleYear}`);
           // Le Détail par pôle exige une filière : lien seulement dans ce cas.
           if (detail.filiere) {
             const openDetail = () => navigateToPoleDetail(detail.filiere, detail.territoire);
@@ -3292,22 +3336,27 @@
               excludedPilots.add(code);
               return;
             }
-            // Pôle pilote recalculé : réduction du catalogue (toujours
-            // comptée comme une baisse) × avancement du pôle, sans ajustement
-            // au profil d'émissions (non disponible pour ces pôles).
-            const catalogue = parseReduction(fact.catalogueReduction);
+            // Pôle pilote recalculé : cible ajustée au profil d'émissions
+            // moyen de sa filière (« BDD - Bilan carbone », cibleCalculee,
+            // décision du 20/10/2026), à défaut réduction du catalogue ;
+            // toujours comptée comme une baisse, × avancement du pôle.
+            const catalogue = parseReduction(fact.cibleCalculee) || parseReduction(fact.catalogueReduction);
             if (!catalogue || catalogue.unit !== 'pct') return;
             recalculatedPilots.add(code);
             const target = -Math.abs(catalogue.value);
             cible = {unit: 'pct', value: target};
             aDate = {unit: 'pct', value: target * parseAvancementFraction(fact.avancement)};
-          } else if (!cible && fact.cibleCalculee) {
-            // Ligne sans cible saisie (ex. PROT ENFANCE, PET E) : cible
-            // calculée côté serveur avec « BDD - Bilan carbone »
-            // (BilanCarboneService.gs) ; à date = cible × avancement.
-            cible = parseReduction(fact.cibleCalculee);
-            if (cible && !aDate) aDate = {unit: 'pct', value: cible.value * parseAvancementFraction(fact.avancement)};
-            if (cible) computedTargetCount += 1;
+          } else if ((!cible || (cible.unit === 'pct' && cible.value === 0)) && fact.cibleCalculee) {
+            // Ligne sans cible saisie, ou à 0 (ex. PROT ENFANCE, PET E) :
+            // cible calculée côté serveur avec « BDD - Bilan carbone »
+            // (BilanCarboneService.gs) ; à date = cible × avancement (la
+            // valeur à date saisie découlait de la cible absente).
+            const computed = parseReduction(fact.cibleCalculee);
+            if (computed) {
+              cible = computed;
+              aDate = {unit: 'pct', value: cible.value * parseAvancementFraction(fact.avancement)};
+              computedTargetCount += 1;
+            }
           }
           if (!aDate && !cible) return;
           if (!byPole.has(code)) byPole.set(code, {aDate: 0, cible: 0});
@@ -4334,8 +4383,11 @@
         if (state.referentPoles) return state.referentPoles;
         const byCode = new Map(state.bootstrap.poles.map((pole) => [normalizePoleCode(pole.poleCode), pole]));
         state.referentPoles = referentsData().poles.map((pole) => {
-          const reference = byCode.get(normalizePoleCode(pole.poleCode));
-          return Object.assign({directeur: ''}, pole, {territoire: reference ? reference.territoire : '', knownCode: Boolean(reference)});
+          // referenceCode : code BDD NOMS rapproché côté serveur (code sans
+          // suffixe « - n » ou mêmes numéros d'établissement).
+          const reference = byCode.get(normalizePoleCode(pole.referenceCode || pole.poleCode));
+          const territoire = reference ? reference.territoire : (pole.territoire || '');
+          return Object.assign({directeur: ''}, pole, {territoire, territoireLabel: formatTerritoireLabel(territoire, reference ? reference.regions : ''), knownCode: Boolean(reference)});
         });
         return state.referentPoles;
       }
@@ -4352,10 +4404,12 @@
 
       function refreshReferentsTerritoires() {
         const filiere = elements.referentsFiliere.value;
-        const territoires = distinctSorted(referentPoles().filter((pole) => pole.filiere === filiere).map((pole) => pole.territoire));
+        const polesOfFiliere = referentPoles().filter((pole) => pole.filiere === filiere);
+        const territoires = distinctSorted(polesOfFiliere.map((pole) => pole.territoire));
+        const labelOf = (name) => (polesOfFiliere.find((pole) => pole.territoire === name && pole.territoireLabel !== name) || {territoireLabel: name}).territoireLabel;
         const current = elements.referentsTerritoire.value;
         elements.referentsTerritoire.replaceChildren(new Option('Toute la filière', ''));
-        territoires.forEach((name) => elements.referentsTerritoire.append(new Option(name, name)));
+        territoires.forEach((name) => elements.referentsTerritoire.append(new Option(labelOf(name), name)));
         elements.referentsTerritoire.disabled = !filiere || territoires.length === 0;
         if ([...elements.referentsTerritoire.options].some((option) => option.value === current)) elements.referentsTerritoire.value = current;
       }
@@ -4365,6 +4419,7 @@
       // départagent toujours par nom du pôle.
       const REFERENTS_SORT_KEYS = {
         poleName: (pole) => pole.poleName || pole.poleCode,
+        poleCode: (pole) => pole.poleCode,
         filiere: (pole) => pole.filiere,
         territoire: (pole) => pole.territoire
       };
@@ -4506,6 +4561,7 @@
         const headRow = document.createElement('tr');
         const headers = [
           {key: 'poleName', label: 'Pôle'},
+          {key: 'poleCode', label: 'Code pôle'},
           {key: 'filiere', label: 'Filière'},
           {key: 'territoire', label: 'Territoire'},
           {label: 'Directeur·rice de territoire'},
@@ -4547,10 +4603,15 @@
             return td;
           };
           const name = cell(pole.poleName || pole.poleCode);
-          name.title = pole.poleCode;
-          const territoireCell = cell(pole.territoire || '—');
+          // Code tel qu'écrit dans la liste ; code BDD NOMS rapproché au survol
+          // quand il diffère (suffixe « - n », libellé de territoire).
+          const code = cell(pole.poleCode);
+          code.className = 'referents-code';
+          if (pole.referenceCode && pole.referenceCode !== pole.poleCode) code.title = `Rapproché de « ${pole.referenceCode} » (BDD NOMS)`;
+          if (!pole.knownCode) code.title = `Code absent de BDD NOMS (filière ${pole.filiere})`;
+          const territoireCell = cell(pole.territoireLabel || '—');
           if (!pole.knownCode) territoireCell.title = `Code pôle ${pole.poleCode} absent de BDD NOMS (filière ${pole.filiere})`;
-          row.append(name, cell(pole.filiere), territoireCell, cell(pole.directeur || '—'));
+          row.append(name, code, cell(pole.filiere), territoireCell, cell(pole.directeur || '—'));
           for (let index = 0; index < maxReferents; index += 1) {
             row.append(referentCell(pole.referents[index]));
           }

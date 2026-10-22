@@ -42,7 +42,15 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual(kpis, ['75 %', '4'], kpis.join(' | '));
     assert.strictEqual(await page.$$eval('#referents-table-body tr', (rows) => rows.length), 4);
     const head = await page.$$eval('#referents-table-head th', (cells) => cells.map((c) => c.textContent.replace(/ [▲▼]$/, '')));
-    assert.deepStrictEqual(head.slice(0, 4), ['Pôle', 'Filière', 'Territoire', 'Directeur·rice de territoire']);
+    assert.deepStrictEqual(head.slice(0, 5), ['Pôle', 'Code pôle', 'Filière', 'Territoire', 'Directeur·rice de territoire']);
+    assert.deepStrictEqual(await page.$$eval('#referents-table-body td.referents-code', (cells) => cells.map((c) => c.textContent)).then((codes) => [...codes].sort()), ['CRC_00', 'CRC_01', 'CRC_10', 'CRC_11']);
+    // Territoire affiché avec ses régions (BDD NOMS), filtre compris.
+    const referentTerritories = await page.$$eval('#referents-table-body tr td:nth-child(4)', (cells) => cells.map((c) => c.textContent));
+    assert.ok(referentTerritories.every((text) => /^Territoire [AB] · Régions [01]$/.test(text)), referentTerritories.join(' | '));
+    await page.selectOption('#referents-filiere', 'CRC');
+    const referentOptions = await page.$$eval('#referents-territoire option', (options) => options.map((o) => [o.value, o.textContent]));
+    assert.deepStrictEqual(referentOptions, [['', 'Toute la filière'], ['Territoire A', 'Territoire A · Régions 0'], ['Territoire B', 'Territoire B · Régions 1']]);
+    await page.selectOption('#referents-filiere', '');
     assert.deepStrictEqual(await page.$$eval('#referents-table-body a[href^="mailto:"]', (links) => links.map((l) => l.getAttribute('href'))), ['mailto:mail@croix-rouge.fr']);
     // Tri par nom du pôle, croissant puis décroissant.
     const names = () => page.$$eval('#referents-table-body tr td:first-child', (cells) => cells.map((c) => c.textContent));
@@ -53,10 +61,11 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     assert.deepStrictEqual(await names(), [...ascending].reverse());
     // Couverture par filière : une ligne par filière (évolution ou liste).
     const filieresRows = await page.$$eval('#referents-filieres-body tr', (rows) => rows.map((r) => [...r.cells].map((c) => c.textContent)));
-    assert.deepStrictEqual(filieresRows.map((r) => r[0]), ['CRC', 'PROT ENFANCE']);
+    assert.deepStrictEqual(filieresRows.map((r) => r[0]), ['CRC', 'DOM', 'PROT ENFANCE'], 'DNOM affiché comme DOM');
     assert.match(filieresRows[0][1], /100/);
     assert.match(filieresRows[0][3], /75 %.*3 \/ 4/);
-    assert.strictEqual(filieresRows[1][3], '—');
+    assert.match(filieresRows[1][1], /85/);
+    assert.strictEqual(filieresRows[2][3], '—');
 
     // Export en image (PNG) : panneau d'un graphique et tuile d'un poste.
     const pngOf = async (click) => {
@@ -94,6 +103,13 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     await page.selectOption('#poste-filiere', 'PROT ENFANCE');
     assert.match(await page.textContent('#poste-co2-summary'), /cible -\d+,\d+ %.*cible calculée avec « BDD - Bilan carbone »/s);
     await page.selectOption('#poste-filiere', '');
+    // Cible saisie à 0 : remplacée par la cible calculée (à date = cible ×
+    // avancement) ; cible saisie non nulle : conservée.
+    const zero = await page.evaluate(() => aggregateReductionByPole([
+      {poleCode: 'Z1', reductionCible: '0%', reductionADate: '0%', cibleCalculee: '-1,5%', avancement: '100%'},
+      {poleCode: 'Z2', reductionCible: '-0,2%', reductionADate: '-0,1%', cibleCalculee: '-1,5%', avancement: '50%'}
+    ]));
+    assert.deepStrictEqual([zero.cible, zero.computedTargetCount], [(-1.5 - 0.2) / 2, 1]);
 
     // Actions spécifiques filière repérées dans les tuiles par une étiquette.
     assert.strictEqual(await page.$$eval('#poste-grid .action-badge', (badges) => badges.length), 0, 'aucune sans la coche');
@@ -133,7 +149,11 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       assert.deepStrictEqual(niveaux, ['territoire', 'thematique', 'volet', 'action'], `Regrouper par ${filiere}`);
       await page.selectOption('#synthese-niveau', 'territoire');
       const bars = await page.$$eval('#chart .category-text', (labels) => labels.map((l) => l.textContent));
-      assert.deepStrictEqual([...bars].sort(), [...territories].sort(), `graphique Synthèse ${filiere}`);
+      assert.deepStrictEqual([...bars].sort(), territories.map((t, i) => `${t} · Régions ${i}`).sort(), `graphique Synthèse ${filiere}`);
+      // Clic sur une barre : le filtre reçoit le nom court du territoire.
+      await page.click('#chart .bar-hit');
+      assert.ok(territories.includes(await page.$eval('#detail-territoire', (select) => select.value)), `navigation ${filiere}`);
+      await page.selectOption('#detail-territoire', '');
 
       await page.click('#tab-detail');
       await page.selectOption('#detail-filiere', filiere);
@@ -171,6 +191,18 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     const tableHeaders = await page.$$eval('#data-table-head th', (cells) => cells.map((c) => c.textContent.replace(/[▲▼]/g, '').trim()));
     assert.deepStrictEqual(tableHeaders, ['Action', 'Thématique', 'Campagne', '% Terminés', 'Pôles ayant terminé', 'Pôles concernés']);
     assert.ok(await page.$$eval('#data-table-body tr', (rows) => rows.length) > 0);
+    // Ligne teintée selon l'année socle de l'action ; action filière sans couleur.
+    const socleRows = () => page.$$eval('#data-table-body tr', (rows) => rows.map((r) => [r.cells[0].textContent, r.className.replace('clickable-row', '').trim(), getComputedStyle(r).backgroundColor]));
+    let rowsBySocle = await socleRows();
+    const socleOf = (action) => rowsBySocle.find(([label]) => label === action);
+    assert.strictEqual(socleOf('Repas végétariens')[1], 'socle-2024');
+    assert.strictEqual(socleOf('Bornes électriques')[1], 'socle-2025');
+    assert.notStrictEqual(socleOf('Repas végétariens')[2], socleOf('Bornes électriques')[2]);
+    await page.uncheck('#synthese-tracked-only');
+    rowsBySocle = await socleRows();
+    assert.strictEqual(socleOf('Action filière X')[1], '', 'action filière sans couleur');
+    await page.check('#synthese-tracked-only');
+    assert.strictEqual(await page.$$eval('#matrix-body tr[class*="socle-"]', (rows) => rows.length), 0, 'Détail par pôle sans couleur de socle');
 
     // Évolution : regroupement par campagne / thématique, courbes par filière.
     await page.click('#tab-evolution');
@@ -179,6 +211,7 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
       const groups = await page.$$eval('#evolution-multiples .evolution-group h3', (titles) => titles.map((t) => t.textContent));
       assert.ok(groups.length > 0, `Évolution groupée par ${groupe}`);
     }
+    assert.match(await page.textContent('#evolution-caveat'), /augmentation du nombre de répondants/);
     const filiereLegend = await page.$$eval('#evolution-filieres-legend span', (items) => items.map((i) => i.textContent).filter(Boolean));
     assert.ok(filiereLegend.includes('Ensemble'), filiereLegend.join(', '));
     const values = await page.evaluate(() => {

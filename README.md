@@ -223,9 +223,15 @@ soit 75 %, identique à la dernière photographie (0,75).
   réduction de l'action au catalogue (`BDD - Actions supplémentaires`, en
   points de % du bilan CRF) × poids du poste dans la ligne « Moyenne
   filière … » de `BDD - Bilan carbone` ÷ poids du poste dans le bilan CRF
-  (bloc « Bilan CRF » à droite du tableau, comme la formule L22 des
-  pôles). À date = cible × avancement (ou cible si terminé, selon
-  l'indicateur). Une cible saisie n'est jamais remplacée. Le type
+  (ligne « Bilan CRF » du tableau : immobilisations = 2e poste, 21 %,
+  confirmé le 20/10/2026 ; le bloc de droite M14:M21, utilisé par la
+  formule L22 des fichiers des pôles, inverse achats de biens et
+  immobilisations et doit être corrigé). À date = cible × avancement (ou
+  cible si terminé, selon l'indicateur). Une cible saisie non nulle n'est
+  jamais remplacée ; une cible vide ou à 0 l'est. Les pôles pilotes
+  utilisent aussi cette cible ajustée à leur filière (décision du
+  20/10/2026). Lignes « Moyenne filière » : moyennes pondérées par les
+  effectifs des types d'établissement. Le type
   d'établissement des pôles n'étant renseigné nulle part, c'est toujours la
   moyenne de la filière. Correspondances : Compétence → CRC, Handicap →
   PSH, PADOM → PA et DOM, Petite Enfance → PET E, Protection de
@@ -233,15 +239,23 @@ soit 75 %, identique à la dernière photographie (0,75).
   Si la ligne « Bilan CRF » du tableau et le bloc de droite diffèrent,
   l'écart est signalé. `testBilanCarbone()` affiche les poids lus et le
   nombre de cibles calculées par filière.
-- **Listes des référents des filières** (`ReferentsService.gs`) : chaque
-  lien de la colonne « Liens référents » (onglet `Liens outils
-  référents`) vers un classeur Google Sheets est lu (premier onglet dont
-  une des 20 premières lignes contient « Code pôle »). Filière : colonne
-  Filière du fichier, sinon code filière du lien. Pour un même code pôle,
-  la liste de la filière l'emporte sur `IMPORT REFERENTS`, qui complète.
-  Fichier inaccessible, fichier Excel ou en-tête introuvable : signalé en
-  tête de page. `testListesReferents()` affiche, pour chaque liste,
-  l'onglet lu et le nombre de pôles, ou la raison de l'échec.
+- **Listes des référents** (`ReferentsService.gs`, revu le 20/10/2026) :
+  l'onglet `IMPORT REFERENTS` regroupe les listes de toutes les filières,
+  un bloc par filière (en-tête, pôles, « LIGNE DE FIN DES DONNEES », lignes
+  de synthèse). Chaque bloc est lu avec ses propres colonnes (le bloc CRC
+  a un en-tête « Code » au lieu de « Code Pôle ») ; les lignes entre une
+  ligne de fin et l'en-tête suivant sont ignorées ; une ligne en double
+  (bloc Petite enfance présent deux fois) n'est lue qu'une fois. Filières
+  « PROT.E. » et « PE » reconnues. Les fichiers de la colonne « Liens
+  référents » (`Liens outils référents`) ne sont ouverts que pour une
+  filière absente de `IMPORT REFERENTS`. Codes pôle rapprochés de
+  `BDD NOMS` : code identique, sinon sans le suffixe « - 1 » / « - 2 »,
+  sinon mêmes numéros d'établissement (libellé de territoire différent).
+  `testListesReferents()` affiche les sources lues et le nombre de pôles
+  par filière.
+  « DNOM » (onglet `Evolution référents`) = DOM. Le tableau par pôle
+  affiche le code pôle tel qu'écrit dans la liste (survol : code de
+  `BDD NOMS` rapproché quand il diffère) et peut être trié par code.
 - **Vue Référents** : la carte « Couverture par filière — dernière valeur »
   est sous la carte « Couverture », à gauche du graphique.
 
@@ -257,6 +271,28 @@ soit 75 %, identique à la dernière photographie (0,75).
   lisible sans légende, en image exportée et par un lecteur d'écran. Le
   CSV des tuiles a une colonne « Type d'action » ; le tableau copié ajoute
   « (spécifique filière) » au nom de l'action.
+
+## Libellés des territoires, années socle, note Évolution (22/10/2026)
+
+- **Libellés des territoires** : la vue Référents (filtre et colonne
+  Territoire), le graphique Synthèse regroupé par territoire, son titre et
+  la fiche d'identité affichent « Territoire A · HDF - IDF - GE » (colonne
+  régions de `BDD NOMS`), comme les filtres des autres vues. Le nom court
+  reste la valeur des filtres : un clic sur une barre ouvre toujours le
+  Détail par pôle sur le bon territoire. Sur le graphique en barres
+  verticales, un libellé de plus de 28 caractères est abrégé (« … ») ; le
+  libellé complet s'affiche au survol.
+- **Synthèse, tableau « Détail des données »** : chaque ligne est
+  teintée selon l'année socle de l'action (colonne « Action socles »),
+  avec les couleurs de l'outil de suivi : 2024 vert pastel, 2025 bleu
+  pastel, 2026 rouge pastel. Une action sans année socle (action filière,
+  supplémentaire…) ou rattachée à plusieurs années dans le périmètre
+  n'est pas teintée. Pour les socles 2027 : ajouter
+  `--socle-2027` dans le style (modes clair et sombre), la règle CSS
+  correspondante et l'année dans `SOCLE_COLOR_YEARS` (`Index.html`).
+- **Vue Évolution** : encadré sous les filtres expliquant que les courbes
+  baissent quand le nombre de répondants augmente ou quand un pôle est
+  divisé en plusieurs outils de suivi.
 
 ## Accès aux classeurs et temps de chargement (14/10/2026)
 
