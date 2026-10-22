@@ -32,6 +32,7 @@ function lancerTests() {
     'IdentityService.gs': ['isAllowedIdentityEmail_', 'getActiveUserEmail_'],
     'PoleReferenceService.gs': ['getPoleReference_'],
     'IndicatorService.gs': ['getDashboardBootstrap', 'getFactRecords_', 'diagnosticDashboard'],
+    'BootstrapCacheService.gs': ['readBootstrapCache_', 'writeBootstrapCache_', 'getUserSpreadsheetAccess_', 'viderCacheDashboard'],
     'ActionReferenceService.gs': ['getActionCatalogue_'],
     'ToolLinksService.gs': ['getToolLinks_'],
     'HistoryService.gs': ['getHistoryForDashboard_', 'historyMonthKey_'],
@@ -79,7 +80,7 @@ function lancerTests() {
 
   // 3. Données réelles
   safely('Chargement du dashboard', () => {
-    const bootstrap = getDashboardBootstrap();
+    const bootstrap = getDashboardBootstrap({forceRefresh: true});
     check('Chargement du dashboard', bootstrap.facts.rows.length > 0 && bootstrap.poles.length > 0,
       `${bootstrap.facts.rows.length} lignes, ${bootstrap.poles.length} pôles`);
     check('Aucun avertissement de données', bootstrap.diagnostics.warnings.length === 0, bootstrap.diagnostics.warnings.join(' | '));

@@ -140,6 +140,15 @@
         min-height: 34px;
       }
 
+      /* Bouton « Actualiser les données » : mis en avant (couleur pleine),
+         les données pouvant dater de 10 minutes (cache serveur). */
+      button.refresh-data {
+        background: var(--series-1);
+        border-color: var(--series-1);
+        color: #ffffff;
+      }
+      button.refresh-data:hover { filter: brightness(1.1); }
+
       .app-header-actions {
         display: flex;
         flex-wrap: wrap;
@@ -913,6 +922,7 @@
         <h1>Dashboard RSO — Avancement des actions</h1>
       </div>
       <div class="app-header-actions">
+        <button type="button" class="refresh-data" id="refresh-data" disabled title="Relit tous les classeurs Google Sheets. Sans ce bouton, les données affichées peuvent dater de 10 minutes au plus.">🔄 Actualiser les données</button>
         <button type="button" id="export-all-csv" title="Exporte en une fois les tableaux actuellement affichés dans Synthèse, Détail et Contrôle">Exporter tout (CSV)</button>
         <button type="button" class="theme-toggle" id="theme-toggle">🌙 Mode sombre</button>
       </div>
@@ -1462,6 +1472,7 @@
 
       const elements = {
         status: document.getElementById('status'),
+        refreshData: document.getElementById('refresh-data'),
         diagnostics: document.getElementById('diagnostics'),
         exportAllCsv: document.getElementById('export-all-csv'),
         themeToggle: document.getElementById('theme-toggle'),
@@ -4775,7 +4786,7 @@
       // Démarrage — un seul aller-retour serveur ; tout le reste (filtres,
       // agrégations, matrice) se recalcule ensuite dans le navigateur.
       // ---------------------------------------------------------------
-      const loadingStartedAt = Date.now();
+      let loadingStartedAt = Date.now();
       const loadingTimer = setInterval(() => {
         const seconds = Math.round((Date.now() - loadingStartedAt) / 1000);
         elements.loadingTitle.textContent = `⏳ Chargement des données en cours… (${seconds} s)`;
@@ -4797,27 +4808,8 @@
           }
           endLoading();
           elements.loadingPanel.hidden = true;
-          renderLoadTimings(bootstrap.diagnostics);
-          bootstrap.facts = expandFacts(bootstrap.facts);
-          state.bootstrap = bootstrap;
-          renderDiagnostics(bootstrap.diagnostics);
-          state.pilotPoleCodes = computePilotPoleCodes(bootstrap);
-          const generated = new Date(bootstrap.generatedAt);
-          elements.status.textContent =
-            `Actualisé à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;
-          populateFiliereSelect(elements.syntheseFiliere, true);
-          populateFiliereSelect(elements.detailFiliere, false);
-          populateFiliereSelect(elements.controlFiliere, true);
-          populateFiliereSelect(elements.posteFiliere, true);
-          updateNiveauAvailability();
-          renderSynthese();
-          renderMatrix();
-          renderControl();
-          renderPoste();
-          populateEvolutionFilters();
-          renderEvolution();
-          populateReferentsFilters();
-          renderReferents();
+          elements.refreshData.disabled = false;
+          applyBootstrap(bootstrap);
         })
         .withFailureHandler((error) => {
           clearInterval(loadingTimer);
@@ -4829,6 +4821,65 @@
           elements.loadingDetail.textContent = `${message} Recharger la page ; si l'erreur persiste, transmettre ce message à l'équipe RSO.`;
         })
         .getDashboardBootstrap();
+
+      // Données reçues (premier chargement ou « Actualiser les données ») :
+      // affichage de toutes les vues ; les filtres choisis sont conservés
+      // quand leur valeur existe encore.
+      function applyBootstrap(bootstrap) {
+      renderLoadTimings(bootstrap.diagnostics);
+      bootstrap.facts = expandFacts(bootstrap.facts);
+      state.bootstrap = bootstrap;
+      renderDiagnostics(bootstrap.diagnostics);
+      state.pilotPoleCodes = computePilotPoleCodes(bootstrap);
+      const generated = new Date(bootstrap.generatedAt);
+      elements.status.classList.remove('error');
+      elements.status.textContent =
+        `Données lues à ${generated.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}${bootstrap.fromCache ? ' (gardées 10 min ; « 🔄 Actualiser les données » pour les relire)' : ''} · v${bootstrap.appVersion} · ${bootstrap.facts.length.toLocaleString('fr-FR')} lignes chargées`;
+      populateFiliereSelect(elements.syntheseFiliere, true);
+      populateFiliereSelect(elements.detailFiliere, false);
+      populateFiliereSelect(elements.controlFiliere, true);
+      populateFiliereSelect(elements.posteFiliere, true);
+      updateNiveauAvailability();
+      renderSynthese();
+      renderMatrix();
+      renderControl();
+      renderPoste();
+      populateEvolutionFilters();
+      renderEvolution();
+      populateReferentsFilters();
+      renderReferents();
+      }
+
+      // « Actualiser les données » : relecture complète des classeurs
+      // (cache serveur ignoré et remplacé), sans recharger la page.
+      elements.refreshData.addEventListener('click', () => {
+        const label = elements.refreshData.textContent;
+        const done = () => {
+          elements.refreshData.disabled = false;
+          elements.refreshData.textContent = label;
+        };
+        elements.refreshData.disabled = true;
+        elements.refreshData.textContent = '⏳ Actualisation en cours…';
+        loadingStartedAt = Date.now();
+        google.script.run
+          .withSuccessHandler((bootstrap) => {
+            done();
+            if (bootstrap.accessRequired) {
+              elements.status.textContent = 'Accès aux données nécessaire : recharger la page.';
+              elements.status.classList.add('error');
+              return;
+            }
+            // Calculs gardés en mémoire à partir des anciennes données.
+            Object.assign(state, {historyRowsClean: null, evolutionThematiques: null, referentPoles: null, controlRows: null});
+            applyBootstrap(bootstrap);
+          })
+          .withFailureHandler((error) => {
+            done();
+            elements.status.textContent = `Actualisation impossible : ${error && error.message ? error.message : 'erreur inconnue'}. Les données affichées sont celles d'avant.`;
+            elements.status.classList.add('error');
+          })
+          .getDashboardBootstrap({forceRefresh: true});
+      });
     </script>
   </body>
 </html>

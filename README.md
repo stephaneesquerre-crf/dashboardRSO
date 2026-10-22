@@ -23,6 +23,9 @@ redécouvrir un par un.
 - **`IndicatorService.gs`** — lit `IMPORT DONNEES` (table de faits pôle ×
   action), reclasse PADOM en PA/DOM, joint faits et pôles, assemble
   `getDashboardBootstrap()`.
+- **`BootstrapCacheService.gs`** — cache de 10 minutes des données
+  calculées par `getDashboardBootstrap()` et contrôle des droits mémorisé
+  par personne (voir « Cache du chargement »).
 - **`ToolLinksService.gs`** — lit l'onglet `Liens outils référents` (B:F : outil, outil bis, liste des référents ; arrêt à « Outils non utilisés » ; liens vers les
   outils de suivi par filière, saisis en chips intelligentes). Nécessite le
   **service avancé Sheets** (éditeur Apps Script → Services → Google
@@ -293,6 +296,43 @@ soit 75 %, identique à la dernière photographie (0,75).
 - **Vue Évolution** : encadré sous les filtres expliquant que les courbes
   baissent quand le nombre de répondants augmente ou quand un pôle est
   divisé en plusieurs outils de suivi.
+
+## Cache du chargement (22/10/2026)
+
+Mesure avant le cache, sur les vraies données : 6,5 s côté serveur
+(dont 3,5 s de vérification des accès) et 9,2 s vues par le navigateur, à
+chaque ouverture et pour chaque personne.
+
+- **Données gardées 10 minutes** (`BOOTSTRAP_CACHE_SECONDS_`,
+  `BootstrapCacheService.gs`) dans le cache du script, commun à toutes les
+  personnes. Les ouvertures suivantes ne relisent plus les classeurs. Les
+  données sont compressées et découpées en morceaux (une valeur du cache
+  Apps Script est limitée à 100 Ko).
+- **Bouton « 🔄 Actualiser les données »** (en-tête de la page) : relit
+  tous les classeurs et remplace le cache, sans recharger la page. La
+  ligne sous le titre indique l'heure de lecture des données.
+- **Droits** : le contrôle d'accès reste fait pour chaque personne ; son
+  résultat est gardé 30 minutes dans le cache de cette personne
+  (`ACCESS_CACHE_SECONDS_`). Un refus n'est pas gardé. Une personne sans
+  accès aux archives ou aux référents ne reçoit pas ces données depuis le
+  cache. Une lecture faite par une personne qui ne voit pas tous les
+  classeurs n'est pas mise en cache. Le contrôle passe par l'API Sheets
+  (service avancé) quand il est activé, plus léger que l'ouverture du
+  classeur.
+- **Cache vidé automatiquement** quand l'historique des archives est
+  réécrit (bouton « Rafraîchir les archives » ou déclencheur horaire). À
+  la main : exécuter `viderCacheDashboard()` dans l'éditeur.
+- **Après un déploiement qui change la forme des données** (nouveau champ
+  envoyé à la page), changer `BOOTSTRAP_CACHE_KEY_` (ex. `-v2`) pour que
+  l'ancien cache soit ignoré ; sinon il disparaît seul en 10 minutes.
+- **Préchargement (facultatif)** : un déclencheur horaire sur
+  `prechargerDashboard` (éditeur Apps Script → Déclencheurs → Ajouter →
+  fonction `prechargerDashboard`, source « Déclencheur horaire », toutes
+  les 5 minutes) recharge le cache avant qu'il expire : personne n'attend
+  la lecture complète. Il tourne avec les droits du compte qui le crée,
+  qui doit avoir accès aux trois classeurs. Non installé à ce jour.
+- Les fonctions de diagnostic de l'éditeur (`diagnosticDashboard`,
+  `lancerTests`…) lisent toujours les classeurs, sans le cache.
 
 ## Accès aux classeurs et temps de chargement (14/10/2026)
 

@@ -85,6 +85,8 @@ function refreshHistoryWithReport_(force) {
   const report = importArchiveSheets_(source, names, valuesByName, true);
   properties.setProperty(HISTORY_SIGNATURE_PROPERTY_, signature);
   properties.setProperty(HISTORY_REFRESHED_AT_PROPERTY_, new Date().toISOString());
+  // Historique réécrit : les données en cache (vue Évolution) sont périmées.
+  viderCacheDashboard();
   return {changed: true, report: report};
 }
 
