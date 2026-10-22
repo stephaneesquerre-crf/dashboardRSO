@@ -338,3 +338,53 @@ test('référents : onglet IMPORT REFERENTS en blocs (une filière par bloc, lig
   assert.strictEqual(app.matchPoleCode_('Territoire A : HDF - IDF - NA - PDL_1405', reference, index).territoire, 'Territoire A');
   assert.strictEqual(app.matchPoleCode_('Territoire A : IDF_9999', reference, index), null);
 });
+
+test('cache : données gardées entre deux ouvertures, « Actualiser » relit les classeurs', () => {
+  const cacheLog = [];
+  const {app, bootstrap: first} = bootstrapFor('normal', {cacheLog});
+  assert.ok(!first.fromCache);
+  assert.ok(cacheLog.some((key) => /\|meta$/.test(key)), 'cache écrit après une lecture complète');
+  // Classeur modifié : la deuxième ouverture sert encore le cache…
+  const importSheet = app.__spreadsheets[NATIONAL_ID].getSheetByName('IMPORT DONNEES');
+  importSheet.values = importSheet.values.slice(0, 2);
+  const second = app.getDashboardBootstrap();
+  assert.ok(second.fromCache);
+  assert.strictEqual(JSON.stringify(second.facts), JSON.stringify(first.facts));
+  assert.strictEqual(second.diagnostics.timings.map(([label]) => label).join(' | '), 'Vérification des accès | Lecture du cache');
+  // … « Actualiser les données » relit les classeurs.
+  const refreshed = app.getDashboardBootstrap({forceRefresh: true});
+  assert.ok(!refreshed.fromCache);
+  assert.ok(refreshed.facts.rows.length < first.facts.rows.length);
+  assert.strictEqual(app.getDashboardBootstrap().facts.rows.length, refreshed.facts.rows.length, 'cache remplacé');
+  // viderCacheDashboard (ex. après « Rafraîchir les archives ») : relecture.
+  app.viderCacheDashboard();
+  assert.ok(!app.getDashboardBootstrap().fromCache);
+});
+
+test('cache : une personne sans accès aux archives ni aux référents ne reçoit pas ces données', () => {
+  // Service avancé Sheets : contrôle d'accès refait à chaque appel (sans
+  // lui, le banc d'essai garde les classeurs ouverts d'un appel à l'autre).
+  const {app, bootstrap: full} = bootstrapFor('normal', {sheetsApi: SHEETS_API});
+  assert.ok(full.history.rows.length > 0 && full.referents.poles.length > 0);
+  delete app.__spreadsheets[ARCHIVES_ID];
+  delete app.__spreadsheets[REFERENTS_ID];
+  app.CacheService.getUserCache().remove('dashboard-access-v1');
+  const restricted = app.getDashboardBootstrap();
+  assert.ok(restricted.fromCache);
+  assert.strictEqual(restricted.history.rows.length, 0);
+  assert.strictEqual(restricted.referents.poles.length, 0);
+  assert.strictEqual(restricted.diagnostics.accessLinks.map((item) => item.key).sort().join(','), 'archives,referents');
+  // Lecture complète par cette personne : non mise en cache (données partielles).
+  app.viderCacheDashboard();
+  app.getDashboardBootstrap({forceRefresh: true});
+  assert.strictEqual(app.readBootstrapCache_(), null);
+});
+
+test('cache : données volumineuses découpées en morceaux de moins de 100 Ko', () => {
+  const cacheLog = [];
+  const app = loadAppsScript({}, {cacheLog});
+  const big = require('crypto').randomBytes(200 * 1024).toString('hex');
+  app.writeBootstrapCache_({generatedAt: 'x', diagnostics: {warnings: []}, big});
+  assert.ok(cacheLog.filter((key) => /\|\d+$/.test(key)).length > 1, 'plusieurs morceaux');
+  assert.strictEqual(app.readBootstrapCache_().big, big);
+});

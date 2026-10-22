@@ -158,7 +158,7 @@ function hasMissingTarget_(fact) {
 }
 
 function testBilanCarbone() {
-  const bootstrap = getDashboardBootstrap();
+  const bootstrap = getDashboardBootstrap({forceRefresh: true});
   if (bootstrap.accessRequired) {
     Logger.log('Accès manquant au classeur national.');
     return;

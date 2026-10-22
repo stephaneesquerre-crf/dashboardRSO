@@ -15,7 +15,7 @@ try { playwright = require('playwright'); } catch (error) { /* non installé */ 
 
 function pageWithBootstrap(bootstrap, delayMs = 0) {
   const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8');
-  const stub = `<script>window.google={script:{run:{_s:null,_f:null,withSuccessHandler(f){this._s=f;return this},withFailureHandler(f){this._f=f;return this},getDashboardBootstrap(){const f=this._s;const data=${JSON.stringify(bootstrap)};setTimeout(()=>f(data),${delayMs})},rafraichirArchivesDepuisDashboard(){const f=this._s;const history=${JSON.stringify(bootstrap.history)};setTimeout(()=>f({report:['Archives 09/26 : 3 valeurs (mois 2026-09)','2 lignes au total dans "HISTORIQUE TDB VA".'],history,warnings:[]}),0)}}}};</script>`;
+  const stub = `<script>window.google={script:{run:{_s:null,_f:null,withSuccessHandler(f){this._s=f;return this},withFailureHandler(f){this._f=f;return this},getDashboardBootstrap(o){(window.__bootstrapCalls=window.__bootstrapCalls||[]).push(o||null);const f=this._s;const data=${JSON.stringify(bootstrap)};setTimeout(()=>f(data),${delayMs})},rafraichirArchivesDepuisDashboard(){const f=this._s;const history=${JSON.stringify(bootstrap.history)};setTimeout(()=>f({report:['Archives 09/26 : 3 valeurs (mois 2026-09)','2 lignes au total dans "HISTORIQUE TDB VA".'],history,warnings:[]}),0)}}}};</script>`;
   const file = path.join(os.tmpdir(), `dashboard-rso-test-${process.pid}.html`);
   fs.writeFileSync(file, html.replace(/<body[^>]*>/, (tag) => `${tag}${stub}`));
   return file;
@@ -220,6 +220,19 @@ test('interface : territoires de chaque filière dans Synthèse, Détail par pô
     });
     const drawnOrder = await page.$$eval('#chart .bar-hit', (bars) => bars.map((b) => Number((b.getAttribute('aria-label').match(/: ([\d,]+) %/) || [])[1]?.replace(',', '.'))));
     assert.deepStrictEqual(drawnOrder, [...values].sort((a, b) => b - a));
+
+    // « Actualiser les données » : relecture forcée, vues réaffichées,
+    // filtre conservé.
+    await page.click('#tab-synthese');
+    await page.selectOption('#synthese-filiere', 'SAN');
+    assert.ok(await page.isVisible('#refresh-data'));
+    await page.click('#refresh-data');
+    await page.waitForFunction(() => !document.getElementById('refresh-data').disabled);
+    assert.deepStrictEqual(await page.evaluate(() => window.__bootstrapCalls), [null, {forceRefresh: true}]);
+    assert.strictEqual(await page.textContent('#refresh-data'), '🔄 Actualiser les données');
+    assert.match(await page.textContent('#status'), /^Données lues à/);
+    assert.strictEqual(await page.$eval('#synthese-filiere', (select) => select.value), 'SAN');
+    assert.ok(await page.$$eval('#data-table-body tr', (rows) => rows.length) > 0);
 
     assert.deepStrictEqual(errors, []);
   } finally {

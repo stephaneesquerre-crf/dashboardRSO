@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -101,6 +102,28 @@ function fakeValuesApi(opened, calls) {
   };
 }
 
+function fakeBlob(buffer) {
+  return {buffer, getBytes: () => [...buffer], getDataAsString: () => buffer.toString('utf8')};
+}
+
+// Cache Apps Script simulé (sans expiration) ; valeur limitée à 100 Ko
+// comme le vrai. log : tableau recevant les clés écrites (facultatif).
+function fakeCache(log) {
+  const store = {};
+  const put = (key, value) => {
+    if (String(value).length > 100 * 1024) throw new Error(`Valeur trop grande pour le cache : ${key}`);
+    store[key] = String(value);
+    if (log) log.push(key);
+  };
+  return {
+    get: (key) => (key in store ? store[key] : null),
+    getAll: (keys) => Object.fromEntries(keys.filter((key) => key in store).map((key) => [key, store[key]])),
+    put,
+    putAll: (entries) => Object.entries(entries).forEach(([key, value]) => put(key, value)),
+    remove: (key) => { delete store[key]; }
+  };
+}
+
 // spreadsheets : {id: {nomOnglet: valeurs 2D}} ; options.email, options.sheetsApi,
 // options.batchGet (true : service avancé avec Values.batchGet simulé)
 function loadAppsScript(spreadsheets, options = {}) {
@@ -123,8 +146,18 @@ function loadAppsScript(spreadsheets, options = {}) {
       formatDate: (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
       DigestAlgorithm: {SHA_256: 'sha256'},
       Charset: {UTF_8: 'utf8'},
-      computeDigest: (algorithm, text) => [...require('crypto').createHash('sha256').update(text, 'utf8').digest()].map((b) => (b > 127 ? b - 256 : b))
+      computeDigest: (algorithm, text) => [...require('crypto').createHash('sha256').update(text, 'utf8').digest()].map((b) => (b > 127 ? b - 256 : b)),
+      newBlob: (data) => fakeBlob(typeof data === 'string' ? Buffer.from(data, 'utf8') : Buffer.from(data)),
+      gzip: (blob) => fakeBlob(zlib.gzipSync(blob.buffer)),
+      ungzip: (blob) => fakeBlob(zlib.gunzipSync(blob.buffer)),
+      base64Encode: (bytes) => Buffer.from(bytes).toString('base64'),
+      base64Decode: (text) => [...Buffer.from(text, 'base64')]
     },
+    CacheService: (() => {
+      const scriptCache = fakeCache(options.cacheLog);
+      const userCache = fakeCache();
+      return {getScriptCache: () => scriptCache, getUserCache: () => userCache};
+    })(),
     PropertiesService: (() => {
       const store = {};
       const properties = {getProperty: (key) => (key in store ? store[key] : null), setProperty: (key, value) => { store[key] = String(value); return properties; }};
@@ -137,6 +170,16 @@ function loadAppsScript(spreadsheets, options = {}) {
   if (options.sheetsApi || options.batchGet) {
     context.Sheets = Object.assign({}, options.sheetsApi || {});
     context.Sheets.Spreadsheets = Object.assign({}, (options.sheetsApi && options.sheetsApi.Spreadsheets) || {});
+    // Test d'accès léger (checkSpreadsheetAccess_) : refusé si le classeur
+    // n'est pas fourni, comme SpreadsheetApp.openById.
+    const get = context.Sheets.Spreadsheets.get;
+    context.Sheets.Spreadsheets.get = (id, params) => {
+      if (params && params.fields === 'spreadsheetId') {
+        if (!opened[id]) throw new Error(`Classeur inaccessible : ${id}`);
+        return {spreadsheetId: id};
+      }
+      return get(id, params);
+    };
     if (options.batchGet) context.Sheets.Spreadsheets.Values = fakeValuesApi(opened, batchCalls);
   }
   vm.createContext(context);
